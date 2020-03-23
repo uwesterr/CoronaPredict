@@ -227,13 +227,15 @@ calcDf$RestanteilStartwert =23
 
 ```{r}
 
+startDate <- as.Date('2020-03-17')
+endDate <- as.Date('2020-04-17')
+
 test <- tribble(
   
   ~Tag, ~TaeglichReproduktionsRateRt, ~GesamtInfizierteBerechnet, ~ReduzierteRt ,
   
   startDate, Rt, n0_erfasst*faktor_n_inf, Rt )
-startDate <- as.Date('2020-03-17')
-endDate <- as.Date('2020-04-17')
+
 
 
 
