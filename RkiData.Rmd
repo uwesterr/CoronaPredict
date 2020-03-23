@@ -167,38 +167,14 @@ Tote berechnet=P2+Q2
 ```
 
 
+
 ```{r calcDf}
 
 
 
+# Initialize the dataframe
 startDate <- as.Date('2020-03-01')
 endDate <- as.Date('2020-05-31')
-
-coronaDf <- tibble(date = seq(startDate, endDate,by = 1))
-
-Rt-F2*(Rt-1)/Y_inf_limit
-
-ifelse(B2<=0,0,MAX(Rt-120*(Rt-1)/Y_inf_limit,0))
-
-Rt-120*(Rt-1)/Y_inf_limit
-```
-
-
-
-```{r test}
-
-calcReduzierteRt <-  function(df){
-if (calcDf$Tag < reduzierung_datum ) {
-  df <- tail(df, 1)
-  ReduzierteRt <- df$TaeglichReproduktionsRateRt-df$WirksamkeitReduktion * (df$TaeglichReproduktionsRateRt-1) * reduzierung_rt
-  ReduzierteRt
-}
-}
-
-
-
-
-
 calcDf <- tibble(Tag                               = startDate,
        TaeglichReproduktionsRateRt       = Rt,
        AktuellInfizierteBerechnet        = n0_erfasst,
@@ -219,21 +195,63 @@ calcDf <- tibble(Tag                               = startDate,
   
  )
 
-calcReduzierteRt(calcDf)
+calcWirksamkeitReduktion <- function(calcDf, reduzierung_datum, ta) {
+  if (calcDf$Tag < reduzierung_datum){
+    
+    WirksamkeitReduktion <- 0
+    
+  }  else {
+    calcDf <- calcDf %>% tail(1)
+    WirksamkeitReduktion <-min(1,as.numeric(calcDf$Tag - reduzierung_datum)/ta)
+    
+  }
+  WirksamkeitReduktion
+}
+calcDf$WirksamkeitReduktion<- calcWirksamkeitReduktion(calcDf, reduzierung_datum, ta)  
+  
+calcReduzierteRt <-  function(df){
 
-calcDf$RestanteilStartwert =23
+df <- df %>% tail(1)
+  ReduzierteRt <- df$TaeglichReproduktionsRateRt-df$WirksamkeitReduktion * (df$TaeglichReproduktionsRateRt-1) * reduzierung_rt
+  ReduzierteRt
+}
+calcDf$ReduzierteRt<- calcReduzierteRt(calcDf)
+
+
+max(0,n0_erfasst*(ta - as.numeric(calcDf$Tag - startDate)+2 )/ta)
+
+
+
+calcRestanteilStartwert <- function(calcDf, n0_erfasst, ta, startDate) {
+  calcDf <- calcDf %>% tail(1)
+  max(0,n0_erfasst*(ta - as.numeric(calcDf$Tag - startDate) )/ta)
+}
+
+calcDf$RestanteilStartwert<- calcRestanteilStartwert(calcDf, n0_erfasst, ta, startDate)
+
+
+calcNeuGesamtInfizierteBerechnet <- function(calcDf){
+
+max(0.1,(calcDf$ReduzierteRt-1)*calcDf$GesamtInfizierteBerechnet)
+}
+
+
+calcDf$NeuGesamtInfizierteBerechnet<- calcNeuGesamtInfizierteBerechnet(calcDf)
+
 
 ```
 
 ```{r}
+
+startDate <- as.Date('2020-03-17')
+endDate <- as.Date('2020-04-17')
 
 test <- tribble(
   
   ~Tag, ~TaeglichReproduktionsRateRt, ~GesamtInfizierteBerechnet, ~ReduzierteRt ,
   
   startDate, Rt, n0_erfasst*faktor_n_inf, Rt )
-startDate <- as.Date('2020-03-17')
-endDate <- as.Date('2020-04-17')
+
 
 
 

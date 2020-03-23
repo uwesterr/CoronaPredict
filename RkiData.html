@@ -409,7 +409,6 @@ summary {
 <h2>Thomas Excel sheet</h2>
 <div id="parameters" class="section level3">
 <h3>parameters</h3>
-<p>kh_normal 4.50% t_kh 14 dt_inf_kh 8 kh_intensiv 25.00% t_intensiv 10 dt_kh_int 1</p>
 <ul>
 <li>Gesamt zu erwartende Infizierte: 5.8110^{7}<br />
 </li>
@@ -435,6 +434,7 @@ Intensiv berechnet=IF(ROW()&gt;dt_kh_int+dt_inf_kh+1,kh_normal*kh_intensiv*SUM(I
 HZ5=IF(ROW()&gt;td_tod+1,&quot;E&quot;&amp;(ROW()-td_tod),0)
 Neue Tote berechnet=IF(ROW()&gt;td_tod+1,  tod_rate*@INDIRECT(O3),0.1)
 Tote berechnet=P2+Q2</code></pre>
+<pre><code>## [1] 144</code></pre>
 </div>
 </div>
 
