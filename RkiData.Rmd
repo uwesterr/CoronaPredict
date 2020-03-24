@@ -66,6 +66,7 @@ It offers the following attributes
 library(tidyverse) ; library(httr) ; library(jsonlite)
 library(lubridate)
 library(plotly)
+library(zoo)
 path <- "https://rki-covid-api.now.sh/api/states"
 stateData <- fromJSON("https://rki-covid-api.now.sh/api/states")
 
@@ -128,7 +129,7 @@ ta	<- 10 # Dauer Ansteckbarkeit  [tage]
 r0	<- 13 # Neuansteckung durch einen Infizierten
 tod_rate <- 	2.00/100 # Sterblichkeit
 td_tod <- 	8 # Dauer Infektion bis Tod  [tage]
-reduzierung_datum	<- as.Date("2020-03-20") # Datum Reduktionsmassnahme
+reduzierung_datum	<- as.Date("2020-03-23") # Datum Reduktionsmassnahme
 reduzierung_rt <- 	30/100 # Reduktion der Repr.rate/Tag
 
 # Ausgabe
@@ -179,7 +180,7 @@ calcWirksamkeitReduktion <- function(calcDf, reduzierung_datum, ta) {
     
   }  else {
     calcDf <- calcDf %>% tail(1)
-    WirksamkeitReduktion <-min(1,as.numeric(calcDf$Tag - reduzierung_datum)/ta)
+    WirksamkeitReduktion <-min(1,(as.numeric(calcDf$Tag - reduzierung_datum)+1)/ta)
     
   }
   WirksamkeitReduktion
@@ -240,7 +241,7 @@ initCalcDf <- initCalcDf(calcDf, reduzierung_datum, ta, n0_erfasst, startDate, f
 
 ```
 
-```{r updateCalcDf, eval=FALSE, include=FALSE}
+```{r updateCalcDf, echo=FALSE}
 
 lengthOfTail <- 1
 calcDf <- initCalcDf
@@ -274,7 +275,7 @@ for (i in seq(startDate, endDate,by = 1)) {
 date <- tailCalcDf$Tag +1
 updatecalcDf <- tibble(
        Tag                               = tailCalcDf$Tag+1,
-       TaeglichReproduktionsRateRt       = calcTaeglichReproduktionsRateRt(Rt, calcDf, Y_inf_limit),
+       TaeglichReproduktionsRateRt       = calcTaeglichReproduktionsRateRt(Rt, tailCalcDf, Y_inf_limit),
        AktuellInfizierteBerechnet        = n0_erfasst,
        RestanteilStartwert               = calcRestanteilStartwert(tailCalcDf, n0_erfasst, ta, startDate, date),
        NeuInfizierteBerechnet            = NA,
@@ -294,8 +295,8 @@ updatecalcDf <- tibble(
 )
 
 
-updatecalcDf$WirksamkeitReduktion<- calcWirksamkeitReduktion(tailCalcDf, reduzierung_datum, ta)  
-updatecalcDf$ReduzierteRt<- calcReduzierteRt(tailCalcDf)
+updatecalcDf$WirksamkeitReduktion<- calcWirksamkeitReduktion(updatecalcDf, reduzierung_datum, ta)  
+updatecalcDf$ReduzierteRt<- calcReduzierteRt(updatecalcDf)
 updatecalcDf$GesamtInfizierteBerechnet <-  calcGesamtInfizierteBerechnet(tailCalcDf)
 updatecalcDf$NeuGesamtInfizierteBerechnet<- calcNeuGesamtInfizierteBerechnet(updatecalcDf)
 updatecalcDf$NeuInfizierteBerechnet <- max(.1,updatecalcDf$NeuGesamtInfizierteBerechnet/faktor_n_inf)
@@ -307,16 +308,117 @@ updatecalcDf$ErfassteInfizierteBerechnet<- calcErfassteInfizierteBerechnet(tailC
 calcDf <- rbind(calcDf,updatecalcDf)
 
 }
+calcDf$ID <- seq.int(nrow(calcDf))
+
+
+
+calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = ifelse(ID==1,n0_erfasst,
+                                                       rollapply(NeuInfizierteBerechnet, 10, sum,align = "right", fill = NA, partial =TRUE) + RestanteilStartwert-NeuInfizierteBerechnet))
+
+calcDf <- calcDf %>% mutate(KhBerechnet =   (rollapply(NeuInfizierteBerechnet, 22, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, 8, sum,align = "right", partial = TRUE )) *kh_normal)
+
+
+
+
 ```
 
 
 
 
-```{r}
+```{r calculateRolls, eval=FALSE, include=FALSE}
+library(RcppRoll)
+library(zoo)
+allButInitCalcDf <- calcDf %>% tail(nrow(calcDf)-1)
+calcDf$ID <- seq.int(nrow(calcDf))
+calcDf$KhId <- calcDf$ID - dt_inf_kh +1
+
+allButInitCalcDf$NeuInfizierteBerechnet %>% roll_sum(9, align = "left")
+
+
+rollapply(allButInitCalcDf$NeuInfizierteBerechnet, 9, sum, align = "right", partial = TRUE) + allButInitCalcDf$RestanteilStartwert
+
+calcDf <- calcDf %>% mutate(KhBerechnet = testF(calcDf))
+
+
+
+
+
+
+
+calcDf <- calcDf %>% mutate(KhBerechnet =   (rollapply(NeuInfizierteBerechnet, 22, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, 8, sum,align = "right", partial = TRUE )) *kh_normal)
+
+
+calcDf <- calcDf %>% mutate(roll22 =   (rollapply(NeuInfizierteBerechnet, 22, sum,align = "right", partial = TRUE )),
+                            roll8 = rollapply(NeuInfizierteBerechnet, 8, sum,align = "right", partial = TRUE ),
+                            KhBerechnet = (roll22 - roll8)*kh_normal)
+
+
+# old method without partial
+calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = ifelse(ID==1,n0_erfasst,if_else(ID<=9,rollapply(NeuInfizierteBerechnet, ID, sum,align = "right", fill = NA) + RestanteilStartwert-NeuInfizierteBerechnet,
+                                                       rollapply(NeuInfizierteBerechnet, 10, sum,align = "right", fill = NA) + RestanteilStartwert-NeuInfizierteBerechnet)))
+
+
+calcDf <- calcDf %>% mutate(IntensivBerechnet =   (rollapply(NeuInfizierteBerechnet, 18, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, 9, sum,align = "right", partial = TRUE )) *kh_normal * kh_intensiv)
+
 
 ```
 
 
+Kumulierte Infizierte /Tote
+
+
+```{r kumInf}
+
+
+calcDf %>% ggplot(aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_line() +  scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+ )
+
+
+
+```
+
+
+Verlauf Infizierte
+
+```{r verlaufInf}
+
+calcDf %>% ggplot(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line() + geom_line(data= calcDf, aes(y= NeuInfizierteBerechnet )) + scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+ )
+
+
+```
+
+Plätze im Krankenhaus
+
+```{r platzKH}
+
+
+calcDf %>% ggplot(aes(x=Tag, y = KhBerechnet)) + geom_line() + geom_line(data= calcDf, aes(y= IntensivBerechnet )) + scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+ )
+
+
+
+```
+
+Reproduktionsrate
+
+
+```{r Reproduktionsrate}
+
+calcDf %>% ggplot(aes(x=Tag, y = TaeglichReproduktionsRateRt)) + geom_line() + geom_line(data= calcDf, aes(y= ReduzierteRt )) + scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+ )
+
+
+
+```
 
 
 
