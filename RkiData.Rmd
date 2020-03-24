@@ -170,12 +170,43 @@ Tote berechnet=P2+Q2
 
 ```{r calcDf}
 
+# functions
+
+calcWirksamkeitReduktion <- function(calcDf, reduzierung_datum, ta) {
+  if (calcDf$Tag < reduzierung_datum){
+    
+    WirksamkeitReduktion <- 0
+    
+  }  else {
+    calcDf <- calcDf %>% tail(1)
+    WirksamkeitReduktion <-min(1,as.numeric(calcDf$Tag - reduzierung_datum)/ta)
+    
+  }
+  WirksamkeitReduktion
+}
+
+  
+calcReduzierteRt <-  function(df){
+
+df <- df %>% tail(1)
+  ReduzierteRt <- df$TaeglichReproduktionsRateRt-df$WirksamkeitReduktion * (df$TaeglichReproduktionsRateRt-1) * reduzierung_rt
+  ReduzierteRt
+}
+
+# max(0,n0_erfasst*(ta - as.numeric(calcDf$Tag - startDate)+2 )/ta)
+
+
+
+calcNeuGesamtInfizierteBerechnet <- function(calcDf){
+
+max(0.1,(calcDf$ReduzierteRt-1)*calcDf$GesamtInfizierteBerechnet)
+}
 
 
 # Initialize the dataframe
 startDate <- as.Date('2020-03-01')
 endDate <- as.Date('2020-05-31')
-calcDf <- tibble(Tag                               = startDate,
+calcDf <- tibble(Tag                     = startDate,
        TaeglichReproduktionsRateRt       = Rt,
        AktuellInfizierteBerechnet        = n0_erfasst,
        RestanteilStartwert               = NA,
@@ -193,80 +224,206 @@ calcDf <- tibble(Tag                               = startDate,
        MaxKhBerechnet                    = 0,
        MaxIntBerechnet                   = 0,
   
- )
+)
 
-calcWirksamkeitReduktion <- function(calcDf, reduzierung_datum, ta) {
-  if (calcDf$Tag < reduzierung_datum){
-    
-    WirksamkeitReduktion <- 0
-    
-  }  else {
-    calcDf <- calcDf %>% tail(1)
-    WirksamkeitReduktion <-min(1,as.numeric(calcDf$Tag - reduzierung_datum)/ta)
-    
-  }
-  WirksamkeitReduktion
-}
-calcDf$WirksamkeitReduktion<- calcWirksamkeitReduktion(calcDf, reduzierung_datum, ta)  
-  
-calcReduzierteRt <-  function(df){
-
-df <- df %>% tail(1)
-  ReduzierteRt <- df$TaeglichReproduktionsRateRt-df$WirksamkeitReduktion * (df$TaeglichReproduktionsRateRt-1) * reduzierung_rt
-  ReduzierteRt
-}
-calcDf$ReduzierteRt<- calcReduzierteRt(calcDf)
-
-
-max(0,n0_erfasst*(ta - as.numeric(calcDf$Tag - startDate)+2 )/ta)
-
-
-
-calcRestanteilStartwert <- function(calcDf, n0_erfasst, ta, startDate) {
-  calcDf <- calcDf %>% tail(1)
-  max(0,n0_erfasst*(ta - as.numeric(calcDf$Tag - startDate) )/ta)
+initCalcDf <- function(calcDf, reduzierung_datum, ta, n0_erfasst, startDate, faktor_n_inf) {
+  calcDf$WirksamkeitReduktion<- calcWirksamkeitReduktion(calcDf, reduzierung_datum, ta)  
+  calcDf$ReduzierteRt<- calcReduzierteRt(calcDf)
+  calcDf$NeuGesamtInfizierteBerechnet<- calcNeuGesamtInfizierteBerechnet(calcDf)
+  calcDf$NeuInfizierteBerechnet <- max(.1,calcDf$NeuGesamtInfizierteBerechnet/faktor_n_inf)
+  return(calcDf)
 }
 
-calcDf$RestanteilStartwert<- calcRestanteilStartwert(calcDf, n0_erfasst, ta, startDate)
+initCalcDf <- initCalcDf(calcDf, reduzierung_datum, ta, n0_erfasst, startDate, faktor_n_inf)
 
-
-calcNeuGesamtInfizierteBerechnet <- function(calcDf){
-
-max(0.1,(calcDf$ReduzierteRt-1)*calcDf$GesamtInfizierteBerechnet)
-}
-
-
-calcDf$NeuGesamtInfizierteBerechnet<- calcNeuGesamtInfizierteBerechnet(calcDf)
 
 
 ```
 
-```{r}
+```{r updateCalcDf, eval=FALSE, include=FALSE}
 
-startDate <- as.Date('2020-03-17')
-endDate <- as.Date('2020-04-17')
-
-test <- tribble(
-  
-  ~Tag, ~TaeglichReproduktionsRateRt, ~GesamtInfizierteBerechnet, ~ReduzierteRt ,
-  
-  startDate, Rt, n0_erfasst*faktor_n_inf, Rt )
+lengthOfTail <- 1
+calcDf <- initCalcDf
 
 
+calcTaeglichReproduktionsRateRt <- function(Rt, calcDf, Y_inf_limit) {
+  Rt-(tailCalcDf$ErfassteInfizierteBerechnet*(Rt-1))/Y_inf_limit
+}
+
+calcRestanteilStartwert <- function(tailCalcDf, n0_erfasst, ta, startDate, date) {
+
+  max(0,n0_erfasst*(ta - as.numeric(date - startDate) )/ta)
+}
+
+
+calcGesamtInfizierteBerechnet <- function(calcDf){
+
+calcDf$GesamtInfizierteBerechnet+calcDf$NeuGesamtInfizierteBerechnet
+}
+
+calcErfassteInfizierteBerechnet <- function(tailCalcDf){
+tailCalcDf$NeuInfizierteBerechnet   + tailCalcDf$ErfassteInfizierteBerechnet
+}
+
+startDate <- as.Date('2020-03-01')
+endDate <- as.Date('2020-05-31')
 
 
 for (i in seq(startDate, endDate,by = 1)) {
-#add_test <- tibble(  Tag = test$Tag, TaeglichReproduktionsRateRt = test$TaeglichReproduktionsRateRt, 
- #                    GesamtInfizierteBerechnet = test$GesamtInfizierteBerechnet, ReduzierteRt = test$ReduzierteRt)
+  tailCalcDf <- tail(calcDf,lengthOfTail)
+date <- tailCalcDf$Tag +1
+updatecalcDf <- tibble(
+       Tag                               = tailCalcDf$Tag+1,
+       TaeglichReproduktionsRateRt       = calcTaeglichReproduktionsRateRt(Rt, calcDf, Y_inf_limit),
+       AktuellInfizierteBerechnet        = n0_erfasst,
+       RestanteilStartwert               = calcRestanteilStartwert(tailCalcDf, n0_erfasst, ta, startDate, date),
+       NeuInfizierteBerechnet            = NA,
+       ErfassteInfizierteBerechnet       = NA,
+       GesamtInfizierteBerechnet         = NA,
+       NeuGesamtInfizierteBerechnet      = NA,
+       KhBerechnet                       = NA,
+       IntensivBerechnet                 = 0,
+       NeueToteBerechnet                 = 0,
+       ToteBerechnet                     = 0,
+       ReduktionAbDatum                  = 0,
+       WirksamkeitReduktion              = 0,
+       ReduzierteRt                      = 0,
+       MaxKhBerechnet                    = 0,
+       MaxIntBerechnet                   = 0,
   
+)
 
-#test <- tibble::add_row(test,add_test)
 
-test <- add_row(test,  Tag = test$Tag[i], TaeglichReproduktionsRateRt = test$TaeglichReproduktionsRateRt[i], 
-                     GesamtInfizierteBerechnet = test$GesamtInfizierteBerechnet[i], ReduzierteRt = test$ReduzierteRt[i])
-  
+updatecalcDf$WirksamkeitReduktion<- calcWirksamkeitReduktion(tailCalcDf, reduzierung_datum, ta)  
+updatecalcDf$ReduzierteRt<- calcReduzierteRt(tailCalcDf)
+updatecalcDf$GesamtInfizierteBerechnet <-  calcGesamtInfizierteBerechnet(tailCalcDf)
+updatecalcDf$NeuGesamtInfizierteBerechnet<- calcNeuGesamtInfizierteBerechnet(updatecalcDf)
+updatecalcDf$NeuInfizierteBerechnet <- max(.1,updatecalcDf$NeuGesamtInfizierteBerechnet/faktor_n_inf)
+updatecalcDf$ErfassteInfizierteBerechnet<- calcErfassteInfizierteBerechnet(tailCalcDf)
+
+#test <- add_row(test,  Tag = test$Tag[i], TaeglichReproduktionsRateRt = test$TaeglichReproduktionsRateRt[i], 
+#                     GesamtInfizierteBerechnet = test$GesamtInfizierteBerechnet[i], ReduzierteRt = test$ReduzierteRt[i])
+ 
+calcDf <- rbind(calcDf,updatecalcDf)
+
 }
 ```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+
+# R package covid19germany
+
+https://github.com/nevrome/covid19germany
+
+
+```{r}
+library(covid19germany)
+covid19germany::get_RKI_timeseries()
+covid19germany::ew_laender
+covid19germany::ew_kreise
+covid19germany::hospital_beds
+rki <- get_RKI_timeseries()
+
+```
+
+
+Get and join data
+
+```{r getData}
+library(covid19germany)
+
+# Get RKI data and transform to daily time series, e.g. per "Bundesland" and "Landkreis"
+
+rki_timeseries_bundesland <- rki %>% group_RKI_timeseries("Bundesland")
+rki_timeseries_landkreis <- rki %>% group_RKI_timeseries("Landkreis")
+
+# Join population info to RKI data
+rki_timeseries_bundesland <- rki_timeseries_bundesland %>%
+  dplyr::left_join(ew_laender, by = "Bundesland")
+
+rki_timeseries_landkreis <- rki_timeseries_landkreis %>%
+  dplyr::left_join(ew_kreise, by = "IdLandkreis")
+
+# Join hospital info to RKI data
+rki_timeseries_bundesland <- rki_timeseries_bundesland %>%
+  dplyr::left_join(hospital_beds, by = "Bundesland")
+```
+
+Simple plots
+
+```{r kumNumbers}
+get_RKI_timeseries() %>% plot_RKI_timeseries("Altersgruppe", "KumAnzahlTodesfall")
+```
+Daily reported cases by federal state
+
+```{r dailyReportFed}
+
+group_RKI_timeseries(rki, Bundesland) %>%
+  dplyr::filter(Meldedatum > "2020-02-25") %>%
+  tidyr::drop_na(Bundesland) %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = Meldedatum,
+                         y = AnzahlFall,
+                         fill = Bundesland),
+           stat = 'identity') +
+  theme_minimal() +
+  ggtitle("Gemeldete Infektionen (täglich)") +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank())
+```
+Cumulative cases by federal state
+
+```{r CumFedCase}
+
+group_RKI_timeseries(rki, Bundesland) %>%
+  dplyr::filter(Meldedatum > "2020-02-25") %>%
+  tidyr::drop_na(Bundesland) %>%
+  dplyr::group_by(Bundesland) %>%
+  dplyr::mutate(kum_fall = cumsum(AnzahlFall)) %>%
+  dplyr::ungroup() %>%
+  ggplot() +
+  geom_area(mapping = aes(x = Meldedatum,
+                          y = kum_fall,
+                          fill = Bundesland),
+            stat = 'identity',
+            na.rm = T) +
+  theme_minimal() +
+  ggtitle("Gemeldete Infektionen (kumulativ)") +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank())
+```
+
+Cumulative per inhabitants
+```{r perInhabitants}
+group_RKI_timeseries(rki, Bundesland) %>%
+  dplyr::left_join(ew_laender, by="Bundesland") %>%
+  dplyr::filter(Meldedatum > "2020-02-25") %>%
+  tidyr::drop_na(Bundesland) %>%
+  dplyr::group_by(Bundesland) %>%
+  dplyr::mutate(kum_fall_per100k_ew = cumsum(AnzahlFall) / EwGesamt) %>%
+  dplyr::ungroup() %>%
+  ggplot() +
+  geom_line(mapping = aes(x = Meldedatum,
+                          y = kum_fall_per100k_ew,
+                          col = Bundesland)) +
+  theme_minimal() +
+  ggtitle("Gemeldete Infektionen pro 100K Einwohner (kumulativ)") +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank())
+```
+
+
+
+
 
 
 
