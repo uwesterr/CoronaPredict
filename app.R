@@ -15,6 +15,11 @@ if (!("jsonlite" %in% rownames(installed.packages()))) install.packages("jsonlit
 if (!("plotly" %in% rownames(installed.packages()))) install.packages("plotly")
 if (!("readxl" %in% rownames(installed.packages()))) install.packages("readxl")
 if (!("scales" %in% rownames(installed.packages()))) install.packages("scales")
+if (!("tidyr" %in% rownames(installed.packages()))) install.packages("tidyr")
+if (!("modelr" %in% rownames(installed.packages()))) install.packages("modelr")
+
+library(modelr)
+library(tidyr)
 
 library(jsonlite)
 library(shiny)
@@ -25,14 +30,15 @@ library(plotly)
 library(readxl)
 library(scales)
 
-
-# import data -------------------------------------------------------------
+source(file = "helper.R")
+testFunc()
+# import data rki -------------------------------------------------------------
 
 historyData <- fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
 
 historyDf <- historyData[["features"]][["properties"]]
 historyDf$MeldeDate <- as.Date(historyDf$Meldedatum)
-## read population file
+## read population file from thonmas
 bundesLandPopulation <- read_excel("bundesland_landkreis.xlsx", "bundesland", col_names = c("Bundesland", "EinwohnerBundesland"))
 landKreisPopulation <- read_excel("bundesland_landkreis.xlsx", "landkreis", col_names = c("Landkreis", "EinwohnerLandkreis"))
 
@@ -238,33 +244,39 @@ ui <-
                                          selectInput("filterRegion", "Region to select", choices = "Deutschland", selected = NULL, multiple = FALSE,
                                                         selectize = TRUE, width = NULL, size = NULL)
                                        ),
-                                       wellPanel(
+                                      
                                          h4("Krankenhausaufenthalt"),   
-                                         
+                                         column(6,
+                                                wellPanel(
                                          numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5),
                                          numericInput("t_kh", label = "Dauer", value = 14),
-                                         numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8),
+                                         numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8))),
+                                         column(6,
+                                                wellPanel(
                                          numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25),
                                          numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10),
                                          numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1)
-                                       ) ,  
-                                       wellPanel(
+                                       )) ,  
                                          h3("Expertenparameter für den Infektionsverlauf"),   
-                                         
+                                         column(6,
+                                                wellPanel(
                                          numericInput("ges_inf_rate", label = "Gesättige Infektionsrate [%]", value = 70),
                                          numericInput("faktor_n_inf", label = "Faktor der nicht erfassten Infizierten", value = 15),
                                          numericInput("ta", label = "Dauer Ansteckbarkeit", value = 10),
-                                         numericInput("r0", label = "Neuansteckung durch einen Infizierten", value = 13),
+                                         numericInput("r0", label = "Neuansteckung durch einen Infizierten", value = 13))),
+                                         column(6,
+                                                wellPanel(
                                          numericInput("tod_rate", label = "Sterblichkeit [%]", value = 2),
                                          numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8),
-                                         dateInput("reduzierung_datum", label = "Datum Reduktionsmassnahme [yyyy-mm-dd]", value = "2020-03-23"),
+                                         dateInput("reduzierung_datum", label = "Datum Reduktionsmassnahme [yyyy-mm-dd]", value = "2020-03-16"),
                                          numericInput("reduzierung_rt", label = "Reduktion der Repr.rate/Tag [%]", value = 30)
-                                       ) , 
+                                       )) , 
                                        
-                                       
-                                       wellPanel(
+                
                                          h3("Einstellen der Darstellung") ,
-                                         dateRangeInput(inputId = "dateInput",
+                                         
+                                       wellPanel(
+                                       dateRangeInput(inputId = "dateInput",
                                                         label = "Date",
                                                         start = min(calcDf$Tag),
                                                         end = max(calcDf$Tag),
@@ -278,7 +290,8 @@ ui <-
                                                       label = "Darstellung y-Achse",
                                                       choices = c("linear", "logarithmisch"),
                                                       selected =  "logarithmisch")
-                                       ),       
+                                       ),
+                                             
                                        
                                        
                                        # select axis transformation
@@ -388,16 +401,16 @@ server <- function(input, output, session) {
       
       if (input$regionSelected ==1) {
       
-        df <- historyDfGroupedMeldeDate <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
+        df <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
       
     } else if (input$regionSelected ==2) {
       
-      df = historyDfGroupedMeldeDate <- historyDf %>% filter(Bundesland ==  input$filterRegion) %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
+      df <- historyDf %>% filter(Bundesland ==  input$filterRegion) %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
       
       
     } else if(input$regionSelected ==3) {
       
-      df = hhistoryDfGroupedMeldeDate <- historyDf %>% filter(Landkreis == input$filterRegion) %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
+      df  <- historyDf %>% filter(Landkreis == input$filterRegion) %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
     }
     df
   })  
@@ -431,14 +444,16 @@ server <- function(input, output, session) {
     
     p <- ggplot(dataPred(), aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_line() + geom_point(data = rkiData(), aes(x = MeldeDate, y = AnzahlFall)) +
       scale_x_date(labels = date_format("%m-%Y"))
-    
+
     if(logy){
-      p <-  p+ scale_y_log10(
-        breaks = scales::trans_breaks("log10", function(x) 10^x),
-        labels = scales::trans_format("log10", scales::math_format(10^.x))
-      )
+      p <- p + coord_trans(y="log10")
+      ggplotly(p) %>% layout(yaxis = list(type="log", autorange=TRUE))
+      
+    } else {
+      p
+      
     }
-    ggplotly(p)
+    p
     
   })
   
