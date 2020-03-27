@@ -245,8 +245,8 @@ ui <-
                                        wellPanel(
                                          radioButtons("regionSelected", label = h3("Region"),
                                                       choices = list("Deutschland" = 1, "Bundesländer" = 2, "Landkreise" = 3), 
-                                                      selected = 1),
-                                         selectInput("filterRegion", "Region to select", choices = "Deutschland", selected = NULL, multiple = FALSE,
+                                                      selected = 2),
+                                         selectInput("filterRegion", "Region to select", choices = "Baden-Württemberg", selected = NULL, multiple = FALSE,
                                                         selectize = TRUE, width = NULL, size = NULL)
                                        ),
                                       
@@ -283,10 +283,10 @@ ui <-
                                        wellPanel(
                                        dateRangeInput(inputId = "dateInput",
                                                         label = "Date",
-                                                        start = min(calcDf$Tag),
-                                                        end = max(calcDf$Tag),
-                                                        min = min(calcDf$Tag),
-                                                        max = max(calcDf$Tag),
+                                                        start = as.Date('2020-03-01'),
+                                                        end = as.Date('2020-05-01'),
+                                                        min = as.Date('2020-02-01'),
+                                                        max = as.Date('2020-07-01'),
                                                         format = "yyyy-mm-dd",
                                                         startview = "month",
                                                         weekstart = 1
@@ -332,10 +332,10 @@ ui <-
                                      mainPanel(
                                        h2("Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung"),
                                        fluidRow(
-                                         splitLayout(cellWidths = c("50%", "50%"), plotlyOutput(outputId ="Kumuliert"), plotlyOutput(outputId ="Verlauf"))
+                                         splitLayout(cellWidths = c("50%", "50%"), plotOutput(outputId ="Kumuliert"), plotOutput(outputId ="Verlauf"))
                                        ),
                                        fluidRow(
-                                         splitLayout(cellWidths = c("50%", "50%"), plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
+                                         splitLayout(cellWidths = c("50%", "50%"), plotOutput(outputId ="Krankenhaus"), plotOutput(outputId ="Reproduktionsrate"))
                                        )       
                                        
                                      ) # end main panel
@@ -442,18 +442,25 @@ server <- function(input, output, session) {
    df <-  Rechenkern(r0_no_erfasstDf ,input)
   })  
  
-
+  color1 = 'blue'
+  color2 = 'green'
   
-  output$Kumuliert <- plotly::renderPlotly({
+  output$Kumuliert <- renderPlot({
+    
+
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-    p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_line() + geom_point(data = rkiAndPredictData(), aes(x = Tag, y = AnzahlFall)) +
-      scale_x_date(labels = date_format("%m-%Y"))
+    p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = ErfassteInfizierteBerechnet, color = "Erfasste Infizierte berechnet")) + geom_line() + geom_point(data = rkiAndPredictData(), aes(x = Tag, y = sumAnzahlFall, color = "Erfasste Infizierte")) +
+      scale_x_date(labels = date_format("%m-%Y")) + labs(title = "Kumulierte Infizierte", x = "Datum [mm-dd]", y = "Anzahl",
+                                                         caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
+                                                           'Erfasste Infizierte berechnet' = color1,
+                                                           'Erfasste Infizierte' = color2)) +
+      labs(color = 'Daten')
+    
 
     if(logy){
-      p <- p + coord_trans(y="log10")
-      ggplotly(p) %>% layout(yaxis = list(type="log", autorange=TRUE))
+      p <- p +  scale_y_log10(label = label_number_si())
       
     } else {
       p
@@ -463,45 +470,64 @@ server <- function(input, output, session) {
     
   })
   
-  output$Verlauf <- plotly::renderPlotly({
+  output$Verlauf <- renderPlot({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-    p <- ggplot(rkiData(), aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line() +
-      scale_x_date(labels = date_format("%m-%Y"))
-    if(logy){
-      p <-  p+ scale_y_log10(
-        breaks = scales::trans_breaks("log10", function(x) 10^x),
-        labels = scales::trans_format("log10", scales::math_format(10^.x))
-      )
-    }
-    ggplotly(p)
+    p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = AktuellInfizierteBerechnet, color ="Aktuell Infizierte berechnet")) + geom_line() + geom_line(aes(y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
+      scale_x_date(labels = date_format("%m-%Y")) + labs(title = "Verlauf Infizierte", x = "Datum [mm-dd]", y = "Anzahl",
+                                                         caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
+                                                           'Aktuell Infizierte berechnet' = color1,
+                                                           'Neu Infizierte berechnet' = color2)) +
+        labs(color = 'Daten')
+      
+      
+      
+      if(logy){
+        p <- p +  scale_y_log10(label = label_number_si())
+        
+      } else {
+        p
+        
+      }
+      p
+      
   })  
   
-  output$Krankenhaus <- plotly::renderPlotly({
+  output$Krankenhaus <- renderPlot({
    # browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
+    #browser()
+    p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = KhBerechnet)) + geom_line(aes(color ="KH berechnet")) + geom_line(aes(y = IntensivBerechnet, color ="Intensiv berechnet")) +
+      scale_x_date(labels = date_format("%m-%Y")) + labs(title = "Plätze in Krankenhaus / Intensivstation", x = "Datum [mm-dd]", y = "Anzahl",
+                                                        caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
+                                                          'KH berechnet' = color1,
+                                                          'Intensiv berechnet' = color2)) +
+        labs(color = 'Daten')
     
-    p <- ggplot(rkiData(), aes(x=Tag, y = KhBerechnet)) + geom_line() +
-      scale_x_date(labels = date_format("%m-%Y"))
-    
-    if(logy){
-      p <-  p+ scale_y_log10(
-        breaks = scales::trans_breaks("log10", function(x) 10^x),
-        labels = scales::trans_format("log10", scales::math_format(10^.x))
-      )
-    }
-    ggplotly(p)
+      if(logy){
+        p <- p +  scale_y_log10(label = label_number_si())
+        
+      } else {
+        p
+        
+      }
+      p
+      
     
   }) 
   
-  output$Reproduktionsrate <- plotly::renderPlotly({
+  output$Reproduktionsrate <- renderPlot({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
-    p <- ggplot(dataPred(), aes(x=Tag, y = TaeglichReproduktionsRateRt)) + geom_line() +
-      scale_x_date(labels = date_format("%m-%Y"))
+    p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = TaeglichReproduktionsRateRt)) + geom_line(aes(color = "Tägliche Reproduktionsrate")) + geom_line(aes(y = ReduzierteRt, color = "Reduzierte Reproduktionsrate")) +
+      scale_x_date(labels = date_format("%m-%Y")) + labs(title = "Reproduktionsrate", x = "Datum [mm-dd]", y = "Wert",
+                                                         caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
+                                                           'Tägliche Reproduktionsrate' = color1,
+                                                           'Reduzierte Reproduktionsrate' = color2)) +
+      labs(color = 'Daten')
     
-    ggplotly(p)
+   p
     
   })  
   

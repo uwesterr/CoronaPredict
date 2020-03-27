@@ -289,8 +289,9 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   
   calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = ifelse(ID==1,n0_erfasst,
                                                                   rollapply(NeuInfizierteBerechnet, 10, sum,align = "right", fill = NA, partial =TRUE) + RestanteilStartwert-NeuInfizierteBerechnet))
-  
-  calcDf <- calcDf %>% mutate(KhBerechnet =   (rollapply(NeuInfizierteBerechnet, 22, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, 8, sum,align = "right", partial = TRUE )) *kh_normal)
+ 
+  calcDf <- calcDf %>% mutate(KhBerechnet = kh_normal*  (rollapply(NeuInfizierteBerechnet, 22, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, 8, sum,align = "right", partial = TRUE )) )
+  calcDf <- calcDf %>% mutate(IntensivBerechnet = kh_normal * kh_intensiv *  (rollapply(NeuInfizierteBerechnet, 18, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, 9, sum,align = "right", partial = TRUE )))
   
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
   
