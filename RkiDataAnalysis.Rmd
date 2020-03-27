@@ -28,7 +28,7 @@ wird untersucht
 Die Daten werden vom RKI eingelesen https://experience.arcgis.com/experience/478220a4c454480e823b17327b2bf1d4/page/page_0/ 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-source(file = "helper.R")  
+source(file = "helper.R")   
 
 outpput <-  createDfBundLandKreis()
 historyDfBund <- outpput[[1]]
@@ -70,20 +70,38 @@ nestedHistoryDfBundesLand <- historyDfBundesLand %>% filter(MeldeDate >= as.Date
 
 # Define function to calculate regression
 expoModel <- function(df) {
-  lm(log10(sumAnzahlFallBundesland) ~ as.numeric(MeldeDate), data = df)
+  lm(log10(sumAnzahlFallBundesland) ~ MeldeDate, data = df)
 }
 
 
+predictLm <- function( model){
+  startDate <- as.Date('2020-03-01')
+endDate <- as.Date('2020-03-16')  
+ data <- data.frame(MeldeDate = seq(startDate, endDate,by =1))
+  
+add_predictions(data, model)
+  
+}
 nestedHistoryDfBundesLandModel <- nestedHistoryDfBundesLand %>% 
   mutate(model = map(data, expoModel),
-         predictions        = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
+         predictionsRegressionPeriode  = map(model, predictLm),
+         predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
          tidiedFit = map(model,tidy)) 
 
-predictedHistoryDfBundesLandModel <- nestedHistoryDfBundesLandModel %>% unnest(c(predictions), .sep ="_") %>% unnest(data)
+
+         
+         
+# nestedHistoryDfBundesLandModel <- nestedHistoryDfBundesLand %>% 
+#   mutate(model = map(data, expoModel),
+#          predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
+#          tidiedFit = map(model,tidy)) 
+ 
+predictedHistoryDfBundesLandModel <- nestedHistoryDfBundesLandModel %>% unnest(c(predictions), .sep ="_") %>% unnest(data) 
+
 
 # plot predictions and RKI values
 
-predictedHistoryDfBundesLandModel %>% ggplot() + geom_point(aes(x = MeldeDate, y = sumAnzahlFallBundesland, color = "rki")) +
+p <- predictedHistoryDfBundesLandModel %>% ggplot() + geom_point(aes(x = MeldeDate, y = sumAnzahlFallBundesland, color = "rki")) +
   geom_line(aes(x = predictions_MeldeDate, y = 10^predictions_pred, color = "pred")) +
   facet_wrap(vars(Bundesland), scales = "free_y") + labs(title = "Vergleich RKI- und Vorhersage Daten", x = "Meldedatum [mm-dd]", y = "Summe der gemeldeten Fälle",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
@@ -91,13 +109,19 @@ predictedHistoryDfBundesLandModel %>% ggplot() + geom_point(aes(x = MeldeDate, y
     'pred' = 'lightblue')) +
   labs(color = 'Y series')
 
+p
+
+```
+```{r}
+p  + scale_y_log10()
+
 
 ```
 
 
 ```{r}
 filter(predictedHistoryDfBundesLandModel, Bundesland == "Baden-Württemberg") %>% ggplot(aes(x = MeldeDate, y = sumAnzahlFallBundesland )) + geom_point() +
-  geom_line(aes(x = predictions_MeldeDate, y = 10^predictions_pred))  + labs(title = "Baden-Württember: Vergleich RKI- und Vorhersage Daten", x = "Meldedatum [mm-dd]", y = "Summe der gemeldeten Fälle", caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
+  geom_line(aes(x = predictions_MeldeDate, y = 10^predictions_pred))  + labs(title = "Baden-Württember: Vergleich RKI- und Vorhersage Daten", x = "Meldedatum [mm-dd]", y = "Summe der gemeldeten Fälle", caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  + scale_y_log10()
   
 ```
 
@@ -127,7 +151,7 @@ predictedHistoryDfBundesLandModel %>% filter(Bundesland %in% BundeslandBadReg) %
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
     'rki' = 'blue',
     'pred' = 'lightblue')) +
-  labs(color = 'Y series')
+  labs(color = 'Y series')  + scale_y_log10()
 
 
 ```
@@ -136,13 +160,13 @@ predictedHistoryDfBundesLandModel %>% filter(Bundesland %in% BundeslandBadReg) %
 
 Die Startwerte und Steigung können folgendermaßen extrahiert werden und sind in der Tablle unten zusammengefasst
 
-```{r extract}
+```{r extract, echo=FALSE}
 predictedHistoryDfBundesLandR0 <- nestedHistoryDfBundesLandModel %>% unnest(c(predictions), .sep ="_") %>% unnest(tidiedFit)
 
-r0Df <- predictedHistoryDfBundesLandR0 %>% mutate(R0 = ifelse(term == "as.numeric(MeldeDate)", 10^estimate, NA))
+r0Df <- predictedHistoryDfBundesLandR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA))
 
 r0Df <- r0Df %>% group_by(Bundesland) %>% select(-c(std.error, statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
-n0_erfasstDf <- predictedHistoryDfBundesLandModel %>% select(Bundesland, predictions_MeldeDate, predictions_pred)  %>% filter(predictions_MeldeDate == as.Date('2020-03-02')) %>% unique() %>% mutate(n0_erfasst = 10^predictions_pred) %>% 
+n0_erfasstDf <- predictedHistoryDfBundesLandModel %>% select(Bundesland, predictions_MeldeDate, predictions_pred)  %>% filter(predictions_MeldeDate == as.Date('2020-03-01')) %>% unique() %>% mutate(n0_erfasst = 10^predictions_pred) %>% 
   
   select(Bundesland, n0_erfasst, predictions_MeldeDate) 
 
