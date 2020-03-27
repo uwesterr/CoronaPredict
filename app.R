@@ -17,7 +17,9 @@ if (!("readxl" %in% rownames(installed.packages()))) install.packages("readxl")
 if (!("scales" %in% rownames(installed.packages()))) install.packages("scales")
 if (!("tidyr" %in% rownames(installed.packages()))) install.packages("tidyr")
 if (!("modelr" %in% rownames(installed.packages()))) install.packages("modelr")
+if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 
+library(DT)
 library(modelr)
 library(tidyr)
 
@@ -31,7 +33,10 @@ library(readxl)
 library(scales)
 
 source(file = "helper.R")
-testFunc()
+outpput <-  createDfBundLandKreis()
+historyDfBund <- outpput[[1]]
+historyDfBundesLand <- outpput[[2]]
+historyDfLandkreis <- outpput[[3]]
 # import data rki -------------------------------------------------------------
 
 historyData <- fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
@@ -274,7 +279,7 @@ ui <-
                                        
                 
                                          h3("Einstellen der Darstellung") ,
-                                         
+                                       column(6,   
                                        wellPanel(
                                        dateRangeInput(inputId = "dateInput",
                                                         label = "Date",
@@ -285,12 +290,14 @@ ui <-
                                                         format = "yyyy-mm-dd",
                                                         startview = "month",
                                                         weekstart = 1
-                                         ),
+                                         ))),
+                                       column(6,
+                                              wellPanel(
                                          radioButtons(inputId = "logyInput",
                                                       label = "Darstellung y-Achse",
                                                       choices = c("linear", "logarithmisch"),
                                                       selected =  "logarithmisch")
-                                       ),
+                                       )),
                                              
                                        
                                        
@@ -395,26 +402,8 @@ server <- function(input, output, session) {
                       Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
    
   })
-  
-  
-  rkiData <- reactive({
-      
-      if (input$regionSelected ==1) {
-      
-        df <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
-      
-    } else if (input$regionSelected ==2) {
-      
-      df <- historyDf %>% filter(Bundesland ==  input$filterRegion) %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
-      
-      
-    } else if(input$regionSelected ==3) {
-      
-      df  <- historyDf %>% filter(Landkreis == input$filterRegion) %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
-    }
-    df
-  })  
- 
+  rv <- reactiveValues()
+  rv$run2 <- 0
   observe({
     updateSelectInput(
       session,
@@ -433,16 +422,33 @@ server <- function(input, output, session) {
         choices = historyDf %>% select(Landkreis) %>% unique() %>% .[[1]]
       }
       
-      
     )
   })
   
+  rkiAndPredictData <- reactive({
+      
+      if (input$regionSelected ==1) {
+      
+        df <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
+      
+    } else if (input$regionSelected ==2) {
+      
+      r0_no_erfasstDf <- createBundesLandR0_no_erfasstDf(historyDfBundesLand, input)
+      
+    } else if(input$regionSelected ==3) {
+      
+      df  <- historyDf %>% filter(Landkreis == input$filterRegion) %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
+    }
+   df <-  Rechenkern(r0_no_erfasstDf ,input)
+  })  
+ 
+
   
   output$Kumuliert <- plotly::renderPlotly({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-    p <- ggplot(dataPred(), aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_line() + geom_point(data = rkiData(), aes(x = MeldeDate, y = AnzahlFall)) +
+    p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_line() + geom_point(data = rkiAndPredictData(), aes(x = Tag, y = AnzahlFall)) +
       scale_x_date(labels = date_format("%m-%Y"))
 
     if(logy){
@@ -461,7 +467,7 @@ server <- function(input, output, session) {
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-    p <- ggplot(dataPred(), aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line() +
+    p <- ggplot(rkiData(), aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line() +
       scale_x_date(labels = date_format("%m-%Y"))
     if(logy){
       p <-  p+ scale_y_log10(
@@ -473,10 +479,10 @@ server <- function(input, output, session) {
   })  
   
   output$Krankenhaus <- plotly::renderPlotly({
-    
+   # browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-    p <- ggplot(dataPred(), aes(x=Tag, y = KhBerechnet)) + geom_line() +
+    p <- ggplot(rkiData(), aes(x=Tag, y = KhBerechnet)) + geom_line() +
       scale_x_date(labels = date_format("%m-%Y"))
     
     if(logy){
