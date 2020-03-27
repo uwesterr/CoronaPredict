@@ -330,12 +330,27 @@ ui <-
                                        )
                                      ), # end sidebar panel
                                      mainPanel(
+                                       
                                        h2("Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung"),
+                                       
                                        fluidRow(
-                                         splitLayout(cellWidths = c("50%", "50%"), plotOutput(outputId ="Kumuliert"), plotOutput(outputId ="Verlauf"))
+                                         wellPanel(
+                                         splitLayout(
+                                           style = "border: 1px solid silver;",
+                                           cellWidths =  c("50%", "50%"),
+                                           cellHeight = "120%",
+                                           cellArgs = list(style = "padding: 6px"), 
+                                           plotOutput(outputId ="Kumuliert"), plotOutput(outputId ="Verlauf"))
+                                       )
                                        ),
                                        fluidRow(
-                                         splitLayout(cellWidths = c("50%", "50%"), plotOutput(outputId ="Krankenhaus"), plotOutput(outputId ="Reproduktionsrate"))
+                                         wellPanel(
+                                           splitLayout(
+                                             style = "border: 1px solid silver;",
+                                             cellWidths =  c("50%", "50%"),
+                                             cellHeight = "120%",
+                                             plotOutput(outputId ="Krankenhaus"), plotOutput(outputId ="Reproduktionsrate"))
+                                         ),
                                        )       
                                        
                                      ) # end main panel
@@ -444,6 +459,18 @@ server <- function(input, output, session) {
  
   color1 = 'blue'
   color2 = 'green'
+  # more options at https://ggplot2.tidyverse.org/reference/theme.html
+  themeCust <-  theme(
+    plot.title = element_text(color="blue", size=24, face="bold.italic"),
+    axis.title.x = element_text(color="blue", size=16, face="bold"),
+    axis.title.y = element_text(color="blue", size=16, face="bold"),
+    axis.text.x = element_text(color="blue", size=16, face="bold"),
+    axis.text.y = element_text(color="blue", size=16, face="bold"),
+    plot.background = element_rect(fill = "lightgray"),
+    axis.text = element_text(colour = "blue"),
+    legend.text = element_text(color="blue", size=16, face="bold"),
+    legend.position = "bottom"
+  )
   
   output$Kumuliert <- renderPlot({
     
@@ -456,7 +483,7 @@ server <- function(input, output, session) {
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Erfasste Infizierte berechnet' = color1,
                                                            'Erfasste Infizierte' = color2)) +
-      labs(color = 'Daten')
+      labs(color = 'Daten') + themeCust
     
 
     if(logy){
@@ -479,7 +506,7 @@ server <- function(input, output, session) {
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Aktuell Infizierte berechnet' = color1,
                                                            'Neu Infizierte berechnet' = color2)) +
-        labs(color = 'Daten')
+        labs(color = 'Daten') + themeCust
       
       
       
@@ -498,12 +525,12 @@ server <- function(input, output, session) {
    # browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     #browser()
-    p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = KhBerechnet)) + geom_line(aes(color ="KH berechnet")) + geom_line(aes(y = IntensivBerechnet, color ="Intensiv berechnet")) +
+    p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = KhBerechnet, color ="KH berechnet")) + geom_line() + geom_line(aes(y= IntensivBerechnet, color = "Intensiv berechnet")) +
       scale_x_date(labels = date_format("%m-%Y")) + labs(title = "Plätze in Krankenhaus / Intensivstation", x = "Datum [mm-dd]", y = "Anzahl",
-                                                        caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
-                                                          'KH berechnet' = color1,
-                                                          'Intensiv berechnet' = color2)) +
-        labs(color = 'Daten')
+                                                         caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
+                                                           'KH berechnet' = color1,
+                                                           'Intensiv berechnet' = color2)) +
+      labs(color = 'Daten') + themeCust
     
       if(logy){
         p <- p +  scale_y_log10(label = label_number_si())
@@ -525,7 +552,7 @@ server <- function(input, output, session) {
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Tägliche Reproduktionsrate' = color1,
                                                            'Reduzierte Reproduktionsrate' = color2)) +
-      labs(color = 'Daten')
+      labs(color = 'Daten') + themeCust
     
    p
     
