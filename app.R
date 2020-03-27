@@ -17,7 +17,9 @@ if (!("readxl" %in% rownames(installed.packages()))) install.packages("readxl")
 if (!("scales" %in% rownames(installed.packages()))) install.packages("scales")
 if (!("tidyr" %in% rownames(installed.packages()))) install.packages("tidyr")
 if (!("modelr" %in% rownames(installed.packages()))) install.packages("modelr")
+if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 
+library(DT)
 library(modelr)
 library(tidyr)
 
@@ -31,7 +33,10 @@ library(readxl)
 library(scales)
 
 source(file = "helper.R")
-testFunc()
+outpput <-  createDfBundLandKreis()
+historyDfBund <- outpput[[1]]
+historyDfBundesLand <- outpput[[2]]
+historyDfLandkreis <- outpput[[3]]
 # import data rki -------------------------------------------------------------
 
 historyData <- fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
@@ -274,7 +279,7 @@ ui <-
                                        
                 
                                          h3("Einstellen der Darstellung") ,
-                                         
+                                       column(6,   
                                        wellPanel(
                                        dateRangeInput(inputId = "dateInput",
                                                         label = "Date",
@@ -285,12 +290,14 @@ ui <-
                                                         format = "yyyy-mm-dd",
                                                         startview = "month",
                                                         weekstart = 1
-                                         ),
+                                         ))),
+                                       column(6,
+                                              wellPanel(
                                          radioButtons(inputId = "logyInput",
                                                       label = "Darstellung y-Achse",
                                                       choices = c("linear", "logarithmisch"),
                                                       selected =  "logarithmisch")
-                                       ),
+                                       )),
                                              
                                        
                                        
