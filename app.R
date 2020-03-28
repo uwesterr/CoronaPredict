@@ -1,4 +1,5 @@
 
+
 # important ---------------------------------------------------------------
 
 #based on covid19germany
@@ -50,53 +51,52 @@ ui <-
                                      sidebarPanel(
                                        
                                        wellPanel(
-                                         fluidRow(
-                                         column(6,
                                          radioButtons("regionSelected", label = h3("Region"),
                                                       choices = list("Deutschland" = 1, "Bundesländer" = 2, "Landkreise" = 3), 
-                                                      selected = 2)),
-                                         column(6, 
-                                                wellPanel(style = "background-color: lightblue",
-                                           h5("Erst Auswahl  Region, danach Bundesland oder Landkreis"),     
-                                         ))),
-                                         
-                                         fluidRow(
-                                           column(6,
+                                                      selected = 2),
                                          selectInput("BundeslandSelected", "Bundesland ausgewählt", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
-                                                        selectize = TRUE, width = NULL, size = NULL)),
-                                         column(6,
-                                         selectInput("LandkreiseSelected", "Landkeis ausgewählt:", choices = historyDfLandkreis$Landkreis %>% unique()),
-                                       ))),
+                                                        selectize = TRUE, width = NULL, size = NULL),
+                                         selectInput("LandkreiseSelected", "Landkeis ausgewählt:", choices = historyDfLandkreis$Landkreis %>% unique())
+                                       ),
                                       
-                                         h4("Krankenhausaufenthalt"),   
-                                         column(6,
-                                                wellPanel(
-                                         numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5),
-                                         numericInput("t_kh", label = "Dauer", value = 14),
-                                         numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8))),
-                                         column(6,
-                                                wellPanel(
-                                         numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25),
-                                         numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10),
-                                         numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1)
-                                       )) ,  
-                                         h3("Expertenparameter für den Infektionsverlauf"),   
-                                         column(6,
-                                                wellPanel(
-                                         numericInput("ges_inf_rate", label = "Gesättige Infektionsrate [%]", value = 70),
-                                         numericInput("faktor_n_inf", label = "Faktor der nicht erfassten Infizierten", value = 15),
-                                         numericInput("ta", label = "Dauer Ansteckbarkeit", value = 10),
-                                         numericInput("r0", label = "Neuansteckung durch einen Infizierten", value = 13))),
-                                         column(6,
-                                                wellPanel(
-                                         numericInput("tod_rate", label = "Sterblichkeit [%]", value = 2),
-                                         numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8),
-                                         dateInput("reduzierung_datum", label = "Datum Reduktionsmassnahme [yyyy-mm-dd]", value = "2020-03-16"),
-                                         numericInput("reduzierung_rt", label = "Reduktion der Repr.rate/Tag [%]", value = 30)
-                                       )) , 
+ 
+                                       h3("Expertenparameter Infektionsverlauf"),   
+                                       column(6,
+                                            wellPanel(
+                                              numericInput("ges_inf_rate", label = "Durchseuchung [%]", value = 70),
+                                              numericInput("ti", label = "Inkubationszeit [d]", value = 2),
+                                              numericInput("tod_rate", label = "Sterblichkeit [%]", value = 2))),
+                                       column(6,
+                                            wellPanel(
+                                              numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15),
+                                              numericInput("ta", label = "Infektiosität [d]", value = 6),
+                                              numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8))),
+
+                                       h3("Reduzierende Massnahmen"),   
+                                       column(6,
+                                              wellPanel(
+                                                dateInput("reduzierung_datum",  label = "Datum", value = "2020-03-16"),
+                                                dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-23"),
+                                                dateInput("reduzierung_datum2", label = "Datum", value = "2020-04-01"))),
+                                       column(6,
+                                              wellPanel(
+                                                numericInput("reduzierung_rt",  label = "Reduzierung Rt [%]", value = 50),
+                                                numericInput("reduzierung_rt1", label = "Reduzierung Rt [%]", value = 50), 
+                                                numericInput("reduzierung_rt2", label = "Reduzierung Rt [%]", value = 50))), 
                                        
+                                       h3("Krankenhausaufenthalt"),   
+                                       column(6,
+                                              wellPanel(
+                                                numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5),
+                                                numericInput("t_kh", label = "Dauer", value = 14),
+                                                numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8))),
+                                       column(6,
+                                              wellPanel(
+                                                numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25),
+                                                numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10),
+                                                numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1))) ,                                        
                 
-                                         h3("Einstellen der Darstellung") ,
+                                      h3("Einstellen der Darstellung") ,
                                        column(6,   
                                        wellPanel(
                                        dateRangeInput(inputId = "dateInput",
@@ -178,9 +178,7 @@ ui <-
              
              tabPanel("Literatur",
    
-                      includeMarkdown("hilfe.md"),
                       
-                      # includeHTML("RkiDataAnalysis.html"),
                       # Show a plot of the generated distribution
         
                       
@@ -366,4 +364,3 @@ server <- function(input, output, session) {
 
 
 shinyApp(ui = ui, server = server)
-
