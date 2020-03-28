@@ -50,13 +50,23 @@ ui <-
                                      sidebarPanel(
                                        
                                        wellPanel(
+                                         fluidRow(
+                                         column(6,
                                          radioButtons("regionSelected", label = h3("Region"),
                                                       choices = list("Deutschland" = 1, "Bundesländer" = 2, "Landkreise" = 3), 
-                                                      selected = 2),
+                                                      selected = 2)),
+                                         column(6,
+                                                wellPanel(
+                                           h5("Auswahl der  Region und dann Bundesland oder Landkreis auswählen"),     
+                                         ))),
+                                         
+                                         fluidRow(
+                                           column(6,
                                          selectInput("BundeslandSelected", "Bundesland ausgewählt", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
-                                                        selectize = TRUE, width = NULL, size = NULL),
-                                         selectInput("LandkreiseSelected", "Landkeis ausgewählt:", choices = historyDfLandkreis$Landkreis %>% unique())
-                                       ),
+                                                        selectize = TRUE, width = NULL, size = NULL)),
+                                         column(6,
+                                         selectInput("LandkreiseSelected", "Landkeis ausgewählt:", choices = historyDfLandkreis$Landkreis %>% unique()),
+                                       ))),
                                       
                                          h4("Krankenhausaufenthalt"),   
                                          column(6,
@@ -168,7 +178,9 @@ ui <-
              
              tabPanel("Literatur",
    
+                      includeMarkdown("hilfe.md"),
                       
+                      # includeHTML("RkiDataAnalysis.html"),
                       # Show a plot of the generated distribution
         
                       
