@@ -59,14 +59,14 @@ ui <-
                                                 wellPanel(style = "background-color: lightblue",
                                            h5("Erst Auswahl  Region, danach Bundesland oder Landkreis"),     
                                          ))),
-                                         
+                                         wellPanel(
                                          fluidRow(
                                            column(6,
                                          selectInput("BundeslandSelected", "Bundesland ausgewählt", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
                                                         selectize = TRUE, width = NULL, size = NULL)),
                                          column(6,
                                          selectInput("LandkreiseSelected", "Landkeis ausgewählt:", choices = historyDfLandkreis$Landkreis %>% unique()),
-                                       ))),
+                                       )))),
                                       
                                          h4("Krankenhausaufenthalt"),   
                                          column(6,

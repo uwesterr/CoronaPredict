@@ -85,7 +85,7 @@ historyData <- fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7
 
 historyDf <- historyData[["features"]][["properties"]]
 #historyDf$MeldeDate <- as_datetime(historyDf$Meldedatum/1000)
-historyDf$MeldeDate <- as_datetime(historyDf$Meldedatum)
+historyDf$MeldeDate <- as.Date(historyDf$Meldedatum)
 ggplot(historyDf %>% group_by(Landkreis) %>% filter(Landkreis == "LK Esslingen"), aes(y= AnzahlFall, x=MeldeDate)) + geom_point()
 
 
@@ -370,7 +370,26 @@ Kumulierte Infizierte /Tote
 ```{r kumInf}
 
 
-calcDf %>% ggplot(aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_line() +  scale_y_log10(
+calcDf %>% ggplot(aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_line() + scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+ )
+
+
+
+```
+Vergleiche Vorhersage- und RKI-Werte
+
+```{r kumInfRki}
+
+historyDfGroupedMeldeDate <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
+
+historyDfGroupedMeldeDate <- historyDfGroupedMeldeDate   %>% mutate(CumCases = cumsum(AnzahlFall))
+
+historyDfGroupedMeldeDate %>% ggplot(aes(x = MeldeDate, y = CumCases)) + geom_line()
+
+calcDf %>% ggplot(aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_line() + 
+  geom_point(data = historyDfGroupedMeldeDate, aes(x = MeldeDate, y = CumCases)) + scale_y_log10(
    breaks = scales::trans_breaks("log10", function(x) 10^x),
    labels = scales::trans_format("log10", scales::math_format(10^.x))
  )
@@ -386,11 +405,29 @@ Verlauf Infizierte
 
 calcDf %>% ggplot(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line() + geom_line(data= calcDf, aes(y= NeuInfizierteBerechnet )) + scale_y_log10(
    breaks = scales::trans_breaks("log10", function(x) 10^x),
-   labels = scales::trans_format("log10", scales::math_format(10^.x))
+   labels = scales::trans_format("log10", scales::math_format(10^.x)),
+  limits = c(10,NA)
+ ) 
+
+
+```
+
+Vergleich verlauf Infizierte
+
+```{r verlaufInf}
+
+calcDf %>% ggplot(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line() + geom_line(data= calcDf, aes(y= NeuInfizierteBerechnet )) + 
+    geom_point(data = historyDfGroupedMeldeDate, aes(x = MeldeDate, y = AnzahlFall))  +
+  scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x)),
+  limits = c(10,NA)
  )
 
 
 ```
+
+
 
 Plätze im Krankenhaus
 
