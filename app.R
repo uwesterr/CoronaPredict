@@ -55,9 +55,9 @@ ui <-
                                          radioButtons("regionSelected", label = h3("Region"),
                                                       choices = list("Deutschland" = 1, "Bundesländer" = 2, "Landkreise" = 3), 
                                                       selected = 2)),
-                                         column(6,
-                                                wellPanel(
-                                           h5("Auswahl der  Region und dann Bundesland oder Landkreis auswählen"),     
+                                         column(6, 
+                                                wellPanel(style = "background-color: lightblue",
+                                           h5("Erst Auswahl  Region, danach Bundesland oder Landkreis"),     
                                          ))),
                                          
                                          fluidRow(
