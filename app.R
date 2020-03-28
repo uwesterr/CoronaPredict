@@ -53,8 +53,9 @@ ui <-
                                          radioButtons("regionSelected", label = h3("Region"),
                                                       choices = list("Deutschland" = 1, "Bundesländer" = 2, "Landkreise" = 3), 
                                                       selected = 2),
-                                         selectInput("filterRegion", "Region to select", choices = "Baden-Württemberg", selected = NULL, multiple = FALSE,
-                                                        selectize = TRUE, width = NULL, size = NULL)
+                                         selectInput("BundeslandSelected", "Bundesland ausgewählt", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
+                                                        selectize = TRUE, width = NULL, size = NULL),
+                                         selectInput("LandkreiseSelected", "Landkeis ausgewählt:", choices = historyDfLandkreis$Landkreis %>% unique())
                                        ),
                                       
                                          h4("Krankenhausaufenthalt"),   
@@ -209,16 +210,17 @@ server <- function(input, output, session) {
   rkiAndPredictData <- reactive({
       
       if (input$regionSelected ==1) {
-      
-        df <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
+  #      browser()
+        r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBund, input,session)
+        
       
     } else if (input$regionSelected ==2) {
       
-      r0_no_erfasstDf <- createBundesLandR0_no_erfasstDf(historyDfBundesLand, input)
+      r0_no_erfasstDf <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, input)
       
     } else if(input$regionSelected ==3) {
       
-      df  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, input,session)
+      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, input,session)
     }
 
    df <-  Rechenkern(r0_no_erfasstDf ,input)
@@ -247,10 +249,10 @@ server <- function(input, output, session) {
   output$Kumuliert <- renderPlotly({
     
 
-    
+    #browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-    p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = ErfassteInfizierteBerechnet, color = "Erfasste Infizierte berechnet")) + geom_line() + geom_point(data = rkiAndPredictData(), aes(x = Tag, y = sumAnzahlFall, color = "Erfasste Infizierte")) +
+    p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = ErfassteInfizierteBerechnet, color = "Erfasste Infizierte berechnet")) + geom_line() + geom_point(data = rkiAndPredictData(), aes(x = Tag, y = SumAnzahl, color = "Erfasste Infizierte")) +
       scale_x_date(labels = date_format("%m-%Y")) + labs(title = "Kumulierte Infizierte", x = "Datum [mm-dd]", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Erfasste Infizierte berechnet' = color1,
