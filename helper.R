@@ -96,31 +96,13 @@ createLandkreisR0_no_erfasstDf <- function(df, input, session){
     regionSelected <- input$LandkreiseSelected
   }
   
-
-
-
-    ## create subDataframe based on variables
-    
-    # filter with variables https://stackoverflow.com/questions/31760134/using-filter-in-dplyr-where-both-field-and-value-are-in-variables
-    
-    ############ delete when reactive problem fixed TODO
-    varString <- "LK Alb-Donau-Kreis"
-    #df <- df %>% filter(.data[[filterVar]]==input$filterRegion)
-    ######### needs to be
     df <- df %>% ungroup() %>%  filter(whichRegion == regionSelected)
-    #df <- df %>% filter(.data[[filterVar]]==varString)
+ 
     df <- df %>% rename_at(vars(contains("sumAnzahlFall")), ~ "SumAnzahl" ) %>% 
       rename_at(vars(contains("Einwohner")), ~ "Einwohner" )
     
-    
-    nesteddf <- df %>% group_by(whichRegion) %>% filter(whichRegion ==  regionSelected) %>% filter(MeldeDate <= as.Date('2020-03-16')) %>% nest()
-    
-    ## will be replaced by 
     nesteddf <- df %>% filter(MeldeDate <= as.Date('2020-03-16'))  %>% nest()
 
-    
-    
-    # browser()
     # Define function to calculate regression
     expoModel <- function(df) {
       
@@ -155,27 +137,15 @@ createLandkreisR0_no_erfasstDf <- function(df, input, session){
     
     r0Df <- r0Df  %>% select(-c(std.error, statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
     
-    # find regression value of first melde day
+    # find regression value of first melde day, here is the problem, with first day of melde the results are useless
     firstMeldeDay <- df$FirstMelde %>% min
-    #vars <- c(filterVar = filterVar, predictions_MeldeDate = "predictions_MeldeDate", predictions_pred = "predictions_pred")
-    #vars2 = c(filterVar = filterVar, predictions_MeldeDate = "predictions_MeldeDate", n0_erfasst = "n0_erfasst")
+
     n0_erfasstDf <- predicteddfModel %>% select(whichRegion, predictions_MeldeDate, predictions_pred)  %>% 
       filter(predictions_MeldeDate == as.Date('2020-03-01')) %>% unique() %>% mutate(n0_erfasst = 10^predictions_pred) 
     
- 
-    
     r0_no_erfasstDf <- cbind(r0Df ,n0_erfasstDf %>% select(whichRegion, n0_erfasst) ) %>% select(whichRegion, p.value, R0, n0_erfasst) 
-     #browser()
-    
-    ############## muss ersetzt werden TODO
-#    dfRoNo <- left_join(df %>% filter(!!filterVar ==  input$filterRegion), r0_no_erfasstDf) %>% 
-#      mutate(sumAnzahlFall = sumAnzahlFallBundesland, Ygesamt = EinwohnerBundesland)
-#    
     dfRoNo <- left_join(df , r0_no_erfasstDf) %>%    mutate( Ygesamt = Einwohner)
 
-
-  #browser()  
-    
 
   dfRoNo
 }
