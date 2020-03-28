@@ -270,7 +270,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
     )
     
     
-    updatecalcDf$WirksamkeitReduktion<- calcWirksamkeitReduktion(updatecalcDf, reduzierung_datum, ta)  
+    updatecalcDf$WirksamkeitReduktion<- calcWirksamkeitReduktion(updatecalcDf, reduzierung_datum, ta)
     updatecalcDf$ReduzierteRt<- calcReduzierteRt(updatecalcDf)
     updatecalcDf$GesamtInfizierteBerechnet <-  calcGesamtInfizierteBerechnet(tailCalcDf)
     updatecalcDf$NeuGesamtInfizierteBerechnet<- calcNeuGesamtInfizierteBerechnet(updatecalcDf)
@@ -292,7 +292,6 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
  
   calcDf <- calcDf %>% mutate(KhBerechnet = kh_normal*  (rollapply(NeuInfizierteBerechnet, 22, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, 8, sum,align = "right", partial = TRUE )) )
   calcDf <- calcDf %>% mutate(IntensivBerechnet = kh_normal * kh_intensiv *  (rollapply(NeuInfizierteBerechnet, 18, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, 9, sum,align = "right", partial = TRUE )))
-  
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
   
  #browser()
