@@ -26,14 +26,23 @@ createBundesLandR0_no_erfasstDf <- function(historyDfBundesLand, input){
     # Define function to calculate regression
     expoModel <- function(df) {
       
-      df <- df %>% filter(MeldeDate >= FirstMelde)
+      #df <- df %>% filter(MeldeDate >= FirstMelde)
+      #TG: Regression zwischen Startdatum bzw. erstem Meldedatum und erster Massnahme. Annahme: bis dahin exponentieller Verlauf
+      endDate <- as.Date(strptime(input$reduzierung_datum, format="%Y-%m-%d"))
+      startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d"))                       
+      df <- df %>% filter(MeldeDate >= startDate)
+      df <- df %>% filter(MeldeDate <= endDate)
       lm(log10(sumAnzahlFallBundesland) ~ MeldeDate, data = df)
     }
     
     
     predictLm <- function( model, data){
-      startDate <- data$FirstMelde %>% unique()
-      endDate <- as.Date('2020-03-16')  
+      #startDate <- data$FirstMelde %>% unique()
+      #endDate <- as.Date('2020-03-16') 
+      #TG: Wie in expoModel, wieso 2x ? habe ich noch nicht richtig verstanden
+      startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
+      endDate <- as.Date(strptime(input$reduzierung_datum, format="%Y-%m-%d"))  %>% unique() 
+
       data <- data.frame(MeldeDate = seq(startDate, endDate,by =1))
       
       add_predictions(data, model)
@@ -60,7 +69,7 @@ createBundesLandR0_no_erfasstDf <- function(historyDfBundesLand, input){
       select(Bundesland, n0_erfasst, predictions_MeldeDate) 
     
     r0_no_erfasstDf <- left_join(r0Df  ,n0_erfasstDf) %>% select(Bundesland, p.value, R0, n0_erfasst) 
-   # browser()
+    #browser()
     
     
     dfRoNo <- left_join(historyDfBundesLand %>% filter(Bundesland ==  input$filterRegion), r0_no_erfasstDf) %>% 
@@ -105,18 +114,33 @@ createLandkreisR0_no_erfasstDf <- function(df, input, session){
 
     # Define function to calculate regression
     expoModel <- function(df) {
-      
-      df <- df %>% filter(MeldeDate >= FirstMelde)
+
+      #TG: Regression zwischen Startdatum bzw. erstem Meldedatum und erster Massnahme. Annahme: bis dahin exponentieller Verlauf
+      endDate <- as.Date(strptime(input$reduzierung_datum, format="%Y-%m-%d"))
+      startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) 
+
+      if (endDate > startDate) {
+        df <- df %>% filter(MeldeDate >= startDate)
+        df <- df %>% filter(MeldeDate <= endDate)
+      }      
+      #TG durch oben ersetzt: df <- df %>% filter(MeldeDate >= FirstMelde)
+
       lm(log10(SumAnzahl) ~ MeldeDate, data = df)
     }
     
     
     predictLm <- function( model, data){
       #browser()
-      startDate <- data$FirstMelde %>% unique()
-      endDate <- as.Date('2020-03-16')  
-      data <- data.frame(MeldeDate = seq(startDate, endDate,by =1))
-      
+      #TG ersetzt durch unten: startDate <- data$FirstMelde %>% unique()
+      #TG ersetzt durch unten: endDate <- as.Date('2020-03-16')  
+
+      #TG: Wie in expoModel, wieso 2x ? habe ich noch nicht richtig verstanden
+      startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
+      endDate <- as.Date(strptime(input$reduzierung_datum, format="%Y-%m-%d"))  %>% unique() 
+
+      if (endDate > startDate) {
+        data <- data.frame(MeldeDate = seq(startDate, endDate,by =1))
+      }    
       add_predictions(data, model)
       
     }
@@ -213,12 +237,14 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   dt_kh_int	<- input$dt_kh_int # Versatz Krankenhaus - Intensivstation [tage]
   
   # Expertenparameter fÃ¼r Infektionsverlauf
-  
-  
   ges_inf_rate <- 	input$ges_inf_rate/100 # GesÃ¤ttige Infektionsrate [percent]
   faktor_n_inf <- 	input$faktor_n_inf # Faktor der nicht erfassten Infizierten
-  ta	<- input$ta # Dauer Ansteckbarkeit  [tage]
-  r0	<- input$r0 # Neuansteckung durch einen Infizierten
+  ta	<- input$ta # Infektiosität  [tage]
+  ti	<- input$ti # Inkubationszeit [tage]
+  
+
+  #TG: dieser Parameter wurde entfernt, kann intern aus ta und rt (extrahiert) berechnet werden
+  #r0	<- input$r0 # Neuansteckung durch einen Infizierten
   tod_rate <-  input$tod_rate/100 # Sterblichkeit
   td_tod <- 	input$td_tod # Dauer Infektion bis Tod  [tage]
   reduzierung_datum	<- input$reduzierung_datum # Datum Reduktionsmassnahme
@@ -228,9 +254,9 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   
   
   Y_inf_limit <- Ygesamt*ges_inf_rate/faktor_n_inf
-  Rt <- r0^(1/ta)
-  
-  
+  #tg Rt <- r0^(1/ta)
+  Rt <- r0_no_erfasstDf$R0
+  r0 <- Rt^ta
   
   # functions
   
@@ -366,16 +392,28 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
     
   }
   calcDf$ID <- seq.int(nrow(calcDf))
-  
-  
-  
-  calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = ifelse(ID==1,n0_erfasst,
-                                                                  rollapply(NeuInfizierteBerechnet, 10, sum,align = "right", fill = NA, partial =TRUE) + RestanteilStartwert-NeuInfizierteBerechnet))
  
-  calcDf <- calcDf %>% mutate(KhBerechnet = kh_normal*  (rollapply(NeuInfizierteBerechnet, 22, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, 8, sum,align = "right", partial = TRUE )) )
-  calcDf <- calcDf %>% mutate(IntensivBerechnet = kh_normal * kh_intensiv *  (rollapply(NeuInfizierteBerechnet, 18, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, 9, sum,align = "right", partial = TRUE )))
+  #TG: ersetzen der festen Zahlen durch die Variablen aus Krankenhaus, Korrektur right->left 2.pointer
+  #    Infiziert
+  ende_inf <- ti+ta
+  calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = ifelse(ID==1,n0_erfasst,
+                                                                  rollapply(NeuInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) + RestanteilStartwert-NeuInfizierteBerechnet))
+  # In KH
+  beginn_kh <- dt_inf_kh
+  ende_kh   <- dt_inf_kh + t_kh
+  calcDf <- calcDf %>% mutate(KhBerechnet = kh_normal * (rollapply(NeuInfizierteBerechnet, ende_kh, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, beginn_kh, sum,align = "left", partial = TRUE )) )
+
+  # In Intensiv
+  # TG: hier muss noch ein Fehler stecken, wenn dt_kh_int=0 und kh_intensiv=1 (100%) ist, sind beide Kurven gleich
+  #     wenn dt_kh_int = 5 ist, erwarten wir eigentlich einen Versatz von 5 Tagen? Das ist glaube ich ein Denkfehler
+  #     Neuer Ansatz: die x% Intensiv müssen von den 
+  #     Zusaetzlich müssen die Intensiv-Betten von den Normalen Betten abgezogen werden. 
+  #     das kann getestet werden, wenn die Zahl nicht mehr ansteigt, also 100% reduzierung
+  beginn_intensiv <- dt_inf_kh + dt_kh_int
+  ende_intensiv   <- dt_inf_kh + dt_kh_int + t_intensiv
+  calcDf <- calcDf %>% mutate(IntensivBerechnet = kh_normal * kh_intensiv * (rollapply(NeuInfizierteBerechnet, ende_intensiv, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, beginn_intensiv, sum,align = "left", partial = TRUE )))
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
   
- #browser()
+  browser()
   return(df)
 }
