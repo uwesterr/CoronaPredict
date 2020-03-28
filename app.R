@@ -334,13 +334,14 @@ ui <-
                                        h2("Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung"),
                                        
                                        fluidRow(
+
                                          wellPanel(
                                          splitLayout(
                                            style = "border: 1px solid silver;",
                                            cellWidths =  c("50%", "50%"),
                                            cellHeight = "120%",
                                            cellArgs = list(style = "padding: 6px"), 
-                                           plotOutput(outputId ="Kumuliert"), plotOutput(outputId ="Verlauf"))
+                                           plotlyOutput(outputId ="Kumuliert"), plotlyOutput(outputId ="Verlauf"))
                                        )
                                        ),
                                        fluidRow(
@@ -349,8 +350,9 @@ ui <-
                                              style = "border: 1px solid silver;",
                                              cellWidths =  c("50%", "50%"),
                                              cellHeight = "120%",
-                                             plotOutput(outputId ="Krankenhaus"), plotOutput(outputId ="Reproduktionsrate"))
+                                             plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
                                          ),
+
                                        )       
                                        
                                      ) # end main panel
@@ -455,6 +457,7 @@ server <- function(input, output, session) {
       df  <- historyDf %>% filter(Landkreis == input$filterRegion) %>% group_by(MeldeDate) %>% summarise_if(is.numeric, sum, na.rm = TRUE) 
     }
    df <-  Rechenkern(r0_no_erfasstDf ,input)
+   
   })  
  
   color1 = 'blue'
@@ -472,7 +475,7 @@ server <- function(input, output, session) {
     legend.position = "bottom"
   )
   
-  output$Kumuliert <- renderPlot({
+  output$Kumuliert <- renderPlotly({
     
 
     
@@ -483,7 +486,9 @@ server <- function(input, output, session) {
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Erfasste Infizierte berechnet' = color1,
                                                            'Erfasste Infizierte' = color2)) +
-      labs(color = 'Daten') + themeCust
+
+      labs(color = 'Daten') + scale_y_continuous(labels = scales::comma)
+
     
 
     if(logy){
@@ -493,11 +498,14 @@ server <- function(input, output, session) {
       p
       
     }
+    p <- ggplotly(p)
+    p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))
+    #p <- p %>% layout(legend = list(orientation = 'h'))
     p
     
   })
   
-  output$Verlauf <- renderPlot({
+  output$Verlauf <- renderPlotly({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
@@ -506,7 +514,9 @@ server <- function(input, output, session) {
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Aktuell Infizierte berechnet' = color1,
                                                            'Neu Infizierte berechnet' = color2)) +
-        labs(color = 'Daten') + themeCust
+
+        labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
+
       
       
       
@@ -517,20 +527,24 @@ server <- function(input, output, session) {
         p
         
       }
-      p
+    p <- ggplotly(p)
+    p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))
+    p
       
   })  
   
-  output$Krankenhaus <- renderPlot({
+  output$Krankenhaus <- renderPlotly({
    # browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     #browser()
     p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = KhBerechnet, color ="KH berechnet")) + geom_line() + geom_line(aes(y= IntensivBerechnet, color = "Intensiv berechnet")) +
       scale_x_date(labels = date_format("%m-%Y")) + labs(title = "Plätze in Krankenhaus / Intensivstation", x = "Datum [mm-dd]", y = "Anzahl",
+
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'KH berechnet' = color1,
                                                            'Intensiv berechnet' = color2)) +
-      labs(color = 'Daten') + themeCust
+      llabs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
+
     
       if(logy){
         p <- p +  scale_y_log10(label = label_number_si())
@@ -539,12 +553,14 @@ server <- function(input, output, session) {
         p
         
       }
-      p
+    p <- ggplotly(p)
+    p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  
+    p
       
     
   }) 
   
-  output$Reproduktionsrate <- renderPlot({
+  output$Reproduktionsrate <- renderPlotly({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = TaeglichReproduktionsRateRt)) + geom_line(aes(color = "Tägliche Reproduktionsrate")) + geom_line(aes(y = ReduzierteRt, color = "Reduzierte Reproduktionsrate")) +
@@ -552,8 +568,11 @@ server <- function(input, output, session) {
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Tägliche Reproduktionsrate' = color1,
                                                            'Reduzierte Reproduktionsrate' = color2)) +
-      labs(color = 'Daten') + themeCust
-    
+
+      labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
+    p <- ggplotly(p)
+    p <- p %>% layout(legend = list(x = 0.01, y = 0.01, font = list(size = 8))) 
+
    p
     
   })  
