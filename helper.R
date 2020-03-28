@@ -71,6 +71,115 @@ createBundesLandR0_no_erfasstDf <- function(historyDfBundesLand, input){
   dfRoNo
 }
 
+
+
+
+#library(rlang)
+#which_column = quot(v1)
+#df %>% filter(!!which_column == 1)
+
+createLandkreisR0_no_erfasstDf <- function(df, input, session){
+ # browser()
+  if (input$regionSelected ==1) {
+    filterVar = "Bund"
+    df$Bund = "Deutschland"
+    df <- df %>% rename("whichRegion" = "Bund")
+    regionSelected <- "Bund"
+    df$whichRegion ="Bund"  # set all of the entries to be taken care of
+  } else if (input$regionSelected ==2) {
+    filterVar = "Bundesland"
+    df <- df %>% rename("whichRegion" = "Bundesland")
+    regionSelected <- input$BundeslandSelected
+  } else if(input$regionSelected ==3) {
+    filterVar = "Landkreis"
+    df <- df %>% rename("whichRegion" = "Landkreis")
+    regionSelected <- input$LandkreiseSelected
+  }
+  
+
+
+
+    ## create subDataframe based on variables
+    
+    # filter with variables https://stackoverflow.com/questions/31760134/using-filter-in-dplyr-where-both-field-and-value-are-in-variables
+    
+    ############ delete when reactive problem fixed TODO
+    varString <- "LK Alb-Donau-Kreis"
+    #df <- df %>% filter(.data[[filterVar]]==input$filterRegion)
+    ######### needs to be
+    df <- df %>% ungroup() %>%  filter(whichRegion == regionSelected)
+    #df <- df %>% filter(.data[[filterVar]]==varString)
+    df <- df %>% rename_at(vars(contains("sumAnzahlFall")), ~ "SumAnzahl" ) %>% 
+      rename_at(vars(contains("Einwohner")), ~ "Einwohner" )
+    
+    
+    nesteddf <- df %>% group_by(whichRegion) %>% filter(whichRegion ==  regionSelected) %>% filter(MeldeDate <= as.Date('2020-03-16')) %>% nest()
+    
+    ## will be replaced by 
+    nesteddf <- df %>% filter(MeldeDate <= as.Date('2020-03-16'))  %>% nest()
+
+    
+    
+    # browser()
+    # Define function to calculate regression
+    expoModel <- function(df) {
+      
+      df <- df %>% filter(MeldeDate >= FirstMelde)
+      lm(log10(SumAnzahl) ~ MeldeDate, data = df)
+    }
+    
+    
+    predictLm <- function( model, data){
+      #browser()
+      startDate <- data$FirstMelde %>% unique()
+      endDate <- as.Date('2020-03-16')  
+      data <- data.frame(MeldeDate = seq(startDate, endDate,by =1))
+      
+      add_predictions(data, model)
+      
+    }
+    nesteddfModel <- nesteddf %>% 
+      mutate(model = map(data, expoModel),
+             predictionsRegressionPeriode  = map2(model,data, predictLm),
+             predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
+             tidiedFit = map(model,tidy)) 
+    
+    predicteddfModel <- nesteddfModel %>% unnest(c(predictions), .sep ="_") %>% unnest(data) 
+    
+    #### calculate R0 und no_erfasst
+    
+    
+    predicteddfR0 <- nesteddfModel %>% unnest(c(predictions), .sep ="_") %>% unnest(tidiedFit)
+    
+    r0Df <- predicteddfR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA))
+    
+    r0Df <- r0Df  %>% select(-c(std.error, statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
+    
+    # find regression value of first melde day
+    firstMeldeDay <- df$FirstMelde %>% min
+    #vars <- c(filterVar = filterVar, predictions_MeldeDate = "predictions_MeldeDate", predictions_pred = "predictions_pred")
+    #vars2 = c(filterVar = filterVar, predictions_MeldeDate = "predictions_MeldeDate", n0_erfasst = "n0_erfasst")
+    n0_erfasstDf <- predicteddfModel %>% select(whichRegion, predictions_MeldeDate, predictions_pred)  %>% 
+      filter(predictions_MeldeDate == as.Date('2020-03-01')) %>% unique() %>% mutate(n0_erfasst = 10^predictions_pred) 
+    
+ 
+    
+    r0_no_erfasstDf <- cbind(r0Df ,n0_erfasstDf %>% select(whichRegion, n0_erfasst) ) %>% select(whichRegion, p.value, R0, n0_erfasst) 
+     #browser()
+    
+    ############## muss ersetzt werden TODO
+#    dfRoNo <- left_join(df %>% filter(!!filterVar ==  input$filterRegion), r0_no_erfasstDf) %>% 
+#      mutate(sumAnzahlFall = sumAnzahlFallBundesland, Ygesamt = EinwohnerBundesland)
+#    
+    dfRoNo <- left_join(df , r0_no_erfasstDf) %>%    mutate( Ygesamt = Einwohner)
+
+
+  #browser()  
+    
+
+  dfRoNo
+}
+
 createDfBundLandKreis <- function() {
   
   historyData <- fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
@@ -87,10 +196,13 @@ createDfBundLandKreis <- function() {
   #historyDf <- left_join(historyDf,bundesLandPopulation)
   #historyDf <- left_join(historyDf,landKreisPopulation)
   
-  
+  BundFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% summarise(FirstMelde = min(MeldeDate))
   historyDfBund <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, list(sum), na.rm = TRUE) %>% 
     mutate(sumAnzahlFallBund = cumsum(AnzahlFall),
-           BundIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% mutate(Ygesamt = bundesLandPopulation %>% summarise(sum = sum(EinwohnerBundesland)) %>% unlist)
+           BundIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% mutate(EinwohnerBund = bundesLandPopulation %>% summarise(sum = sum(EinwohnerBundesland)) %>% unlist) 
+  historyDfBund$FirstMelde <- BundFirstMeldung %>% unlist %>% as.Date()
+  
+  
   
   BundesLandFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% group_by(Bundesland) %>% summarise(FirstMelde = min(MeldeDate))
   historyDfBundesLand  <- historyDf %>% dplyr::ungroup() %>% group_by(Bundesland, MeldeDate)  %>% summarise_if(is.numeric, sum, na.rm = TRUE)  %>% 
@@ -114,10 +226,10 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   ### rechenkern
   
   
-  
+# browser()  
   # Betroffene
   
-  Ygesamt	<- r0_no_erfasstDf$Ygesamt # Gesamtmenge
+  Ygesamt	<- r0_no_erfasstDf$Einwohner # Gesamtmenge
   n0_erfasst <- 	r0_no_erfasstDf$n0_erfasst # Anzahl erfasster Infizierter am Beginn 
   beginn_date	<- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) # Datum Beginn
 
