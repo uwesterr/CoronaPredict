@@ -39,19 +39,24 @@ createLandkreisR0_no_erfasstDf <- function(df, input, session){
     df <- df %>% rename_at(vars(contains("sumAnzahlFall")), ~ "SumAnzahl" ) %>% 
       rename_at(vars(contains("Einwohner")), ~ "Einwohner" )
     
-    nesteddf <- df %>% filter(MeldeDate <= as.Date('2020-03-16'))  %>% nest()
+    nesteddf <- df %>% filter(MeldeDate <=  as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d")) )  %>% nest()
 
     # Define function to calculate regression
     expoModel <- function(df) {
 
       #TG: Regression zwischen Startdatum bzw. erstem Meldedatum und erster Massnahme. Annahme: bis dahin exponentieller Verlauf
+      #    Wenn Start-Date > erste Massnahme ist: Ausnahme --> 10 Tage nach Start
       endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))
       startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) 
 
       if (endDate > startDate) {
         df <- df %>% filter(MeldeDate >= startDate)
         df <- df %>% filter(MeldeDate <= endDate)
-      }      
+      } else {
+        df <- df %>% filter(MeldeDate >= startDate)
+        df <- df %>% filter(MeldeDate <= startDate+10)
+      }
+      
       #TG durch oben ersetzt: df <- df %>% filter(MeldeDate >= FirstMelde)
 
       lm(log10(SumAnzahl) ~ MeldeDate, data = df)
@@ -67,9 +72,11 @@ createLandkreisR0_no_erfasstDf <- function(df, input, session){
       startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
       endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))  %>% unique() 
 
-      if (endDate > startDate) {
-        data <- data.frame(MeldeDate = seq(startDate, endDate,by =1))
-      }    
+      if (endDate <= startDate) {
+        endDate <- startDate+10
+      } 
+      
+      data <- data.frame(MeldeDate = seq(startDate, endDate,by =1))
       add_predictions(data, model)
       
     }
@@ -78,7 +85,7 @@ createLandkreisR0_no_erfasstDf <- function(df, input, session){
              predictionsRegressionPeriode  = map2(model,data, predictLm),
              predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
              tidiedFit = map(model,tidy)) 
-    
+    #browser()
  #   predicteddfModel <- nesteddfModel %>% unnest(c(predictions), .sep ="_") %>% unnest(data) 
     
     # US 29.03.2020: Vereinfachuchung der der nest und unnest vorgänge
@@ -93,7 +100,7 @@ createLandkreisR0_no_erfasstDf <- function(df, input, session){
     #firstMeldeDay <- df$FirstMelde %>% min
 
     n0_erfasstDf <- predicteddfR0 %>% select(whichRegion, predictionsRegressionPeriode_MeldeDate, predictionsRegressionPeriode_pred)  %>% 
-      filter(predictionsRegressionPeriode_MeldeDate == as.Date('2020-03-01')) %>% unique() %>% mutate(n0_erfasst = 10^predictionsRegressionPeriode_pred) 
+      filter(predictionsRegressionPeriode_MeldeDate == as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) ) %>% unique() %>% mutate(n0_erfasst = 10^predictionsRegressionPeriode_pred) 
   
     
     r0_no_erfasstDf <- cbind(r0Df ,n0_erfasstDf %>% select(whichRegion, n0_erfasst) ) %>% select(whichRegion, p.value, R0, n0_erfasst) 
@@ -101,6 +108,7 @@ createLandkreisR0_no_erfasstDf <- function(df, input, session){
 
 
   dfRoNo
+  #browser()
 }
 
 createDfBundLandKreis <- function() {
@@ -223,8 +231,8 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   
   
   # Initialize the dataframe
-  startDate <- as.Date('2020-03-01')
-  endDate <- as.Date('2020-05-31')
+  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d"))
+  endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))
   calcDf <- tibble(Tag                     = startDate,
                    TaeglichReproduktionsRateRt       = Rt,
                    AktuellInfizierteBerechnet        = n0_erfasst,
@@ -306,10 +314,10 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
     
     # Reduzierung Rt (max. 3x)
     updatecalcDf$ReduzierteRt <- calcReduzierung(updatecalcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
-    updatecalcDf$GesamtInfizierteBerechnet <-  calcGesamtInfizierteBerechnet(tailCalcDf)
-    updatecalcDf$NeuGesamtInfizierteBerechnet<- calcNeuGesamtInfizierteBerechnet(updatecalcDf)
-    updatecalcDf$NeuInfizierteBerechnet <- max(.1,updatecalcDf$NeuGesamtInfizierteBerechnet/faktor_n_inf)
-    updatecalcDf$ErfassteInfizierteBerechnet<- calcErfassteInfizierteBerechnet(tailCalcDf)
+    updatecalcDf$GesamtInfizierteBerechnet <-  round(calcGesamtInfizierteBerechnet(tailCalcDf),digits = 0)
+    updatecalcDf$NeuGesamtInfizierteBerechnet<- round(calcNeuGesamtInfizierteBerechnet(updatecalcDf), digits = 0)
+    updatecalcDf$NeuInfizierteBerechnet <- round(max(.1,updatecalcDf$NeuGesamtInfizierteBerechnet/faktor_n_inf), digits = 0)
+    updatecalcDf$ErfassteInfizierteBerechnet<- round(calcErfassteInfizierteBerechnet(tailCalcDf), digits = 0)
     
     #test <- add_row(test,  Tag = test$Tag[i], TaeglichReproduktionsRateRt = test$TaeglichReproduktionsRateRt[i], 
     #                     GesamtInfizierteBerechnet = test$GesamtInfizierteBerechnet[i], ReduzierteRt = test$ReduzierteRt[i])
@@ -319,27 +327,24 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   }
   calcDf$ID <- seq.int(nrow(calcDf))
  
-  #TG: ersetzen der festen Zahlen durch die Variablen aus Krankenhaus, Korrektur right->left 2.pointer
   #    Infiziert
   ende_inf <- ti+ta
   calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = ifelse(ID==1,n0_erfasst,
                                                                   rollapply(NeuInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) + RestanteilStartwert-NeuInfizierteBerechnet))
+  # In Intensiv
+  # Diese Formel sollte noch einmal ueberprueft werden
+  beginn_intensiv <- dt_inf_kh + dt_kh_int
+  ende_intensiv   <- dt_inf_kh + dt_kh_int + t_intensiv
+  calcDf <- calcDf %>% mutate(IntensivBerechnet = round(kh_normal * kh_intensiv * (rollapply(NeuInfizierteBerechnet, ende_intensiv, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, beginn_intensiv, sum,align = "left", partial = TRUE ))), digits=0)
+  
   # In KH
   beginn_kh <- dt_inf_kh
   ende_kh   <- dt_inf_kh + t_kh
-  calcDf <- calcDf %>% mutate(KhBerechnet = kh_normal * (rollapply(NeuInfizierteBerechnet, ende_kh, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, beginn_kh, sum,align = "left", partial = TRUE )) )
-
-  # In Intensiv
-  # TG: hier muss noch ein Fehler stecken, wenn dt_kh_int=0 und kh_intensiv=1 (100%) ist, sind beide Kurven gleich
-  #     wenn dt_kh_int = 5 ist, erwarten wir eigentlich einen Versatz von 5 Tagen? Das ist glaube ich ein Denkfehler
-  #     Neuer Ansatz: die x% Intensiv m?ssen von den 
-  #     Zusaetzlich m?ssen die Intensiv-Betten von den Normalen Betten abgezogen werden. 
-  #     das kann getestet werden, wenn die Zahl nicht mehr ansteigt, also 100% reduzierung
-  beginn_intensiv <- dt_inf_kh + dt_kh_int
-  ende_intensiv   <- dt_inf_kh + dt_kh_int + t_intensiv
-  calcDf <- calcDf %>% mutate(IntensivBerechnet = kh_normal * kh_intensiv * (rollapply(NeuInfizierteBerechnet, ende_intensiv, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, beginn_intensiv, sum,align = "left", partial = TRUE )))
-  df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
+  calcDf <- calcDf %>% mutate(KhBerechnet       = kh_normal * (rollapply(NeuInfizierteBerechnet, ende_kh, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, beginn_kh, sum,align = "left", partial = TRUE )))
+  calcDf <- calcDf %>% mutate(KhBerechnet       = round(KhBerechnet-IntensivBerechnet),digits=0)
   
- 
+  
+  df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
+
   return(df)
 }
