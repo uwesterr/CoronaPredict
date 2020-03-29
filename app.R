@@ -53,9 +53,9 @@ ui <-
                                          radioButtons("regionSelected", label = h3("Region"),
                                                       choices = list("Deutschland" = 1, "Bundesländer" = 2, "Landkreise" = 3), 
                                                       selected = 2),
-                                         selectInput("BundeslandSelected", "Bundesland ausgewählt", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
+                                         selectInput("BundeslandSelected", "Bundesland ausgewählen", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
                                                         selectize = TRUE, width = NULL, size = NULL),
-                                         selectInput("LandkreiseSelected", "Landkeis ausgewählt:", choices = historyDfLandkreis$Landkreis %>% unique())
+                                         selectInput("LandkreiseSelected", "Landkeis ausgewählen:", choices = historyDfLandkreis$Landkreis %>% unique(), selected = "LK Esslingen")
                                        ),
                                       
  
@@ -234,9 +234,10 @@ server <- function(input, output, session) {
 
    df <-  Rechenkern(r0_no_erfasstDf ,input)
    
-   # restict data given date range
+   # restrict data to given date range
    df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                        Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
+  # browser()
    
   })  
  
@@ -258,7 +259,7 @@ server <- function(input, output, session) {
   output$Kumuliert <- renderPlotly({
     
     
-    # browser()
+   #  browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
     p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = ErfassteInfizierteBerechnet, color = "Erfasste Infizierte berechnet")) + geom_line() + geom_point(data = rkiAndPredictData(), aes(x = Tag, y = SumAnzahl, color = "Erfasste Infizierte")) +

@@ -15,77 +15,6 @@ library(DT)
 
 
 
-createBundesLandR0_no_erfasstDf <- function(historyDfBundesLand, input){
-  
-
-  
-  if(input$regionSelected == 2 &input$filterRegion != "Deutschland") {
-
-    nestedHistoryDfBundesLand <- historyDfBundesLand %>% filter(Bundesland ==  input$filterRegion) %>% filter(MeldeDate <= as.Date('2020-03-16')) %>% group_by(Bundesland) %>% nest()
-    # browser()
-    # Define function to calculate regression
-    expoModel <- function(df) {
-      
-      #df <- df %>% filter(MeldeDate >= FirstMelde)
-      #TG: Regression zwischen Startdatum bzw. erstem Meldedatum und erster Massnahme. Annahme: bis dahin exponentieller Verlauf
-      endDate <- as.Date(strptime(input$reduzierung_datum, format="%Y-%m-%d"))
-      startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d"))                       
-      df <- df %>% filter(MeldeDate >= startDate)
-      df <- df %>% filter(MeldeDate <= endDate)
-      lm(log10(sumAnzahlFallBundesland) ~ MeldeDate, data = df)
-    }
-    
-    
-    predictLm <- function( model, data){
-      #startDate <- data$FirstMelde %>% unique()
-      #endDate <- as.Date('2020-03-16') 
-      #TG: Wie in expoModel, wieso 2x ? habe ich noch nicht richtig verstanden
-      startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
-      endDate <- as.Date(strptime(input$reduzierung_datum, format="%Y-%m-%d"))  %>% unique() 
-
-      data <- data.frame(MeldeDate = seq(startDate, endDate,by =1))
-      
-      add_predictions(data, model)
-      
-    }
-    nestedHistoryDfBundesLandModel <- nestedHistoryDfBundesLand %>% 
-      mutate(model = map(data, expoModel),
-             predictionsRegressionPeriode  = map2(model,data, predictLm),
-             predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
-             tidiedFit = map(model,tidy)) 
-    
-    predictedHistoryDfBundesLandModel <- nestedHistoryDfBundesLandModel %>% unnest(c(predictions), .sep ="_") %>% unnest(data) 
-    
-    #### calculate R0 und no_erfasst
-    
-    
-    predictedHistoryDfBundesLandR0 <- nestedHistoryDfBundesLandModel %>% unnest(c(predictions), .sep ="_") %>% unnest(tidiedFit)
-    
-    r0Df <- predictedHistoryDfBundesLandR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA))
-    
-    r0Df <- r0Df %>% group_by(Bundesland) %>% select(-c(std.error, statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
-    n0_erfasstDf <- predictedHistoryDfBundesLandModel %>% select(Bundesland, predictions_MeldeDate, predictions_pred)  %>% filter(predictions_MeldeDate == as.Date('2020-03-01')) %>% unique() %>% mutate(n0_erfasst = 10^predictions_pred) %>% 
-      
-      select(Bundesland, n0_erfasst, predictions_MeldeDate) 
-    
-    r0_no_erfasstDf <- left_join(r0Df  ,n0_erfasstDf) %>% select(Bundesland, p.value, R0, n0_erfasst) 
-    #browser()
-    
-    
-    dfRoNo <- left_join(historyDfBundesLand %>% filter(Bundesland ==  input$filterRegion), r0_no_erfasstDf) %>% 
-      mutate(sumAnzahlFall = sumAnzahlFallBundesland, Ygesamt = EinwohnerBundesland)
-    
-
-  }
-  dfRoNo
-}
-
-
-
-
-#library(rlang)
-#which_column = quot(v1)
-#df %>% filter(!!which_column == 1)
 
 createLandkreisR0_no_erfasstDf <- function(df, input, session){
  # browser()
@@ -150,22 +79,22 @@ createLandkreisR0_no_erfasstDf <- function(df, input, session){
              predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
              tidiedFit = map(model,tidy)) 
     
-    predicteddfModel <- nesteddfModel %>% unnest(c(predictions), .sep ="_") %>% unnest(data) 
+ #   predicteddfModel <- nesteddfModel %>% unnest(c(predictions), .sep ="_") %>% unnest(data) 
     
-    #### calculate R0 und no_erfasst
-    
-    
-    predicteddfR0 <- nesteddfModel %>% unnest(c(predictions), .sep ="_") %>% unnest(tidiedFit)
+    # US 29.03.2020: Vereinfachuchung der der nest und unnest vorgänge
+
+    predicteddfR0 <- nesteddfModel  %>% unnest(data) %>% unnest(c(predictions), .sep ="_")%>% unnest(c(predictionsRegressionPeriode), .sep ="_") %>% unnest(tidiedFit)
     
     r0Df <- predicteddfR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA))
     
     r0Df <- r0Df  %>% select(-c(std.error, statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
     
     # find regression value of first melde day, here is the problem, with first day of melde the results are useless
-    firstMeldeDay <- df$FirstMelde %>% min
+    #firstMeldeDay <- df$FirstMelde %>% min
 
-    n0_erfasstDf <- predicteddfModel %>% select(whichRegion, predictions_MeldeDate, predictions_pred)  %>% 
-      filter(predictions_MeldeDate == as.Date('2020-03-01')) %>% unique() %>% mutate(n0_erfasst = 10^predictions_pred) 
+    n0_erfasstDf <- predicteddfR0 %>% select(whichRegion, predictionsRegressionPeriode_MeldeDate, predictionsRegressionPeriode_pred)  %>% 
+      filter(predictionsRegressionPeriode_MeldeDate == as.Date('2020-03-01')) %>% unique() %>% mutate(n0_erfasst = 10^predictionsRegressionPeriode_pred) 
+  
     
     r0_no_erfasstDf <- cbind(r0Df ,n0_erfasstDf %>% select(whichRegion, n0_erfasst) ) %>% select(whichRegion, p.value, R0, n0_erfasst) 
     dfRoNo <- left_join(df , r0_no_erfasstDf) %>%    mutate( Ygesamt = Einwohner)
@@ -185,10 +114,6 @@ createDfBundLandKreis <- function() {
   ## read population file from thonmas
   bundesLandPopulation <- read_excel("bundesland_landkreis_200326_2.xlsx", "bundesland", col_names = c("Bundesland", "EinwohnerBundesland"))
   landKreisPopulation <- read_excel("bundesland_landkreis_200326_2.xlsx", "landkreis", col_names = c("Landkreis", "EinwohnerLandkreis"))
-  
-  
-  #historyDf <- left_join(historyDf,bundesLandPopulation)
-  #historyDf <- left_join(historyDf,landKreisPopulation)
   
   BundFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% summarise(FirstMelde = min(MeldeDate))
   historyDfBund <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, list(sum), na.rm = TRUE) %>% 
@@ -217,10 +142,6 @@ createDfBundLandKreis <- function() {
 
 Rechenkern <- function(r0_no_erfasstDf, input) {
 
-  ### rechenkern
-  
-  
-# browser()  
   # Betroffene
   
   Ygesamt	<- r0_no_erfasstDf$Einwohner # Gesamtmenge
@@ -261,8 +182,10 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   # functions
   
   calcWirksamkeitReduktion <- function(calcDf, reduzierung_datum, ta) {
+    # US 29.03.2020: avoid error message Warning in if (calcDf$Tag < reduzierung_datum) { :the condition has length > 1 and only the first element will be used
+    calcDf <- calcDf %>% tail(1) 
     if (calcDf$Tag < reduzierung_datum){
-      
+  #browser()    
       WirksamkeitReduktion <- 0
       
     }  else {
