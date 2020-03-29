@@ -16,7 +16,9 @@ knitr::opts_chunk$set(
 ```
 
 # Einführung
-Der Ansatz eine Regression als zur Ermittlung von 
+
+Der Ansatz eine Regression  zur Ermittlung von 
+
 - R0
 - Anzahl erfasster Fälle zu einem Zeitpunkt to
 
@@ -61,21 +63,23 @@ Bis zum 26.03.2020 wurden in
 COVID-19 Fälle gemeldet.
 
 
-## Modellberechnung
+## Modellberechnung für Länder
 
-Zuerst werden Modelle für die Bundesländer berechnet, als model wird
+Zuerst werden Modelle für die Bundesländer berechnet, als Model wird eine Exponentialfunktion angesetzt **lm(log10(sumAnzahlFallBundesland) ~ MeldeDate, data = df)**
 
 ```{r modelBundeslaender}
-nestedHistoryDfBundesLand <- historyDfBundesLand %>% filter(MeldeDate >= as.Date('2020-03-01') & MeldeDate <= as.Date('2020-03-16')) %>% group_by(Bundesland) %>% nest()
+nestedHistoryDfBundesLand <- historyDfBundesLand %>% filter(MeldeDate <= as.Date('2020-03-16')) %>% group_by(Bundesland) %>% nest()
 
 # Define function to calculate regression
 expoModel <- function(df) {
+  
+df <- df %>% filter(MeldeDate >= FirstMelde)
   lm(log10(sumAnzahlFallBundesland) ~ MeldeDate, data = df)
 }
 
 
-predictLm <- function( model){
-  startDate <- as.Date('2020-03-01')
+predictLm <- function( model, data){
+  startDate <- data$FirstMelde %>% unique()
 endDate <- as.Date('2020-03-16')  
  data <- data.frame(MeldeDate = seq(startDate, endDate,by =1))
   
@@ -84,7 +88,7 @@ add_predictions(data, model)
 }
 nestedHistoryDfBundesLandModel <- nestedHistoryDfBundesLand %>% 
   mutate(model = map(data, expoModel),
-         predictionsRegressionPeriode  = map(model, predictLm),
+         predictionsRegressionPeriode  = map2(model,data, predictLm),
          predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
          tidiedFit = map(model,tidy)) 
 
@@ -112,12 +116,20 @@ p <- predictedHistoryDfBundesLandModel %>% ggplot() + geom_point(aes(x = MeldeDa
 p
 
 ```
+
+---
+
+Der Plot im logarithmischen Maßstab
+
 ```{r}
 p  + scale_y_log10()
 
 
 ```
 
+---
+
+Als Beipsiel die Daten für Baden-Württemberg
 
 ```{r}
 filter(predictedHistoryDfBundesLandModel, Bundesland == "Baden-Württemberg") %>% ggplot(aes(x = MeldeDate, y = sumAnzahlFallBundesland )) + geom_point() +
@@ -125,6 +137,7 @@ filter(predictedHistoryDfBundesLandModel, Bundesland == "Baden-Württemberg") %>
   
 ```
 
+---
 
 Die Qulität der Regression beurteilen wir anhand von $R^2$
 
@@ -134,7 +147,7 @@ qualityRegressionBundesland <- nestedHistoryDfBundesLandModel %>%
   unnest(glance, .drop = TRUE)
 
 qualityRegressionBundesland %>% ungroup() %>% arrange(r.squared) %>% mutate(Bundesland=factor(Bundesland, levels=Bundesland)) %>%  ggplot(aes(Bundesland, r.squared, color = r.squared)) + geom_point() + theme(legend.position = "none") +
-  coord_flip() + labs(title = "R^2 der Regression", y = "R^2", x = "",
+  coord_flip() + labs(title = expression("R^2 der Regression"), y = "R^2", x = "",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson") 
 ```
 
@@ -156,11 +169,14 @@ predictedHistoryDfBundesLandModel %>% filter(Bundesland %in% BundeslandBadReg) %
 
 ```
 
-# R0 und Startwerte aus der Regression
+## R0 und Startwerte aus der Regression
 
 Die Startwerte und Steigung können folgendermaßen extrahiert werden und sind in der Tablle unten zusammengefasst
 
-```{r extract, echo=FALSE}
+---
+
+
+```{r extractBundesland, echo=FALSE}
 predictedHistoryDfBundesLandR0 <- nestedHistoryDfBundesLandModel %>% unnest(c(predictions), .sep ="_") %>% unnest(tidiedFit)
 
 r0Df <- predictedHistoryDfBundesLandR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA))
@@ -177,6 +193,124 @@ left_join(r0Df  ,n0_erfasstDf) %>% select(Bundesland, p.value, R0, n0_erfasst) %
 ```
 
 
+#######################################################
+
+# Modelberechnung für Landkreise
+
+
+
+Zuerst werden Modelle für die Bundesländer berechnet, als Model wird eine Exponentialfunktion angesetzt **lm(log10(sumAnzahlFallBundesland) ~ MeldeDate, data = df)**
+
+Da es über 400 Land- und Stadtkreise gibt können nicht alle dargstellt werden. Exemplarisch hier die Regression für den Landkreis Esslingen
+
+
+```{r modelLandkreis}
+nestedHistoryDfLandkreis <- historyDfLandkreis %>% filter(MeldeDate <= as.Date('2020-03-16')) %>% group_by(Landkreis) %>% nest()
+
+# Define function to calculate regression
+expoModel <- function(df) {
+  
+df <- df %>% filter(MeldeDate >= FirstMelde)
+  lm(log10(sumAnzahlFallLandkreis) ~ MeldeDate, data = df)
+}
+
+
+nestedHistoryDfLandkreisModel <- nestedHistoryDfLandkreis %>% 
+  mutate(model = map(data, expoModel),
+         predictionsRegressionPeriode  = map2(model,data, predictLm),
+         predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
+         tidiedFit = map(model,tidy)) 
+
+
+         
+         
+# nestedHistoryDfBundesLandModel <- nestedHistoryDfBundesLand %>% 
+#   mutate(model = map(data, expoModel),
+#          predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
+#          tidiedFit = map(model,tidy)) 
+ 
+predictedHistoryDfLandkreisModel <- nestedHistoryDfLandkreisModel %>% unnest(c(predictions), .sep ="_") %>% unnest(data) 
+
+
+# plot predictions and RKI values
+
+```
+
+
+
+
+
+```{r}
+filter(predictedHistoryDfLandkreisModel, Landkreis == "LK Esslingen") %>% ggplot(aes(x = MeldeDate, y = sumAnzahlFallLandkreis )) + geom_point() +
+  geom_line(aes(x = predictions_MeldeDate, y = 10^predictions_pred))  + labs(title = "LK Esslingen: Vergleich RKI- und Vorhersage Daten", x = "Meldedatum [mm-dd]", y = "Summe der gemeldeten Fälle", caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  + scale_y_log10()
+  
+```
+
+
+Die Qulität der Regression beurteilen wir anhand von $R^2$
+
+
+```{r qulityOfRegressionLandkreis}
+qualityRegressionLandkreis <- nestedHistoryDfLandkreisModel %>% 
+  mutate(glance = map(model, broom::glance)) %>% 
+  unnest(glance, .drop = TRUE)
+
+qualityRegressionLandkreis %>% ungroup() %>% arrange(r.squared) %>% mutate(Landkreis=factor(Landkreis, levels=Landkreis)) %>%  ggplot(aes(Landkreis, r.squared, color = r.squared)) + geom_point() + theme(legend.position = "none") +
+  coord_flip() + labs(title = "R^2 der Regression der Landkreise", y = "R^2", x = "",
+                                                         caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson") 
+
+
+
+```
+
+
+Der Plot zeigt das die Regression für viele Landkreise nicht gut ist, nachfolgend eine Tabelle der R^2 Werte zur besseren Analyse
+
+
+```{r qulityOfRegressionLandkreisTabelle}
+qualityRegressionLandkreis %>% select(Landkreis, r.squared) %>% datatable()
+```
+
+Und Bilder der schlechtesten Regressionen
+
+---
+
+
+```{r}
+
+
+LandkreisBadReg <- qualityRegressionLandkreis %>% arrange(r.squared) %>% head(8) %>% select(Landkreis) %>% unlist
+
+predictedHistoryDfLandkreisModel %>% filter(Landkreis %in% LandkreisBadReg) %>% ggplot() + geom_point(aes(x = MeldeDate, y = sumAnzahlFallLandkreis, color = "rki")) +
+  geom_line(aes(x = predictions_MeldeDate, y = 10^predictions_pred, color = "pred")) +
+  facet_wrap(vars(Landkreis), scales = "free") + labs(title = "Vergleich RKI- und Vorhersage Daten", x = "Meldedatum [mm-dd]", y = "Summe der gemeldeten Fälle",
+                                                         caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
+    'rki' = 'blue',
+    'pred' = 'lightblue')) +
+  labs(color = 'Y series')  + scale_y_log10()
+
+
+```
+
+## R0 und Startwerte aus der Regression
+
+Die Startwerte und Steigung können folgendermaßen extrahiert werden und sind in der Tablle unten zusammengefasst
+
+```{r extract, echo=FALSE}
+predictedHistoryDfLandkreisModelR0 <- nestedHistoryDfLandkreisModel %>% unnest(c(predictions), .sep ="_") %>% unnest(tidiedFit)
+
+r0Df <- predictedHistoryDfLandkreisModelR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA))
+
+r0Df <- r0Df %>% group_by(Landkreis) %>% select(-c(std.error, statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
+n0_erfasstDf <- predictedHistoryDfLandkreisModel %>% select(Landkreis, predictions_MeldeDate, predictions_pred)  %>% filter(predictions_MeldeDate == as.Date('2020-03-01')) %>% unique() %>% mutate(n0_erfasst = 10^predictions_pred) %>% 
+  
+  select(Landkreis, n0_erfasst, predictions_MeldeDate) 
+
+left_join(r0Df  ,n0_erfasstDf) %>% select(Landkreis, p.value, R0, n0_erfasst) %>% datatable()
+
+
+
+```
 
 
 

@@ -239,7 +239,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   # Expertenparameter fÃ¼r Infektionsverlauf
   ges_inf_rate <- 	input$ges_inf_rate/100 # GesÃ¤ttige Infektionsrate [percent]
   faktor_n_inf <- 	input$faktor_n_inf # Faktor der nicht erfassten Infizierten
-  ta	<- input$ta # Infektiosität  [tage]
+  ta	<- input$ta # Infektiosit?t  [tage]
   ti	<- input$ti # Inkubationszeit [tage]
   
 
@@ -406,14 +406,14 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   # In Intensiv
   # TG: hier muss noch ein Fehler stecken, wenn dt_kh_int=0 und kh_intensiv=1 (100%) ist, sind beide Kurven gleich
   #     wenn dt_kh_int = 5 ist, erwarten wir eigentlich einen Versatz von 5 Tagen? Das ist glaube ich ein Denkfehler
-  #     Neuer Ansatz: die x% Intensiv müssen von den 
-  #     Zusaetzlich müssen die Intensiv-Betten von den Normalen Betten abgezogen werden. 
+  #     Neuer Ansatz: die x% Intensiv m?ssen von den 
+  #     Zusaetzlich m?ssen die Intensiv-Betten von den Normalen Betten abgezogen werden. 
   #     das kann getestet werden, wenn die Zahl nicht mehr ansteigt, also 100% reduzierung
   beginn_intensiv <- dt_inf_kh + dt_kh_int
   ende_intensiv   <- dt_inf_kh + dt_kh_int + t_intensiv
   calcDf <- calcDf %>% mutate(IntensivBerechnet = kh_normal * kh_intensiv * (rollapply(NeuInfizierteBerechnet, ende_intensiv, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, beginn_intensiv, sum,align = "left", partial = TRUE )))
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
   
-  browser()
+ 
   return(df)
 }
