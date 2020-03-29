@@ -53,9 +53,9 @@ ui <-
                                          radioButtons("regionSelected", label = h3("Region"),
                                                       choices = list("Deutschland" = 1, "Bundesländer" = 2, "Landkreise" = 3), 
                                                       selected = 2),
-                                         selectInput("BundeslandSelected", "Bundesland ausgewählen", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
+                                         selectInput("BundeslandSelected", "Bundesland auswählen", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
                                                      selectize = TRUE, width = NULL, size = NULL),
-                                         selectInput("LandkreiseSelected", "Landkeis ausgewählen:", choices = historyDfLandkreis$Landkreis %>% unique(), selected = "LK Esslingen")
+                                         selectInput("LandkreiseSelected", "Landkeis auswählen:", choices = historyDfLandkreis$Landkreis %>% unique(), selected = "LK Esslingen")
                                        ),
                                        
                                        
