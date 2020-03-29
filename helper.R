@@ -325,7 +325,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = ifelse(ID==1,n0_erfasst,
                                                                   rollapply(NeuInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) + RestanteilStartwert-NeuInfizierteBerechnet))
   # In KH
-  beginn_kh <- dt_inf_kh
+  beginn_kh <- dt_inf_kh  
   ende_kh   <- dt_inf_kh + t_kh
   calcDf <- calcDf %>% mutate(KhBerechnet = kh_normal * (rollapply(NeuInfizierteBerechnet, ende_kh, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, beginn_kh, sum,align = "left", partial = TRUE )) )
   
