@@ -54,34 +54,34 @@ ui <-
                                                       choices = list("Deutschland" = 1, "Bundesländer" = 2, "Landkreise" = 3), 
                                                       selected = 2),
                                          selectInput("BundeslandSelected", "Bundesland ausgewählen", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
-                                                        selectize = TRUE, width = NULL, size = NULL),
+                                                     selectize = TRUE, width = NULL, size = NULL),
                                          selectInput("LandkreiseSelected", "Landkeis ausgewählen:", choices = historyDfLandkreis$Landkreis %>% unique(), selected = "LK Esslingen")
                                        ),
-                                      
- 
+                                       
+                                       
                                        h3("Expertenparameter Infektionsverlauf"),   
                                        column(6,
-                                            wellPanel(
-                                              numericInput("ges_inf_rate", label = "Durchseuchung [%]", value = 70),
-                                              numericInput("ti", label = "Inkubationszeit [d]", value = 2),
-                                              numericInput("tod_rate", label = "Sterblichkeit [%]", value = 2))),
-                                       column(6,
-                                            wellPanel(
-                                              numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15),
-                                              numericInput("ta", label = "Infektiosität [d]", value = 6),
-                                              numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8))),
-
-                                       h3("Reduzierende Massnahmen"),   
+                                              wellPanel(
+                                                numericInput("ges_inf_rate", label = "Durchseuchung [%]", value = 70),
+                                                numericInput("ti", label = "Inkubationszeit [d]", value = 2),
+                                                numericInput("tod_rate", label = "Sterblichkeit [%]", value = 2))),
                                        column(6,
                                               wellPanel(
-                                                dateInput("reduzierung_datum",  label = "Datum", value = "2020-03-16"),
-                                                dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-23"),
-                                                dateInput("reduzierung_datum2", label = "Datum", value = "2020-04-01"))),
+                                                numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15),
+                                                numericInput("ta", label = "Infektiosität [d]", value = 6),
+                                                numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8))),
+                                       
+                                       h3("Reduzierende Massnahmen"), 
                                        column(6,
                                               wellPanel(
-                                                numericInput("reduzierung_rt",  label = "Reduzierung Rt [%]", value = 50),
-                                                numericInput("reduzierung_rt1", label = "Reduzierung Rt [%]", value = 50), 
-                                                numericInput("reduzierung_rt2", label = "Reduzierung Rt [%]", value = 50))), 
+                                                numericInput("reduzierung_rt1", label = "1. Reduzierung Rt [%]", value = 50),
+                                                numericInput("reduzierung_rt2", label = "2. Reduzierung Rt [%]", value = 50), 
+                                                numericInput("reduzierung_rt3", label = "3. Reduzierung Rt [%]", value = 50))), 
+                                       column(6,
+                                              wellPanel(
+                                                dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")),
+                                                dateInput("reduzierung_datum2", label = "Datum", value = "2020-03-23", start=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")),
+                                                dateInput("reduzierung_datum3", label = "Datum", value = "2020-04-01", start=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")))),
                                        
                                        h3("Krankenhausaufenthalt"),   
                                        column(6,
@@ -94,28 +94,28 @@ ui <-
                                                 numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25),
                                                 numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10),
                                                 numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1))) ,                                        
-                
-                                      h3("Einstellen der Darstellung") ,
+                                       
+                                       h3("Einstellen der Darstellung") ,
                                        column(6,   
-                                       wellPanel(
-                                       dateRangeInput(inputId = "dateInput",
-                                                        label = "Date",
-                                                        start = as.Date('2020-03-01'),
-                                                        end = as.Date('2020-05-01'),
-                                                        min = as.Date('2020-02-01'),
-                                                        max = as.Date('2020-07-01'),
-                                                        format = "yyyy-mm-dd",
-                                                        startview = "month",
-                                                        weekstart = 1
-                                         ))),
+                                              wellPanel(
+                                                dateRangeInput(inputId = "dateInput",
+                                                               label = "Datum",
+                                                               start = as.Date('2020-03-01'),
+                                                               end = as.Date('2020-06-01'),
+                                                               min = as.Date('2020-03-01'),
+                                                               max = as.Date('2020-12-31'),
+                                                               format = "yyyy-mm-dd",
+                                                               startview = "month",
+                                                               weekstart = 1
+                                                ))),
                                        column(6,
                                               wellPanel(
-                                         radioButtons(inputId = "logyInput",
-                                                      label = "Darstellung y-Achse",
-                                                      choices = c("linear", "logarithmisch"),
-                                                      selected =  "logarithmisch")
-                                       )),
-
+                                                radioButtons(inputId = "logyInput",
+                                                             label = "Darstellung y-Achse",
+                                                             choices = c("linear", "logarithmisch"),
+                                                             selected =  "logarithmisch")
+                                              )),
+                                       
                                        tags$img(src = "logo-admos.png",
                                                 width = "200px", height = "100px"),
                                        tags$img(src = "Folie9.png",
@@ -143,15 +143,15 @@ ui <-
                                        h2("Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung"),
                                        
                                        fluidRow(
-
+                                         
                                          wellPanel(
-                                         splitLayout(
-                                           style = "border: 1px solid silver;",
-                                           cellWidths =  c("50%", "50%"),
-                                           cellHeight = "120%",
-                                           cellArgs = list(style = "padding: 6px"), 
-                                           plotlyOutput(outputId ="Kumuliert"), plotlyOutput(outputId ="Verlauf"))
-                                       )
+                                           splitLayout(
+                                             style = "border: 1px solid silver;",
+                                             cellWidths =  c("50%", "50%"),
+                                             cellHeight = "120%",
+                                             cellArgs = list(style = "padding: 6px"), 
+                                             plotlyOutput(outputId ="Kumuliert"), plotlyOutput(outputId ="Verlauf"))
+                                         )
                                        ),
                                        fluidRow(
                                          wellPanel(
@@ -161,7 +161,7 @@ ui <-
                                              cellHeight = "120%",
                                              plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
                                          ),
-
+                                         
                                        )       
                                        
                                      ) # end main panel
@@ -176,10 +176,10 @@ ui <-
              ),
              
              tabPanel("Literatur",
-   
+                      
                       
                       # Show a plot of the generated distribution
-        
+                      
                       
                       # Show a plot of the generated distribution
                       mainPanel(
@@ -192,7 +192,7 @@ ui <-
 
 
 server <- function(input, output, session) {
-
+  
   rv <- reactiveValues()
   rv$run2 <- 0
   observe({
@@ -217,11 +217,11 @@ server <- function(input, output, session) {
   })
   
   rkiAndPredictData <- reactive({
+    
+    if (input$regionSelected ==1) {
+      #      browser()
+      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBund, input,session)
       
-      if (input$regionSelected ==1) {
-  #      browser()
-        r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBund, input,session)
-        
       
     } else if (input$regionSelected ==2) {
       
@@ -231,16 +231,16 @@ server <- function(input, output, session) {
       
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, input,session)
     }
-
-   df <-  Rechenkern(r0_no_erfasstDf ,input)
-   
-   # restrict data to given date range
-   df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
-                       Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
-  # browser()
-   
+    
+    df <-  Rechenkern(r0_no_erfasstDf ,input)
+    
+    # restrict data to given date range
+    df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
+                        Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
+    # browser()
+    
   })  
- 
+  
   color1 = 'blue'
   color2 = 'green'
   # more options at https://ggplot2.tidyverse.org/reference/theme.html
@@ -259,7 +259,7 @@ server <- function(input, output, session) {
   output$Kumuliert <- renderPlotly({
     
     
-   #  browser()
+    #  browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
     p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = ErfassteInfizierteBerechnet, color = "Erfasste Infizierte berechnet")) + geom_line() + geom_point(data = rkiAndPredictData(), aes(x = Tag, y = SumAnzahl, color = "Erfasste Infizierte")) +
