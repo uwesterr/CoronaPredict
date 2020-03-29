@@ -53,9 +53,9 @@ ui <-
                                          radioButtons("regionSelected", label = h3("Region"),
                                                       choices = list("Deutschland" = 1, "Bundesländer" = 2, "Landkreise" = 3), 
                                                       selected = 2),
-                                         selectInput("BundeslandSelected", "Bundesland ausgewählt", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
+                                         selectInput("BundeslandSelected", "Bundesland ausgewählen", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
                                                         selectize = TRUE, width = NULL, size = NULL),
-                                         selectInput("LandkreiseSelected", "Landkeis ausgewählt:", choices = historyDfLandkreis$Landkreis %>% unique())
+                                         selectInput("LandkreiseSelected", "Landkeis ausgewählen:", choices = historyDfLandkreis$Landkreis %>% unique(), selected = "LK Esslingen")
                                        ),
                                       
  
@@ -71,18 +71,18 @@ ui <-
                                               numericInput("ta", label = "Infektiosität [d]", value = 6),
                                               numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8))),
 
-                                       h3("Reduzierende Massnahmen"),   
+                                       h3("Reduzierende Massnahmen"), 
                                        column(6,
                                               wellPanel(
-                                                dateInput("reduzierung_datum",  label = "Datum", value = "2020-03-16"),
-                                                dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-23"),
-                                                dateInput("reduzierung_datum2", label = "Datum", value = "2020-04-01"))),
+                                                numericInput("reduzierung_rt1", label = "1. Reduzierung Rt [%]", value = 50),
+                                                numericInput("reduzierung_rt2", label = "2. Reduzierung Rt [%]", value = 50), 
+                                                numericInput("reduzierung_rt3", label = "3. Reduzierung Rt [%]", value = 50))), 
                                        column(6,
                                               wellPanel(
-                                                numericInput("reduzierung_rt",  label = "Reduzierung Rt [%]", value = 50),
-                                                numericInput("reduzierung_rt1", label = "Reduzierung Rt [%]", value = 50), 
-                                                numericInput("reduzierung_rt2", label = "Reduzierung Rt [%]", value = 50))), 
-                                       
+                                                dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")),
+                                                dateInput("reduzierung_datum2", label = "Datum", value = "2020-03-23", start=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")),
+                                                dateInput("reduzierung_datum3", label = "Datum", value = "2020-04-01", start=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")))),
+
                                        h3("Krankenhausaufenthalt"),   
                                        column(6,
                                               wellPanel(
@@ -99,11 +99,11 @@ ui <-
                                        column(6,   
                                        wellPanel(
                                        dateRangeInput(inputId = "dateInput",
-                                                        label = "Date",
+                                                        label = "Datum",
                                                         start = as.Date('2020-03-01'),
-                                                        end = as.Date('2020-05-01'),
-                                                        min = as.Date('2020-02-01'),
-                                                        max = as.Date('2020-07-01'),
+                                                        end = as.Date('2020-06-01'),
+                                                        min = as.Date('2020-03-01'),
+                                                        max = as.Date('2020-12-31'),
                                                         format = "yyyy-mm-dd",
                                                         startview = "month",
                                                         weekstart = 1
@@ -234,9 +234,10 @@ server <- function(input, output, session) {
 
    df <-  Rechenkern(r0_no_erfasstDf ,input)
    
-   # restict data given date range
+   # restrict data to given date range
    df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                        Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
+  # browser()
    
   })  
  
@@ -257,21 +258,21 @@ server <- function(input, output, session) {
   
   output$Kumuliert <- renderPlotly({
     
-
-   # browser()
+    
+   #  browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
     p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = ErfassteInfizierteBerechnet, color = "Erfasste Infizierte berechnet")) + geom_line() + geom_point(data = rkiAndPredictData(), aes(x = Tag, y = SumAnzahl, color = "Erfasste Infizierte")) +
-      scale_x_date(labels = date_format("%m-%Y")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte", sep =""),
-                                                         x = "Datum [mm-dd]", y = "Anzahl",
+      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte", sep =""),
+                                                         x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Erfasste Infizierte berechnet' = color1,
                                                            'Erfasste Infizierte' = color2)) +
-
+      
       labs(color = 'Daten') + scale_y_continuous(labels = scales::comma)
-
     
-
+    
+    
     if(logy){
       p <- p +  scale_y_log10(label = label_number_si())
       
@@ -290,54 +291,53 @@ server <- function(input, output, session) {
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = AktuellInfizierteBerechnet, color ="Aktuell Infizierte berechnet")) + geom_line() + geom_line(aes(y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
-      scale_x_date(labels = date_format("%m-%Y")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte", sep =""),
-                                                         x = "Datum [mm-dd]", y = "Anzahl",
+      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte", sep =""),
+                                                         x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Aktuell Infizierte berechnet' = color1,
                                                            'Neu Infizierte berechnet' = color2)) +
-
-        labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
-
       
+      labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
+    
+    
+    
+    if(logy){
+      p <- p +  scale_y_log10(label = label_number_si())
       
+    } else {
+      p
       
-      if(logy){
-        p <- p +  scale_y_log10(label = label_number_si())
-        
-      } else {
-        p
-        
-      }
+    }
     p <- ggplotly(p)
     p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))
     p
-      
+    
   })  
   
   output$Krankenhaus <- renderPlotly({
-   # browser()
+    # browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
-     
+    
     p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = KhBerechnet, color ="KH berechnet")) + geom_line() + geom_line(aes(y= IntensivBerechnet, color = "Intensiv berechnet")) +
-      scale_x_date(labels = date_format("%m-%Y")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Plätze in Krankenhaus / Intensivstation", sep ="")  ,
-                                                         x = "Datum [mm-dd]", y = "Anzahl",
+      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Plätze in Krankenhaus / Intensivstation", sep ="")  ,
+                                                         x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'KH berechnet' = color1,
                                                            'Intensiv berechnet' = color2)) +
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
-
     
-      if(logy){
-        p <- p +  scale_y_log10(label = label_number_si())
-        
-      } else {
-        p
-        
-      }
+    
+    if(logy){
+      p <- p +  scale_y_log10(label = label_number_si())
+      
+    } else {
+      p
+      
+    }
     p <- ggplotly(p)
     p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  
     p
-      
+    
     
   }) 
   
@@ -345,16 +345,16 @@ server <- function(input, output, session) {
     paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     p <- ggplot(rkiAndPredictData(), aes(x=Tag, y = TaeglichReproduktionsRateRt)) + geom_line(aes(color = "Tägliche Reproduktionsrate")) + geom_line(aes(y = ReduzierteRt, color = "Reduzierte Reproduktionsrate")) +
-      scale_x_date(labels = date_format("%m-%Y")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  , x = "Datum [mm-dd]", y = "Wert",
+      scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  , x = "Datum", y = "Wert",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Tägliche Reproduktionsrate' = color1,
                                                            'Reduzierte Reproduktionsrate' = color2)) +
-
+      
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
     p <- ggplotly(p)
     p <- p %>% layout(legend = list(x = 0.01, y = 0.01, font = list(size = 8))) 
-
-   p
+    
+    p
     
   })  
   
@@ -363,4 +363,3 @@ server <- function(input, output, session) {
 
 
 shinyApp(ui = ui, server = server)
-
