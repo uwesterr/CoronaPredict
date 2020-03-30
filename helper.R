@@ -158,7 +158,7 @@ createDfBundLandKreis <- function() {
 
 
 Rechenkern <- function(r0_no_erfasstDf, input) {
-  
+  browser()
   # Betroffene
   Ygesamt	<- r0_no_erfasstDf$Einwohner # Gesamtmenge
   n0_erfasst <- 	r0_no_erfasstDf$n0_erfasst # Anzahl erfasster Infizierter am Beginn 
