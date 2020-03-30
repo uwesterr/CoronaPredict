@@ -1,3 +1,4 @@
+
 # Files to supply functions to other programs
 
 library(jsonlite)
@@ -358,4 +359,5 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
   
   return(df)
+
 }
