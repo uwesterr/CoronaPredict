@@ -210,9 +210,9 @@ tabPanel("Impressum",
          
          # Show a plot of the generated distribution
          mainPanel(
-           # includeHTML("AdmosImpressum.html")
+            includeHTML("AdmosImpressum.html")
           # includeHTML("AdmosImpressum.html")
-           includeMarkdown("AdmosImpressum.md")
+          # includeMarkdown("AdmosImpressum.md")
           # includeText("AdmosImpressum.txt")
          )
 ),
@@ -220,8 +220,8 @@ tabPanel("Impressum",
 tabPanel("Datenschutz",
          
          mainPanel(
-     #      includeHTML("AdmosDatenschutz.html")
-           includeText("AdmosDatenschutz.txt")
+          includeHTML("AdmosDatenschutz.html")
+         #  includeText("AdmosDatenschutz.txt")
          )
          
          
