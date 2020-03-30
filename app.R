@@ -60,10 +60,10 @@ ui <- function(request) {
                                            
                                            column(6,
                                                   
-                                                  selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("Deutschland",historyDfBundesLand$Bundesland %>% unique()), selected = "Deutschland", multiple = FALSE,
+                                                  selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("Deutschland",historyDfBundesLand$Bundesland %>% unique() %>% str_sort, "---"), selected = "Deutschland", multiple = FALSE,
                                                               selectize = TRUE, width = NULL, size = NULL)),
                                            column(6,
-                                                  selectInput("LandkreiseSelected", "Landkeis", choices = historyDfLandkreis$Landkreis %>% unique(), selected = "LK Esslingen")
+                                                  selectInput("LandkreiseSelected", "Landkeis", choices = c(historyDfLandkreis$Landkreis %>% unique() %>% str_sort, "---"), selected = "LK Esslingen")
                                            ))),
                                        
                                        
@@ -210,14 +210,18 @@ tabPanel("Impressum",
          
          # Show a plot of the generated distribution
          mainPanel(
-           
+           # includeHTML("AdmosImpressum.html")
+          # includeHTML("AdmosImpressum.html")
+           includeMarkdown("AdmosImpressum.md")
+          # includeText("AdmosImpressum.txt")
          )
 ),
 
 tabPanel("Datenschutz",
          
          mainPanel(
-           
+     #      includeHTML("AdmosDatenschutz.html")
+           includeText("AdmosDatenschutz.txt")
          )
          
          
@@ -233,18 +237,34 @@ server <- function(input, output, session) {
   # rkiAndPredictData <- reactiveVal(0)  
   r0_no_erfasstDf <- reactiveVal(0) 
   
-  observeEvent(input$BundeslandSelected, {
+  observeEvent(input$BundeslandSelected,  ignoreInit = TRUE,{
+    if(input$BundeslandSelected =="---")
+    {
+      
+    } else{
     # browser()
     regionSelected = 2
     r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, input,session)
     r0_no_erfasstDf(r0_no_erfasstDf)
+    # set menu of Landkreis to "---"
+    updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+    }
+   
+
   })
   
   observeEvent(input$LandkreiseSelected, {
+    if(input$LandkreiseSelected =="---")
+    {
+      
+    } else{
     #browser()
     regionSelected = 3
     r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, input,session)
     r0_no_erfasstDf(r0_no_erfasstDf)
+   # browser()
+    updateSelectInput(session, "BundeslandSelected",  selected = "---")
+    }
   })
   
   rkiAndPredictData <- reactive({
