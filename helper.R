@@ -240,7 +240,8 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   
   
   # Initialize the dataframe
-  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d"))
+  #US 30.03.20202 Startdatum fix gesetzt damit bei verändern des startdatums keine anderen berechnungsergebnisse entstehen
+  startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))
   calcDf <- tibble(Tag                     = startDate,
                    TaeglichReproduktionsRateRt       = Rt,

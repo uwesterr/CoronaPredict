@@ -230,14 +230,9 @@ tabPanel("Datenschutz",
 
 }
 server <- function(input, output, session) {
-  
-  
-  
-  
-  # rkiAndPredictData <- reactiveVal(0)  
+
   r0_no_erfasstDf <- reactiveVal(0) 
- # rkiAndPredictData <- reactiveVal(0) 
-  
+
   observeEvent(input$BundeslandSelected,  ignoreInit = TRUE,{
     if(input$BundeslandSelected =="---"){
     } else{
@@ -247,9 +242,7 @@ server <- function(input, output, session) {
     r0_no_erfasstDf(r0_no_erfasstDf)
     # set menu of Landkreis to "---"
     updateSelectInput(session, "LandkreiseSelected",  selected = "---")
-#  df <-  Rechenkern(r0_no_erfasstDf() ,input)
-#    rkiAndPredictData(df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
-#                                       Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))))
+
     }
   })
   
@@ -262,10 +255,7 @@ server <- function(input, output, session) {
     r0_no_erfasstDf(r0_no_erfasstDf)
    # browser()
     updateSelectInput(session, "BundeslandSelected",  selected = "---")
-   #df <-  Rechenkern(r0_no_erfasstDf() ,input)
-    #browser()
-#    rkiAndPredictData(df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
-#                                      Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))))
+
     }
   })
   
