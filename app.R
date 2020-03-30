@@ -172,7 +172,7 @@ ui <- function(request) {
   ), # end sidebar panel
 mainPanel(
   
-  h2("Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.1"),
+  h2("Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.11"),
   
   fluidRow(
     
@@ -421,4 +421,4 @@ server <- function(input, output, session) {
 }
 
 
-shinyApp(ui, server, enableBookmarking = "url")
+shinyApp(ui, server, enableBookmarking = "server")
