@@ -245,13 +245,13 @@ server <- function(input, output, session) {
     #  browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-    
+
     tmp <- rkiAndPredictData()
     colnames(tmp)[colnames(tmp) == "SumAnzahl"] <- "ErfassteInfizierte"
     tmp$ErfassteInfizierte <- as.integer(tmp$ErfassteInfizierte)
     tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$ErfassteInfizierteBerechnet)
     p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_point(data = tmp, aes(x = Tag, y = ErfassteInfizierte, color = "Erfasste Infizierte")) +
-      
+
       scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
@@ -279,13 +279,13 @@ server <- function(input, output, session) {
   output$Verlauf <- renderPlotly({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
-    
+
     
     tmp <- rkiAndPredictData()
     tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
     p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
-      
+
       scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
@@ -303,9 +303,11 @@ server <- function(input, output, session) {
       p
       
     }
+
     
     p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag"))
     
+
     p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))
     p
     
@@ -314,7 +316,7 @@ server <- function(input, output, session) {
   output$Krankenhaus <- renderPlotly({
     # browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
-    
+
     tmp <- rkiAndPredictData()
     colnames(tmp)[colnames(tmp) == "KhBerechnet"] <- "Krankenhaus_berechnet"
     colnames(tmp)[colnames(tmp) == "IntensivBerechnet"] <- "Intensiv_berechnet"
@@ -328,6 +330,7 @@ server <- function(input, output, session) {
                                                            'Intensiv berechnet' = color2)) +
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
     
+
     
     
     if(logy){
@@ -337,9 +340,11 @@ server <- function(input, output, session) {
       p
       
     }
+
     
     p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag"))
     
+
     p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  
     p
     
@@ -349,7 +354,7 @@ server <- function(input, output, session) {
   output$Reproduktionsrate <- renderPlotly({
     paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
-    
+
     tmp <- rkiAndPredictData()
     colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt"] <- "Taegliche_Reproduktionsrate"
     colnames(tmp)[colnames(tmp) == "ReduzierteRt"] <- "Reduzierte_Reproduktionsrate"
@@ -357,7 +362,7 @@ server <- function(input, output, session) {
     tmp$Reduzierte_Reproduktionsrate <- round(tmp$Reduzierte_Reproduktionsrate, digits = 3)
     
     p <- ggplot(tmp, aes(color = "Tägliche Reproduktionsrate")) + geom_line(aes(x=Tag, y = Taegliche_Reproduktionsrate)) + geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Reduzierte Reproduktionsrate")) +
-      
+
       scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  , x = "Datum", y = "Wert",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Tägliche Reproduktionsrate' = color1,
