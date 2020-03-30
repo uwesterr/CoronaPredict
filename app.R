@@ -76,9 +76,12 @@ ui <-
                                        h3("Reduzierende Massnahmen"), 
                                        column(6,
                                               wellPanel(
-                                                numericInput("reduzierung_rt1", label = "1. Reduzierung Rt [%]", value = 50),
-                                                numericInput("reduzierung_rt2", label = "2. Reduzierung Rt [%]", value = 50), 
-                                                numericInput("reduzierung_rt3", label = "3. Reduzierung Rt [%]", value = 50))), 
+                                                sliderInput("reduzierung_rt1",label="1. Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50),
+                                                sliderInput("reduzierung_rt2",label="2. Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50),
+                                                sliderInput("reduzierung_rt3",label="3. Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50))),
+                           #                    numericInput("reduzierung_rt1", label = "1. Reduzierung Rt [%]", value = 50),
+                           #                    numericInput("reduzierung_rt2", label = "2. Reduzierung Rt [%]", value = 50), 
+                           #                    numericInput("reduzierung_rt3", label = "3. Reduzierung Rt [%]", value = 50))), 
                                        column(6,
                                               wellPanel(
                                                 dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")),
@@ -117,11 +120,21 @@ ui <-
                                                              choices = c("linear", "logarithmisch"),
                                                              selected =  "logarithmisch")
                                               )),
-                                       
-                                       tags$img(src = "logo-admos.png",
-                                                width = "200px", height = "100px"),
-                                       tags$img(src = "Folie9.png",
-                                                width = "100px", height = "100px"),
+                                       column(6,
+                                              wellPanel(
+                                       tags$a(
+                                         href="https://admos.de/de/", 
+                                         tags$img(src = "logo-admos.png",
+                                                  width = "200px", height = "100px"),
+                                       ))),
+                                       column(6,
+                                              wellPanel(
+                                       tags$a(
+                                         href="https://www.st2c.de", 
+                                         tags$img(src = "Folie9.png",
+                                                  width = "100px", height = "100px"),
+                                       ))),                                      
+
                                        
                                        #tags$p(class="header", checked=NA,
                                        #
@@ -200,29 +213,28 @@ server <- function(input, output, session) {
 
 
   
-  rkiAndPredictData <- reactiveVal(0)  
+ # rkiAndPredictData <- reactiveVal(0)  
+  r0_no_erfasstDf <- reactiveVal(0) 
+  
  observeEvent(input$BundeslandSelected, {
    # browser()
     regionSelected = 2
     r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, input,session)
-    df <-  Rechenkern(r0_no_erfasstDf ,input)
-    df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
-                        Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
-    rkiAndPredictData(df)
+    r0_no_erfasstDf(r0_no_erfasstDf)
   })
   
  observeEvent(input$LandkreiseSelected, {
     #browser()
     regionSelected = 3
     r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, input,session)
-    df <-  Rechenkern(r0_no_erfasstDf ,input)
-    df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
-                        Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
-    rkiAndPredictData(df)
+    r0_no_erfasstDf(r0_no_erfasstDf)
   })
   
-  
- 
+ rkiAndPredictData <- reactive({
+   df <-  Rechenkern(r0_no_erfasstDf() ,input)
+   df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
+                       Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
+ }) 
   
   color1 = 'blue'
   color2 = 'green'
