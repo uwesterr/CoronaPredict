@@ -60,10 +60,10 @@ ui <- function(request) {
                                            
                                            column(6,
                                                   
-                                                  selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("Deutschland",historyDfBundesLand$Bundesland %>% unique() %>% str_sort, "---"), selected = "Deutschland", multiple = FALSE,
+                                                  selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("---","Deutschland",historyDfBundesLand$Bundesland %>% unique() %>% str_sort), selected = "Deutschland", multiple = FALSE,
                                                               selectize = TRUE, width = NULL, size = NULL)),
                                            column(6,
-                                                  selectInput("LandkreiseSelected", "Landkeis", choices = c(historyDfLandkreis$Landkreis %>% unique() %>% str_sort, "---"), selected = "LK Esslingen")
+                                                  selectInput("LandkreiseSelected", "Landkeis", choices = c("---",historyDfLandkreis$Landkreis %>% unique() %>% str_sort), selected = "LK Esslingen")
                                            ))),
                                        
                                        
@@ -236,11 +236,10 @@ server <- function(input, output, session) {
   
   # rkiAndPredictData <- reactiveVal(0)  
   r0_no_erfasstDf <- reactiveVal(0) 
+ # rkiAndPredictData <- reactiveVal(0) 
   
   observeEvent(input$BundeslandSelected,  ignoreInit = TRUE,{
-    if(input$BundeslandSelected =="---")
-    {
-      
+    if(input$BundeslandSelected =="---"){
     } else{
     # browser()
     regionSelected = 2
@@ -248,15 +247,14 @@ server <- function(input, output, session) {
     r0_no_erfasstDf(r0_no_erfasstDf)
     # set menu of Landkreis to "---"
     updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+#  df <-  Rechenkern(r0_no_erfasstDf() ,input)
+#    rkiAndPredictData(df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
+#                                       Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))))
     }
-   
-
   })
   
   observeEvent(input$LandkreiseSelected, {
-    if(input$LandkreiseSelected =="---")
-    {
-      
+    if(input$LandkreiseSelected =="---"){
     } else{
     #browser()
     regionSelected = 3
@@ -264,6 +262,10 @@ server <- function(input, output, session) {
     r0_no_erfasstDf(r0_no_erfasstDf)
    # browser()
     updateSelectInput(session, "BundeslandSelected",  selected = "---")
+   #df <-  Rechenkern(r0_no_erfasstDf() ,input)
+    #browser()
+#    rkiAndPredictData(df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
+#                                      Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))))
     }
   })
   
