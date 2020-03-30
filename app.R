@@ -48,15 +48,17 @@ ui <-
                                      
                                      
                                      sidebarPanel(
-                                       
+                                       h3("Auswahl Analyse Deutschland/Bundesland oder einen Landkreis"),
                                        wellPanel(
-                                         radioButtons("regionSelected", label = h3("Region"),
-                                                      choices = list("Deutschland" = 1, "Bundesländer" = 2, "Landkreise" = 3), 
-                                                      selected = 2),
-                                         selectInput("BundeslandSelected", "Bundesland auswählen", choices = historyDfBundesLand$Bundesland %>% unique(), selected = NULL, multiple = FALSE,
-                                                     selectize = TRUE, width = NULL, size = NULL),
-                                         selectInput("LandkreiseSelected", "Landkeis auswählen:", choices = historyDfLandkreis$Landkreis %>% unique(), selected = "LK Esslingen")
-                                       ),
+                                       fluidRow(
+                                       
+                                         column(6,
+
+                                         selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("Deutschland",historyDfBundesLand$Bundesland %>% unique()), selected = "Deutschland", multiple = FALSE,
+                                                     selectize = TRUE, width = NULL, size = NULL)),
+                                         column(6,
+                                         selectInput("LandkreiseSelected", "Landkeis", choices = historyDfLandkreis$Landkreis %>% unique(), selected = "LK Esslingen")
+                                       ))),
                                        
                                        
                                        h3("Expertenparameter Infektionsverlauf"),   
@@ -140,7 +142,7 @@ ui <-
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung"),
+                                       h2("Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.1"),
                                        
                                        fluidRow(
                                          
@@ -167,7 +169,14 @@ ui <-
                                      ) # end main panel
                       )
              ),
-             tabPanel("Ergebnis",
+             tabPanel("Anleitung",
+                      
+                      # Show a plot of the generated distribution
+                      mainPanel(
+                        
+                      )
+             ),
+             tabPanel("Impressum",
                       
                       # Show a plot of the generated distribution
                       mainPanel(
@@ -175,13 +184,8 @@ ui <-
                       )
              ),
              
-             tabPanel("Literatur",
-                      
-                      
-                      # Show a plot of the generated distribution
-                      
-                      
-                      # Show a plot of the generated distribution
+             tabPanel("Datenschutz",
+
                       mainPanel(
                         
                       )
@@ -193,53 +197,32 @@ ui <-
 
 server <- function(input, output, session) {
   
-  rv <- reactiveValues()
-  rv$run2 <- 0
-  observe({
-    updateSelectInput(
-      session,
-      "filterRegion",label = paste("Select input label"),
-      
-      if (input$regionSelected ==1) {
-        
-        choices = "Deutschland" 
-        
-      } else if (input$regionSelected ==2) {
-        
-        choices = historyDfBundesLand %>% select(Bundesland) %>% unique() %>% .[[1]]
-        
-      } else if(input$regionSelected ==3) {
-        
-        choices = historyDfLandkreis %>% select(Landkreis) %>% unique() %>% .[[1]]
-      }
-      
-    )
-  })
+
+
   
-  rkiAndPredictData <- reactive({
-    
-    if (input$regionSelected ==1) {
-      #      browser()
-      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBund, input,session)
-      
-      
-    } else if (input$regionSelected ==2) {
-      
-      r0_no_erfasstDf <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, input)
-      
-    } else if(input$regionSelected ==3) {
-      
-      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, input,session)
-    }
-    
+  rkiAndPredictData <- reactiveVal(0)  
+ observeEvent(input$BundeslandSelected, {
+   # browser()
+    regionSelected = 2
+    r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, input,session)
     df <-  Rechenkern(r0_no_erfasstDf ,input)
-    
-    # restrict data to given date range
     df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                         Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
-    # browser()
-    
-  })  
+    rkiAndPredictData(df)
+  })
+  
+ observeEvent(input$LandkreiseSelected, {
+    #browser()
+    regionSelected = 3
+    r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, input,session)
+    df <-  Rechenkern(r0_no_erfasstDf ,input)
+    df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
+                        Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
+    rkiAndPredictData(df)
+  })
+  
+  
+ 
   
   color1 = 'blue'
   color2 = 'green'
@@ -321,7 +304,9 @@ server <- function(input, output, session) {
       
     }
 
+    
     p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag"))
+    
 
     p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))
     p
@@ -347,6 +332,7 @@ server <- function(input, output, session) {
     
 
     
+    
     if(logy){
       p <- p +  scale_y_log10(label = label_number_si())
       
@@ -355,7 +341,9 @@ server <- function(input, output, session) {
       
     }
 
+    
     p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag"))
+    
 
     p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  
     p
