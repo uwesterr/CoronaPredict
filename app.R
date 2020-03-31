@@ -174,7 +174,7 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.11"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.11"),
                                        
                                        fluidRow(
                                          
@@ -205,7 +205,7 @@ ui <- function(request) {
                       
                       # Show a plot of the generated distribution
                       mainPanel(
-                        
+                        includeMarkdown("Anleitung.md")
                       )
              ),
              tabPanel("Impressum",
@@ -427,6 +427,12 @@ server <- function(input, output, session) {
  # Save extra values in state$values when we bookmark
  onBookmark(function(state) {
    state$values$currentSum <- vals$Flag
+ })
+ 
+ # copy url into browser url adress field
+ onBookmarked(function(url) {
+   showBookmarkUrlModal(url) # Default function
+   updateQueryString(url) # Update Adresse im Browser
  })
  
  # Read values from state$values when we restore
