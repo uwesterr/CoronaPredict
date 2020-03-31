@@ -1,5 +1,6 @@
 
 
+
 # important ---------------------------------------------------------------
 
 #based on covid19germany
@@ -459,8 +460,5 @@ server <- function(input, output, session) {
  }
 
 shinyApp(ui, server, enableBookmarking = "server")
-
-
-
 
 
