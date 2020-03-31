@@ -164,7 +164,8 @@ createDfBundLandKreis <- function() {
 Rechenkern <- function(r0_no_erfasstDf, input) {
   
   # Betroffene
-  Ygesamt	<- r0_no_erfasstDf$Einwohner # Gesamtmenge
+  # US 31.03.2020: use only one value, before the whole column was used this lead to a init CalcDf with many rows instead of one which could screw up the rollapply later on
+  Ygesamt	<- r0_no_erfasstDf$Einwohner %>% unique() # Gesamtmenge
   # US 31.03.2020: use only one value, before the whole column was used this lead to a init CalcDf with many rows instead of one which could screw up the rollapply later on
   n0_erfasst <- 	r0_no_erfasstDf$n0_erfasst %>% unique() # Anzahl erfasster Infizierter am Beginn 
   beginn_date	<- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) # Datum Beginn
@@ -271,7 +272,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
                    MaxIntBerechnet                   = 0,
                    
   )
-  # browser()
+  #browser()
   initCalcDf <- function(calcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta, n0_erfasst, startDate, faktor_n_inf) {
     calcDf$ReduzierteRt <- calcReduzierung(calcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
     
@@ -336,7 +337,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
       MaxIntBerechnet                   = 0,
       
     )
-    
+   # browser()
     # Reduzierung Rt (max. 3x)
     updatecalcDf$ReduzierteRt <- calcReduzierung(updatecalcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
     updatecalcDf$GesamtInfizierteBerechnet <-  round(calcGesamtInfizierteBerechnet(tailCalcDf),digits = 0)
@@ -350,7 +351,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
     calcDf <- rbind(calcDf,updatecalcDf)
     
   }
- # browser()
+
  calcDf$ID <- seq.int(nrow(calcDf))
   
   #    Infiziert
@@ -371,7 +372,8 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   
   
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
-  
+  #browser()
+  a <- 5
   return(df)
   
   }
