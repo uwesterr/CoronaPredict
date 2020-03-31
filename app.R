@@ -1,4 +1,5 @@
 
+
 # important ---------------------------------------------------------------
 
 #based on covid19germany
@@ -47,12 +48,14 @@ ui <- function(request) {
                       
                       sidebarLayout( position ="left",
                                      
+
                                      sidebarPanel(
                                        wellPanel(
                                        h3("Speichern Einstellungen"),
                                          bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellen 
                                                                                                            Werten aufgerufen werden")),
                                        h3("Auswahl Region"),
+
                                        wellPanel(
                                          fluidRow(
                                            
@@ -64,6 +67,7 @@ ui <- function(request) {
                                                   selectInput("LandkreiseSelected", "Landkeis", choices = c("---",historyDfLandkreis$Landkreis %>% unique() %>% str_sort), selected = "LK Esslingen")
                                            ))),
                                        
+
 
                                        h3("Reduzierende Massnahmen"), 
                                        wellPanel(
@@ -85,6 +89,7 @@ ui <- function(request) {
                                        column(6,
                                               sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 0)))),
 
+
                                        
                                        h3("Expertenparameter Infektionsverlauf"),  
                                        fluidRow(
@@ -98,7 +103,7 @@ ui <- function(request) {
                                                   numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15),
                                                   numericInput("ta", label = "Infektiosität [d]", value = 6),
                                                   numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8)))),
-                                                                              
+
                                        h3("Krankenhausaufenthalt"), 
                                        fluidRow(
                                          column(6,
