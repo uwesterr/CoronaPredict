@@ -1,5 +1,4 @@
 
-
 # important ---------------------------------------------------------------
 
 #based on covid19germany
@@ -47,15 +46,13 @@ ui <- function(request) {
              tabPanel("Einstellung und Ausgabe",
                       
                       sidebarLayout( position ="left",
-                                  
-                                     
-                                     
-                                     sidebarPanel(
+
+                                    sidebarPanel(
                                        wellPanel(
-                                       h3("Link Erstellung mit allen Einstellungen"),
+                                       h3("Speichern Einstellungen"),
                                        bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellen 
                                                                                                            Werten aufgerufen werden")),
-                                       h3("Auswahl Analyse Deutschland/Bundesland oder einen Landkreis"),
+                                       h3("Auswahl Region"),
                                        wellPanel(
                                          fluidRow(
                                            
@@ -67,6 +64,29 @@ ui <- function(request) {
                                                   selectInput("LandkreiseSelected", "Landkeis", choices = c("---",historyDfLandkreis$Landkreis %>% unique() %>% str_sort), selected = "LK Esslingen")
                                            ))),
                                        
+
+                                       h3("Reduzierende Massnahmen"), 
+                                       
+                                       
+                                       wellPanel(
+                                         fluidRow(
+                                           column(6,
+                                                  dateInput("reduzierung_datum1", label = "1. Massnahme Datum, Rt [%]", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(6,
+                                                  sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
+                                       wellPanel(
+                                       fluidRow(
+                                         column(6,
+                                                dateInput("reduzierung_datum2", label = "2. Massnahme Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                         column(6,
+                                                sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
+                                       wellPanel(
+                                         fluidRow(
+                                       column(6,
+                                              dateInput("reduzierung_datum3", label = "3. Massnahme Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                       column(6,
+                                              sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 0)))),
+
                                        
                                        h3("Expertenparameter Infektionsverlauf"),  
                                        fluidRow(
@@ -80,30 +100,6 @@ ui <- function(request) {
                                                   numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15),
                                                   numericInput("ta", label = "Infektiosität [d]", value = 6),
                                                   numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8)))),
-                                       
-                                       h3("Reduzierende Massnahmen"), 
-                                       
-                                       
-                                       wellPanel(
-                                         fluidRow(
-                                           column(6,
-                                                  dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                           column(6,
-                                                  sliderInput("reduzierung_rt1",label="1. Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
-                                       wellPanel(
-                                       fluidRow(
-                                         column(6,
-                                                dateInput("reduzierung_datum2", label = "Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                         column(6,
-                                                sliderInput("reduzierung_rt2",label="1. Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
-                                       wellPanel(
-                                         fluidRow(
-                                       column(6,
-                                              dateInput("reduzierung_datum3", label = "Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                       column(6,
-                                              sliderInput("reduzierung_rt3",label="1. Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
-
-   
              
              h3("Krankenhausaufenthalt"), 
              fluidRow(
@@ -420,7 +416,6 @@ server <- function(input, output, session) {
   
   
 }
-
 
 
 shinyApp(ui, server, enableBookmarking = "server")

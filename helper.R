@@ -1,4 +1,3 @@
-
 # Files to supply functions to other programs
 
 library(jsonlite)
@@ -242,7 +241,10 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   
   # Initialize the dataframe
   #US 30.03.20202 Startdatum fix gesetzt damit bei verändern des startdatums keine anderen berechnungsergebnisse entstehen
-  startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
+  #startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
+  #TG wieder variabel gesetzt, damit Anpassung stimmt
+  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d"))
+   
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))
   calcDf <- tibble(Tag                     = startDate,
                    TaeglichReproduktionsRateRt       = Rt,
@@ -297,8 +299,10 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   }
   
   #US 30.03.20202 Startdatum fix gesetzt damit bei verändern des startdatums keine anderen berechnungsergebnisse entstehen
-  startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
-  endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")) # Datum Beginn
+  #startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
+  #TG wieder variabel gesetzt, damit Anpassung stimmt
+  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) # Datum Beginn
+  endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")) # Datum Ende
   
   
   for (i in seq(startDate, endDate,by = 1)) {
@@ -359,5 +363,4 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
   
   return(df)
-
 }
