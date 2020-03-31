@@ -16,16 +16,10 @@ library(DT)
 
 
 
-createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, input, session){
-  # browser()
-  if (regionSelected ==1) {
-#    filterVar = "Bund"
-#    historyDfBund$Bund = "Deutschland"
-#    df <- historyDfBund %>% rename("whichRegion" = "Bund")
-#    regionSelected <- "Bund"
-#    df$whichRegion ="Bund"  # set all of the entries to be taken care of
-  } else if (regionSelected ==2) {
-    
+createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, vals, input,session){
+   # browser()
+  if (vals$Flag  == "Bundesland") {
+    if(input$BundeslandSelected == "---"){}
     if(input$BundeslandSelected == "Deutschland"){
       filterVar = "Bund"
       historyDfBund$Bund = "Deutschland"
@@ -37,7 +31,8 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, in
     df <- df %>% rename("whichRegion" = "Bundesland")
     regionSelected <- input$BundeslandSelected
     }
-  } else if(regionSelected ==3) {
+  } else if(vals$Flag  == "Landkreis") {
+    if(input$LandkreiseSelected == "---"){}
     filterVar = "Landkreis"
     df <- df %>% rename("whichRegion" = "Landkreis")
     regionSelected <- input$LandkreiseSelected

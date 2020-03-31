@@ -19,7 +19,10 @@ if (!("tidyr" %in% rownames(installed.packages()))) install.packages("tidyr")
 if (!("modelr" %in% rownames(installed.packages()))) install.packages("modelr")
 if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 if (!("rlang" %in% rownames(installed.packages()))) install.packages("rlang")
+if (!("shinyjs" %in% rownames(installed.packages()))) install.packages("shinyjs")
 
+
+library(shinyjs)
 library(rlang)
 library(DT)
 library(modelr)
@@ -172,7 +175,7 @@ ui <- function(request) {
   ), # end sidebar panel
 mainPanel(
   
-  h2("Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.11"),
+  h2("HoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.11"),
   
   fluidRow(
     
@@ -193,8 +196,10 @@ mainPanel(
         cellHeight = "120%",
         plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
     ),
+
     
-  )       
+  )
+  
   
 ) # end main panel
 )
@@ -203,7 +208,7 @@ tabPanel("Anleitung",
          
          # Show a plot of the generated distribution
          mainPanel(
-           
+       #    includeHTML("CoPE_200330.html") 
          )
 ),
 tabPanel("Impressum",
@@ -220,7 +225,8 @@ tabPanel("Impressum",
 tabPanel("Datenschutz",
          
          mainPanel(
-          includeHTML("AdmosDatenschutz.html")
+          includeHTML("AdmosDatenschutz.html"),
+          
          #  includeText("AdmosDatenschutz.txt")
          )
          
@@ -230,33 +236,36 @@ tabPanel("Datenschutz",
 
 }
 server <- function(input, output, session) {
-
+  vals <- reactiveValues(Flag = "Landkreis")
   r0_no_erfasstDf <- reactiveVal(0) 
 
-  observeEvent(input$BundeslandSelected,  ignoreInit = TRUE,{
+  observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
     if(input$BundeslandSelected =="---"){
     } else{
+
+      vals$Flag  <- "Bundesland"
     # browser()
     regionSelected = 2
-    r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, input,session)
+    r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
     r0_no_erfasstDf(r0_no_erfasstDf)
     # set menu of Landkreis to "---"
     updateSelectInput(session, "LandkreiseSelected",  selected = "---")
-
     }
+
   })
   
-  observeEvent(input$LandkreiseSelected, {
-    if(input$LandkreiseSelected =="---"){
-    } else{
+  observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
+   if(input$LandkreiseSelected =="---"){
+   } else{
+
     #browser()
+      vals$Flag  <- "Landkreis"
     regionSelected = 3
-    r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, input,session)
+    r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
     r0_no_erfasstDf(r0_no_erfasstDf)
    # browser()
     updateSelectInput(session, "BundeslandSelected",  selected = "---")
-
-    }
+   }
   })
   
   rkiAndPredictData <- reactive({
@@ -417,8 +426,23 @@ server <- function(input, output, session) {
     
   })  
   
+ 
+  # Save extra values in state$values when we bookmark
+  onBookmark(function(state) {
+    state$values$currentSum <- vals$Flag
+  })
   
+  # Read values from state$values when we restore
+  onRestore(function(state) {
+    vals$Flag <- state$values$currentSum
+  })
+  
+  
+  
+  
+  
+   
 }
 
 
-shinyApp(ui, server, enableBookmarking = "server")
+shinyApp(ui, server, enableBookmarking = "url")
