@@ -1,3 +1,5 @@
+
+
 # Files to supply functions to other programs
 
 library(jsonlite)
@@ -16,16 +18,10 @@ library(DT)
 
 
 
-createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, input, session){
-  # browser()
-  if (regionSelected ==1) {
-#    filterVar = "Bund"
-#    historyDfBund$Bund = "Deutschland"
-#    df <- historyDfBund %>% rename("whichRegion" = "Bund")
-#    regionSelected <- "Bund"
-#    df$whichRegion ="Bund"  # set all of the entries to be taken care of
-  } else if (regionSelected ==2) {
-    
+createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, vals, input,session){
+  #browser()
+  if (vals$Flag  == "Bundesland") {
+    if(input$BundeslandSelected == "---"){input$BundeslandSelected == "Deutschland"}
     if(input$BundeslandSelected == "Deutschland"){
       filterVar = "Bund"
       historyDfBund$Bund = "Deutschland"
@@ -33,16 +29,24 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, in
       regionSelected <- "Deutschland" 
     } else{
       
-    filterVar = "Bundesland"
-    df <- df %>% rename("whichRegion" = "Bundesland")
-    regionSelected <- input$BundeslandSelected
+      filterVar = "Bundesland"
+      df <- df %>% rename("whichRegion" = "Bundesland")
+      regionSelected <- input$BundeslandSelected
     }
-  } else if(regionSelected ==3) {
+  } else if(vals$Flag  == "Landkreis") {
     filterVar = "Landkreis"
     df <- df %>% rename("whichRegion" = "Landkreis")
     regionSelected <- input$LandkreiseSelected
   }
-  
+  # browser()
+  if(regionSelected =="---"){
+    filterVar = "Bund"
+    historyDfBund$Bund = "Deutschland"
+    df <- historyDfBund %>% rename("whichRegion" = "Bund")
+    regionSelected <- "Deutschland" 
+    updateSelectInput(session, "BundeslandSelected",  selected = "Deutschland")
+    
+  }
   df <- df %>% ungroup() %>%  filter(whichRegion == regionSelected)
   
   df <- df %>% rename_at(vars(contains("sumAnzahlFall")), ~ "SumAnzahl" ) %>% 
@@ -158,7 +162,7 @@ createDfBundLandKreis <- function() {
 
 
 Rechenkern <- function(r0_no_erfasstDf, input) {
-  browser()
+  
   # Betroffene
   Ygesamt	<- r0_no_erfasstDf$Einwohner # Gesamtmenge
   n0_erfasst <- 	r0_no_erfasstDf$n0_erfasst # Anzahl erfasster Infizierter am Beginn 
@@ -240,7 +244,8 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   
   
   # Initialize the dataframe
-  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d"))
+  #US 30.03.20202 Startdatum fix gesetzt damit bei verändern des startdatums keine anderen berechnungsergebnisse entstehen
+  startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))
   calcDf <- tibble(Tag                     = startDate,
                    TaeglichReproduktionsRateRt       = Rt,
@@ -294,7 +299,8 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
     tailCalcDf$NeuInfizierteBerechnet   + tailCalcDf$ErfassteInfizierteBerechnet
   }
   
-  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) # Datum Beginn
+  #US 30.03.20202 Startdatum fix gesetzt damit bei verändern des startdatums keine anderen berechnungsergebnisse entstehen
+  startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")) # Datum Beginn
   
   
@@ -356,4 +362,5 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
   
   return(df)
-}
+  
+  }
