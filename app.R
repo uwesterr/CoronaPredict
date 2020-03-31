@@ -1,4 +1,5 @@
 
+
 # important ---------------------------------------------------------------
 
 #based on covid19germany
@@ -19,10 +20,7 @@ if (!("tidyr" %in% rownames(installed.packages()))) install.packages("tidyr")
 if (!("modelr" %in% rownames(installed.packages()))) install.packages("modelr")
 if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 if (!("rlang" %in% rownames(installed.packages()))) install.packages("rlang")
-if (!("shinyjs" %in% rownames(installed.packages()))) install.packages("shinyjs")
 
-
-library(shinyjs)
 library(rlang)
 library(DT)
 library(modelr)
@@ -49,13 +47,13 @@ ui <- function(request) {
              tabPanel("Einstellung und Ausgabe",
                       
                       sidebarLayout( position ="left",
-                                  
+                                     
                                      
                                      
                                      sidebarPanel(
                                        wellPanel(
-                                       h3("Link Erstellung mit allen Einstellungen"),
-                                       bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellen 
+                                         h3("Link Erstellung mit allen Einstellungen"),
+                                         bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellen 
                                                                                                            Werten aufgerufen werden")),
                                        h3("Auswahl Analyse Deutschland/Bundesland oder einen Landkreis"),
                                        wellPanel(
@@ -93,157 +91,154 @@ ui <- function(request) {
                                            column(6,
                                                   sliderInput("reduzierung_rt1",label="1. Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
                                        wellPanel(
-                                       fluidRow(
-                                         column(6,
-                                                dateInput("reduzierung_datum2", label = "Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                         column(6,
-                                                sliderInput("reduzierung_rt2",label="1. Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
+                                         fluidRow(
+                                           column(6,
+                                                  dateInput("reduzierung_datum2", label = "Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(6,
+                                                  sliderInput("reduzierung_rt2",label="1. Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
                                        wellPanel(
                                          fluidRow(
+                                           column(6,
+                                                  dateInput("reduzierung_datum3", label = "Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(6,
+                                                  sliderInput("reduzierung_rt3",label="1. Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
+                                       
+                                       
+                                       
+                                       h3("Krankenhausaufenthalt"), 
+                                       fluidRow(
+                                         column(6,
+                                                wellPanel(
+                                                  numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5),
+                                                  numericInput("t_kh", label = "Dauer", value = 14),
+                                                  numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8))),
+                                         column(6,
+                                                wellPanel(
+                                                  numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25),
+                                                  numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10),
+                                                  numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1)))) ,                                        
+                                       
+                                       h3("Einstellen der Darstellung") ,
+                                       column(6,   
+                                              wellPanel(
+                                                dateRangeInput(inputId = "dateInput",
+                                                               label = "Datum",
+                                                               start = as.Date('2020-03-01'),
+                                                               end = as.Date('2020-06-01'),
+                                                               min = as.Date('2020-03-01'),
+                                                               max = as.Date('2020-12-31'),
+                                                               format = "yyyy-mm-dd",
+                                                               startview = "month",
+                                                               weekstart = 1
+                                                ))),
                                        column(6,
-                                              dateInput("reduzierung_datum3", label = "Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                              wellPanel(
+                                                radioButtons(inputId = "logyInput",
+                                                             label = "Darstellung y-Achse",
+                                                             choices = c("linear", "logarithmisch"),
+                                                             selected =  "logarithmisch")
+                                              )),
                                        column(6,
-                                              sliderInput("reduzierung_rt3",label="1. Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
-
-   
-             
-             h3("Krankenhausaufenthalt"), 
-             fluidRow(
-               column(6,
-                      wellPanel(
-                        numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5),
-                        numericInput("t_kh", label = "Dauer", value = 14),
-                        numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8))),
-               column(6,
-                      wellPanel(
-                        numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25),
-                        numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10),
-                        numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1)))) ,                                        
-             
-             h3("Einstellen der Darstellung") ,
-             column(6,   
-                    wellPanel(
-                      dateRangeInput(inputId = "dateInput",
-                                     label = "Datum",
-                                     start = as.Date('2020-03-01'),
-                                     end = as.Date('2020-06-01'),
-                                     min = as.Date('2020-03-01'),
-                                     max = as.Date('2020-12-31'),
-                                     format = "yyyy-mm-dd",
-                                     startview = "month",
-                                     weekstart = 1
-                      ))),
-             column(6,
-                    wellPanel(
-                      radioButtons(inputId = "logyInput",
-                                   label = "Darstellung y-Achse",
-                                   choices = c("linear", "logarithmisch"),
-                                   selected =  "logarithmisch")
-                    )),
-             column(6,
-                    wellPanel(
-                      tags$a(
-                        href="https://admos.de/de/", 
-                        tags$img(src = "logo-admos.png",
-                                 width = "200px", height = "100px"),
-                      ))),
-             column(6,
-                    wellPanel(
-                      tags$a(
-                        href="https://www.st2c.de", 
-                        tags$img(src = "Folie9.png",
-                                 width = "100px", height = "100px"),
-                      ))),                                      
-             
-             
-             #tags$p(class="header", checked=NA,
-             #
-             
-             # adding the new div tag to the sidebar
-             tags$div(class="header", checked=NA,
-                      list(
-                        tags$p(
-                          tags$a(href="https://github.com/uwesterr/CoronaPredict", "GitHub")),
+                                              wellPanel(
+                                                tags$a(
+                                                  href="https://admos.de/de/", 
+                                                  tags$img(src = "logo-admos.png",
+                                                           width = "200px", height = "100px"),
+                                                ))),
+                                       column(6,
+                                              wellPanel(
+                                                tags$a(
+                                                  href="https://www.st2c.de", 
+                                                  tags$img(src = "Folie9.png",
+                                                           width = "100px", height = "100px"),
+                                                ))),                                      
+                                       
+                                       
+                                       #tags$p(class="header", checked=NA,
+                                       #
+                                       
+                                       # adding the new div tag to the sidebar
+                                       tags$div(class="header", checked=NA,
+                                                list(
+                                                  tags$p(
+                                                    tags$a(href="https://github.com/uwesterr/CoronaPredict", "GitHub")),
+                                                  
+                                                  
+                                                  
+                                                  HTML(paste("Data accessed on",
+                                                             Sys.time(),
+                                                             tags$a(href="https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson",
+                                                                    "from RKI"))))
+                                       )
+                                     ), # end sidebar panel
+                                     mainPanel(
+                                       
+                                       h2("Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.11"),
+                                       
+                                       fluidRow(
+                                         
+                                         wellPanel(
+                                           splitLayout(
+                                             style = "border: 1px solid silver;",
+                                             cellWidths =  c("50%", "50%"),
+                                             cellHeight = "120%",
+                                             cellArgs = list(style = "padding: 6px"), 
+                                             plotlyOutput(outputId ="Kumuliert"), plotlyOutput(outputId ="Verlauf"))
+                                         )
+                                       ),
+                                       fluidRow(
+                                         wellPanel(
+                                           splitLayout(
+                                             style = "border: 1px solid silver;",
+                                             cellWidths =  c("50%", "50%"),
+                                             cellHeight = "120%",
+                                             plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
+                                         ),
+                                         
+                                       )       
+                                       
+                                     ) # end main panel
+                      )
+             ),
+             tabPanel("Anleitung",
+                      
+                      # Show a plot of the generated distribution
+                      mainPanel(
                         
-                        
-                        
-                        HTML(paste("Data accessed on",
-                                   Sys.time(),
-                                   tags$a(href="https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson",
-                                          "from RKI"))))
+                      )
+             ),
+             tabPanel("Impressum",
+                      
+                      # Show a plot of the generated distribution
+                      mainPanel(
+                        includeHTML("AdmosImpressum.html")
+                        # includeHTML("AdmosImpressum.html")
+                        # includeMarkdown("AdmosImpressum.md")
+                        # includeText("AdmosImpressum.txt")
+                      )
+             ),
+             
+             tabPanel("Datenschutz",
+                      
+                      mainPanel(
+                        includeHTML("AdmosDatenschutz.html")
+                        #  includeText("AdmosDatenschutz.txt")
+                      )
+                      
+                      
              )
-  ), # end sidebar panel
-mainPanel(
-  
-  h2("HoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.11"),
-  
-  fluidRow(
-    
-    wellPanel(
-      splitLayout(
-        style = "border: 1px solid silver;",
-        cellWidths =  c("50%", "50%"),
-        cellHeight = "120%",
-        cellArgs = list(style = "padding: 6px"), 
-        plotlyOutput(outputId ="Kumuliert"), plotlyOutput(outputId ="Verlauf"))
-    )
-  ),
-  fluidRow(
-    wellPanel(
-      splitLayout(
-        style = "border: 1px solid silver;",
-        cellWidths =  c("50%", "50%"),
-        cellHeight = "120%",
-        plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
-    ),
-
-    
   )
   
-  
-) # end main panel
-)
-),
-tabPanel("Anleitung",
-         
-         # Show a plot of the generated distribution
-         mainPanel(
-       #    includeHTML("CoPE_200330.html") 
-         )
-),
-tabPanel("Impressum",
-         
-         # Show a plot of the generated distribution
-         mainPanel(
-            includeHTML("AdmosImpressum.html")
-          # includeHTML("AdmosImpressum.html")
-          # includeMarkdown("AdmosImpressum.md")
-          # includeText("AdmosImpressum.txt")
-         )
-),
-
-tabPanel("Datenschutz",
-         
-         mainPanel(
-          includeHTML("AdmosDatenschutz.html"),
-          
-         #  includeText("AdmosDatenschutz.txt")
-         )
-         
-         
-)
-)
-
 }
 server <- function(input, output, session) {
-  vals <- reactiveValues(Flag = "Landkreis")
+  
+  vals <- reactiveValues(Flag = "Bundesland")
   r0_no_erfasstDf <- reactiveVal(0) 
-
+  
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
     if(input$BundeslandSelected =="---"){
-    } else{
-
-      vals$Flag  <- "Bundesland"
+    }else {
+    vals$Flag  <- "Bundesland"
     # browser()
     regionSelected = 2
     r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
@@ -251,21 +246,19 @@ server <- function(input, output, session) {
     # set menu of Landkreis to "---"
     updateSelectInput(session, "LandkreiseSelected",  selected = "---")
     }
-
   })
   
   observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
-   if(input$LandkreiseSelected =="---"){
-   } else{
-
+    if(input$LandkreiseSelected =="---"){
+    }else {
     #browser()
-      vals$Flag  <- "Landkreis"
+    vals$Flag  <- "Landkreis"
     regionSelected = 3
     r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
     r0_no_erfasstDf(r0_no_erfasstDf)
-   # browser()
+    # browser()
     updateSelectInput(session, "BundeslandSelected",  selected = "---")
-   }
+    }
   })
   
   rkiAndPredictData <- reactive({
@@ -426,23 +419,48 @@ server <- function(input, output, session) {
     
   })  
   
+  
+
+
  
-  # Save extra values in state$values when we bookmark
-  onBookmark(function(state) {
-    state$values$currentSum <- vals$Flag
-  })
-  
-  # Read values from state$values when we restore
-  onRestore(function(state) {
-    vals$Flag <- state$values$currentSum
-  })
-  
-  
-  
-  
-  
-   
-}
+ # Save extra values in state$values when we bookmark
+ onBookmark(function(state) {
+   state$values$currentSum <- vals$Flag
+ })
+ 
+ # Read values from state$values when we restore
+ onRestore(function(state) {
+   vals$Flag <- state$values$currentSum
+
+     if(input$BundeslandSelected =="---"){
+     }else {
+       vals$Flag  <- "Bundesland"
+       # browser()
+       regionSelected = 2
+       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
+       r0_no_erfasstDf(r0_no_erfasstDf)
+       # set menu of Landkreis to "---"
+       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+     }
+ 
+     if(input$LandkreiseSelected =="---"){
+     }else {
+       #browser()
+       vals$Flag  <- "Landkreis"
+       regionSelected = 3
+       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
+       r0_no_erfasstDf(r0_no_erfasstDf)
+       # browser()
+       updateSelectInput(session, "BundeslandSelected",  selected = "---")
+     }
+ 
+ })
+ 
+ }
+
+shinyApp(ui, server, enableBookmarking = "server")
 
 
-shinyApp(ui, server, enableBookmarking = "url")
+
+
+

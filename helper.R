@@ -1,3 +1,4 @@
+
 # Files to supply functions to other programs
 
 library(jsonlite)
@@ -17,9 +18,9 @@ library(DT)
 
 
 createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, vals, input,session){
-   # browser()
-  if (vals$Flag  == "Bundesland") {
-    if(input$BundeslandSelected == "---"){}
+  #browser()
+if (vals$Flag  == "Bundesland") {
+    if(input$BundeslandSelected == "---"){input$BundeslandSelected == "Deutschland"}
     if(input$BundeslandSelected == "Deutschland"){
       filterVar = "Bund"
       historyDfBund$Bund = "Deutschland"
@@ -27,17 +28,24 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
       regionSelected <- "Deutschland" 
     } else{
       
-    filterVar = "Bundesland"
-    df <- df %>% rename("whichRegion" = "Bundesland")
-    regionSelected <- input$BundeslandSelected
+      filterVar = "Bundesland"
+      df <- df %>% rename("whichRegion" = "Bundesland")
+      regionSelected <- input$BundeslandSelected
     }
   } else if(vals$Flag  == "Landkreis") {
-    if(input$LandkreiseSelected == "---"){}
     filterVar = "Landkreis"
     df <- df %>% rename("whichRegion" = "Landkreis")
     regionSelected <- input$LandkreiseSelected
   }
-  
+ # browser()
+  if(regionSelected =="---"){
+      filterVar = "Bund"
+      historyDfBund$Bund = "Deutschland"
+      df <- historyDfBund %>% rename("whichRegion" = "Bund")
+      regionSelected <- "Deutschland" 
+      updateSelectInput(session, "BundeslandSelected",  selected = "Deutschland")
+    
+  }
   df <- df %>% ungroup() %>%  filter(whichRegion == regionSelected)
   
   df <- df %>% rename_at(vars(contains("sumAnzahlFall")), ~ "SumAnzahl" ) %>% 
@@ -353,4 +361,5 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
   
   return(df)
+  
 }
