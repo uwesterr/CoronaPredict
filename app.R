@@ -20,7 +20,9 @@ if (!("tidyr" %in% rownames(installed.packages()))) install.packages("tidyr")
 if (!("modelr" %in% rownames(installed.packages()))) install.packages("modelr")
 if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 if (!("rlang" %in% rownames(installed.packages()))) install.packages("rlang")
+if (!("writexl" %in% rownames(installed.packages()))) install.packages("writexl")
 
+library(writexl)
 library(rlang)
 library(DT)
 library(modelr)
@@ -206,6 +208,24 @@ ui <- function(request) {
                         includeMarkdown("Anleitung.md")
                       )
              ),
+             
+             tabPanel("Datenimport",
+                      
+                      # Show a plot of the generated distribution
+                      sidebarPanel(
+                        # daten einlesen
+                        fileInput("importData",
+                                  label="Upload der Bettenmeldedaten",         accept = c(
+                                    "xls",
+                                    "xlsx"),
+                                  multiple = FALSE),
+                        # daten runterladen
+                        downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
+                        mainPanel(
+                        tableOutput("uploadedBettenmeldedaten"))
+                        )
+             ),
+             
              tabPanel("Impressum",
                       
                       # Show a plot of the generated distribution
@@ -230,6 +250,37 @@ ui <- function(request) {
   
 }
 server <- function(input, output, session) {
+  
+  ######  down and upload of data
+ 
+  # Downloadable csv of selected dataset ----
+  # https://shiny.rstudio.com/reference/shiny/1.0.3/downloadHandler.html
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste("data-", Sys.Date(), ".xlsx", sep="")
+    },
+    content = function(file) {
+      write_xlsx(rkiAndPredictData(), file)
+    }
+  )
+  
+  ####### upload data ----
+
+  output$uploadedBettenmeldedaten <- renderTable({
+    # input$file1 will be NULL initially. After the user selects
+    # and uploads a file, it will be a data frame with 'name',
+    # 'size', 'type', and 'datapath' columns. The 'datapath'
+    # column will contain the local filenames where the data can
+    # be found.
+    inFile <- input$importData
+    
+    if (is.null(inFile))
+      return(NULL)
+    
+    read_excel(inFile$datapath)
+  })
+  
+  
   
   vals <- reactiveValues(Flag = "Bundesland")
   r0_no_erfasstDf <- reactiveVal(0) 
