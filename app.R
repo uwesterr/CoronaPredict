@@ -174,7 +174,9 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.11"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.11", color = "blue"),
+                                       tags$head(tags$style('h2 {color:blue;}')),
+                                       tags$head(tags$style('h3 {color:blue;}')),
                                        
                                        fluidRow(
                                          
