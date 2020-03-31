@@ -426,7 +426,15 @@ server <- function(input, output, session) {
  
  # Save extra values in state$values when we bookmark
  onBookmark(function(state) {
+  #  browser()
    state$values$currentSum <- vals$Flag
+
+ })
+ 
+ 
+ onBookmarked(function(url) {
+   showBookmarkUrlModal(url) # Default function
+   updateQueryString(url) # Update Adresse im Browser
  })
  
  # Read values from state$values when we restore
