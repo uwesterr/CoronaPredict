@@ -268,6 +268,7 @@ server <- function(input, output, session) {
   
   color1 = 'blue'
   color2 = 'green'
+  color3 = '#6ab84d'
   # more options at https://ggplot2.tidyverse.org/reference/theme.html
   themeCust <-  theme(
     plot.title = element_text(color="blue", size=24, face="bold.italic"),
@@ -322,17 +323,18 @@ server <- function(input, output, session) {
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-    
+   # browser()
     tmp <- rkiAndPredictData()
     tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
     p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
-      
+      geom_point(aes(x=Tag,y= AnzahlFall, color = "Neu Infizierte erfasst")) +
       scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Aktuell Infizierte berechnet' = color1,
-                                                           'Neu Infizierte berechnet' = color2)) +
+                                                           'Neu Infizierte berechnet' = color2,
+                                                           'Neu Infizierte erfasst' = color3)) +
       
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
     
