@@ -287,55 +287,38 @@ server <- function(input, output, session) {
   
   
   
+  
   vals <- reactiveValues(Flag = "Bundesland")
-  valsFlag = "B"
   r0_no_erfasstDf <- reactiveVal(0) 
   
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
-    print(" observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{")
     if(input$BundeslandSelected =="---"){
-    } else {
+    }else {
       vals$Flag  <- "Bundesland"
-      
+      # browser()
+      regionSelected = 2
+      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
+      r0_no_erfasstDf(r0_no_erfasstDf)
+      # set menu of Landkreis to "---"
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
     }
   })
   
   observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
-    print(" observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{")
     if(input$LandkreiseSelected =="---"){
-    } else {
+    }else {
       #browser()
-      vals$Flag  <- "Landkreis"
-      updateSelectInput(session, "BundeslandSelected",  selected = "---")
-    }
-  })
-  test <- 4
-  rkiAndPredictData <- reactive({
-    
-    if( (vals$Flag  == "Bundesland") & (input$BundeslandSelected !="---")){
-     # browser()
-      print("if( vals$Flag  == Bundesland & input$BundeslandSelected !=---){")
-      vals$Flag  <- "Bundesland"
-      regionSelected = 2
-      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
-      #r0_no_erfasstDf(r0_no_erfasstDf)
-      # set menu of Landkreis to "---"
-      # updateSelectInput(session, "LandkreiseSelected",  selected = "---")
-    }
-    
-    if((vals$Flag  == "Landkreis") & (input$LandkreiseSelected !="---")){
-      print("if(vals$Flag  == Landkreis & input$LandkreiseSelected !=---){")
       vals$Flag  <- "Landkreis"
       regionSelected = 3
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
-      #r0_no_erfasstDf(r0_no_erfasstDf)
+      r0_no_erfasstDf(r0_no_erfasstDf)
       # browser()
-      #          updateSelectInput(session, "BundeslandSelected",  selected = "---")
+      updateSelectInput(session, "BundeslandSelected",  selected = "---")
     }
-    
-    
-    df <-  Rechenkern(r0_no_erfasstDf,input)
+  })
+  
+  rkiAndPredictData <- reactive({
+    df <-  Rechenkern(r0_no_erfasstDf() ,input)
     df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                         Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
   }) 
@@ -343,6 +326,8 @@ server <- function(input, output, session) {
   color1 = 'blue'
   color2 = 'green'
   color3 = '#6ab84d'
+  color4 = 'black'
+  color5 = 'gray'
   # more options at https://ggplot2.tidyverse.org/reference/theme.html
   themeCust <-  theme(
     plot.title = element_text(color="blue", size=24, face="bold.italic"),
@@ -368,12 +353,14 @@ server <- function(input, output, session) {
     tmp$ErfassteInfizierte <- as.integer(tmp$ErfassteInfizierte)
     tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$ErfassteInfizierteBerechnet)
     p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_point(data = tmp, aes(x = Tag, y = ErfassteInfizierte, color = "Erfasste Infizierte")) +
-      
+      geom_line(data = tmp, aes(x = Tag, y = ToteBerechnet, color = "Todesfälle berechnet")) + geom_point(data = tmp, aes(x = Tag, y = sumTote, color = "Todesfälle erfasst")) +
       scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Erfasste Infizierte berechnet' = color1,
-                                                           'Erfasste Infizierte' = color2)) +
+                                                           'Erfasste Infizierte' = color2,
+                                                           'Todesfälle berechnet' = color4,
+                                                           'Todesfälle erfasst' = color5)) +
       
       labs(color = 'Daten') + scale_y_continuous(labels = scales::comma)
     
@@ -387,28 +374,32 @@ server <- function(input, output, session) {
       
     }
     p <- ggplotly(p, tooltip = c("ErfassteInfizierteBerechnet", "ErfassteInfizierte", "Tag"))
-    p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))
+    p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     #p <- p %>% layout(legend = list(orientation = 'h'))
     p
     
   })
-  
+  #browser()
   output$Verlauf <- renderPlotly({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-    # browser()
+   #  browser()
     tmp <- rkiAndPredictData()
     tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
     p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
-      geom_point(aes(x=Tag,y= AnzahlFall, color = "Neu Infizierte erfasst")) +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte", sep =""),
+      geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y= AnzahlTodesfall, color = "Neue Todesfälle erfasst")) +
+      geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
+      
+      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte/Todesfälle", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Aktuell Infizierte berechnet' = color1,
                                                            'Neu Infizierte berechnet' = color2,
-                                                           'Neu Infizierte erfasst' = color3)) +
+                                                           'Neu Infizierte erfasst' = color3,
+                                                           'Neue Todesfälle berechnet' = color4,
+                                                           'Neue Todesfälle erfasst' = color5)) +
       
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
     
@@ -426,7 +417,7 @@ server <- function(input, output, session) {
     p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag"))
     
     
-    p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))
+    p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     p
     
   })  
