@@ -55,7 +55,7 @@ ui <- function(request) {
                                        wellPanel(
                                        h3("Speichern Einstellungen"),
                                          bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten 
-                                                                                                           Werten aufgerufen werden.", " Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
+                                                                                                           Werten aufgerufen werden.", "Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
                                        h3("Auswahl Region"),
 
                                        wellPanel(
@@ -207,7 +207,7 @@ ui <- function(request) {
                       
                       # Show a plot of the generated distribution
                       mainPanel(
-                        includeMarkdown("Anleitung.md")
+                        includeMarkdown("Readme.md")
                       )
              ),
              
