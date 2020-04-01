@@ -108,7 +108,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   predicteddfR0 <- nesteddfModel  %>% unnest(data) %>% unnest(c(predictions), .sep ="_")%>% unnest(c(predictionsRegressionPeriode), .sep ="_") %>% unnest(tidiedFit)
  #browser()
   r0Df <- predicteddfR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA),
-                                   RO_std.error = ifelse(term == "MeldeDate", 10^std.error, NA))  # this std.error is a multiplikator not to add to R0
+                                   RO_std.error = ifelse(term == "MeldeDate", 10^std.error, NA))  # this std.error is a multiplier not to add to R0
   
   r0Df <- r0Df  %>% select(-c(statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
   
@@ -277,7 +277,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
                    MaxIntBerechnet                   = 0,
                    
   )
-  browser()
+ # browser()
   initCalcDf <- function(calcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta, n0_erfasst, startDate, faktor_n_inf) {
     calcDf$ReduzierteRt <- calcReduzierung(calcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
     

@@ -99,7 +99,7 @@ ui <- function(request) {
                                                 wellPanel(
                                                   numericInput("ges_inf_rate", label = "Durchseuchung [%]", value = 70),
                                                   numericInput("ti", label = "Inkubationszeit [d]", value = 2),
-                                                  numericInput("tod_rate", label = "Sterblichkeit [%]", value = 2))),
+                                                  numericInput("tod_rate", label = "Sterblichkeit [%]", value = 2., step = 0.1))),
                                          column(6,
                                                 wellPanel(
                                                   numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15),
@@ -110,7 +110,7 @@ ui <- function(request) {
                                        fluidRow(
                                          column(6,
                                                 wellPanel(
-                                                  numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5),
+                                                  numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5, step = 0.1))),
                                                   numericInput("t_kh", label = "Dauer", value = 14),
                                                   numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8))),
                                          column(6,
