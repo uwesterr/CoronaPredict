@@ -106,10 +106,11 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   # US 29.03.2020: Vereinfachuchung der der nest und unnest vorgänge
   
   predicteddfR0 <- nesteddfModel  %>% unnest(data) %>% unnest(c(predictions), .sep ="_")%>% unnest(c(predictionsRegressionPeriode), .sep ="_") %>% unnest(tidiedFit)
+ #browser()
+  r0Df <- predicteddfR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA),
+                                   RO_std.error = ifelse(term == "MeldeDate", 10^std.error, NA))
   
-  r0Df <- predicteddfR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA))
-  
-  r0Df <- r0Df  %>% select(-c(std.error, statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
+  r0Df <- r0Df  %>% select(-c(statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
   
   # find regression value of first melde day, here is the problem, with first day of melde the results are useless
   #firstMeldeDay <- df$FirstMelde %>% min
@@ -118,12 +119,12 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     filter(predictionsRegressionPeriode_MeldeDate == as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) ) %>% unique() %>% mutate(n0_erfasst = 10^predictionsRegressionPeriode_pred) 
   
   
-  r0_no_erfasstDf <- cbind(r0Df ,n0_erfasstDf %>% select(whichRegion, n0_erfasst) ) %>% select(whichRegion, p.value, R0, n0_erfasst) 
+  r0_no_erfasstDf <- cbind(r0Df ,n0_erfasstDf %>% select(whichRegion, n0_erfasst) ) %>% select(whichRegion, p.value, R0, RO_std.error, n0_erfasst) 
   dfRoNo <- left_join(df , r0_no_erfasstDf) %>%    mutate( Ygesamt = Einwohner)
   
   
-  dfRoNo
-  #browser()
+  browser()
+  return(dfRoNo)
 }
 
 createDfBundLandKreis <- function() {
@@ -385,3 +386,4 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   return(df)
   
 }
+
