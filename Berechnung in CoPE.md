@@ -6,7 +6,7 @@ Das Dokument beruht auf der Software [link zum Github repo commit](https://githu
 
 Die beiden Werte für den Start der Vorhersageberechnung ist die Reproduktionsrate zum Zeitpunkt `startDate` und die Anzahl der Infizierten zum gleichen Zeitpunkt gemäß der Regression
 
-$$SumAnzahl=10^{MeldeDate}+ 10^{n0\_erfasst}$$
+$$SumAnzahl=10^{R\_T*MeldeDate}$$
 
 - n_0: Anzahl erfasster Infizierter am Beginn  startDate [n0_erfasst]
 - Rt: Reproduktionsrate pro Tag [R0]
