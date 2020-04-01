@@ -50,14 +50,14 @@ ui <- function(request) {
                       
                       sidebarLayout( position ="left",
                                      
-
+                                     
                                      sidebarPanel(
                                        wellPanel(
-                                       h3("Speichern Einstellungen"),
+                                         h3("Speichern Einstellungen"),
                                          bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten 
                                                                                                            Werten aufgerufen werden.", "Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
                                        h3("Auswahl Region"),
-
+                                       
                                        wellPanel(
                                          fluidRow(
                                            
@@ -69,8 +69,8 @@ ui <- function(request) {
                                                   selectInput("LandkreiseSelected", "Landkeis", choices = c("---",historyDfLandkreis$Landkreis %>% unique() %>% str_sort), selected = "LK Esslingen")
                                            ))),
                                        
-
-
+                                       
+                                       
                                        h3("Reduzierende Massnahmen"), 
                                        wellPanel(
                                          fluidRow(
@@ -79,19 +79,19 @@ ui <- function(request) {
                                            column(6,
                                                   sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 50)))),
                                        wellPanel(
-                                       fluidRow(
-                                         column(6,
-                                                dateInput("reduzierung_datum2", label = "2. Massnahme Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                         column(6,
-                                                sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 50)))),
+                                         fluidRow(
+                                           column(6,
+                                                  dateInput("reduzierung_datum2", label = "2. Massnahme Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(6,
+                                                  sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 50)))),
                                        wellPanel(
                                          fluidRow(
-                                       column(6,
-                                              dateInput("reduzierung_datum3", label = "3. Massnahme Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                       column(6,
-                                              sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
-
-
+                                           column(6,
+                                                  dateInput("reduzierung_datum3", label = "3. Massnahme Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(6,
+                                                  sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
+                                       
+                                       
                                        
                                        h3("Expertenparameter Infektionsverlauf"),  
                                        fluidRow(
@@ -105,7 +105,7 @@ ui <- function(request) {
                                                   numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15),
                                                   numericInput("ta", label = "Infektiosität [d]", value = 6),
                                                   numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8)))),
-
+                                       
                                        h3("Krankenhausaufenthalt"), 
                                        fluidRow(
                                          column(6,
@@ -211,23 +211,23 @@ ui <- function(request) {
                       )
              ),
              
-#             tabPanel("Datenimport",
-#                      
-#                      # Show a plot of the generated distribution
-#                      sidebarPanel(
-#                        # daten einlesen
-#                        fileInput("importData",
-#                                  label="Upload der Bettenmeldedaten",         accept = c(
-#                                    "xls",
-#                                    "xlsx"),
-#                                  multiple = FALSE),
-#                        # daten runterladen
-#                        downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
-#                        mainPanel(
-#                          dataTableOutput("uploadedBettenmeldedaten"))
-#                        )
-#             ),
-#             
+             tabPanel("Datenimport",
+                      
+                      # Show a plot of the generated distribution
+                      sidebarPanel(
+                        # daten einlesen
+                        fileInput("importData",
+                                  label="Upload der Bettenmeldedaten",         accept = c(
+                                    "xls",
+                                    "xlsx"),
+                                  multiple = FALSE),
+                        # daten runterladen
+                        downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
+                        mainPanel(
+                          dataTableOutput("uploadedBettenmeldedaten"))
+                      )
+             ),
+             
              tabPanel("Impressum",
                       
                       # Show a plot of the generated distribution
@@ -254,7 +254,7 @@ ui <- function(request) {
 server <- function(input, output, session) {
   
   ######  down and upload of data
- 
+  
   # Downloadable csv of selected dataset ----
   # https://shiny.rstudio.com/reference/shiny/1.0.3/downloadHandler.html
   output$downloadData <- downloadHandler(
@@ -267,7 +267,7 @@ server <- function(input, output, session) {
   )
   
   ####### upload data ----
-# https://shiny.rstudio.com/reference/shiny/latest/fileInput.html
+  # https://shiny.rstudio.com/reference/shiny/latest/fileInput.html
   output$uploadedBettenmeldedaten <- renderDataTable({
     # input$file1 will be NULL initially. After the user selects
     # and uploads a file, it will be a data frame with 'name',
@@ -279,45 +279,63 @@ server <- function(input, output, session) {
     if (is.null(inFile))
       return(NULL)
     
-   a <-  read_excel(inFile$datapath)
-   a$Tag <- a$Tag %>% as.Date( format="%Y-%m-%d")
-  # browser()
-      a
+    a <-  read_excel(inFile$datapath)
+    a$Tag <- a$Tag %>% as.Date( format="%Y-%m-%d")
+    # browser()
+    a
   })
   
   
   
   vals <- reactiveValues(Flag = "Bundesland")
+  valsFlag = "B"
   r0_no_erfasstDf <- reactiveVal(0) 
   
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
+    print(" observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{")
     if(input$BundeslandSelected =="---"){
-    }else {
-    vals$Flag  <- "Bundesland"
-    # browser()
-    regionSelected = 2
-    r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
-    r0_no_erfasstDf(r0_no_erfasstDf)
-    # set menu of Landkreis to "---"
-    updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+    } else {
+      vals$Flag  <- "Bundesland"
+      
+      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
     }
   })
   
   observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
+    print(" observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{")
     if(input$LandkreiseSelected =="---"){
-    }else {
-    #browser()
-    vals$Flag  <- "Landkreis"
-    regionSelected = 3
-    r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
-    r0_no_erfasstDf(r0_no_erfasstDf)
-    # browser()
-    updateSelectInput(session, "BundeslandSelected",  selected = "---")
+    } else {
+      #browser()
+      vals$Flag  <- "Landkreis"
+      updateSelectInput(session, "BundeslandSelected",  selected = "---")
     }
   })
-  
+  test <- 4
   rkiAndPredictData <- reactive({
-    df <-  Rechenkern(r0_no_erfasstDf() ,input)
+    
+    if( (vals$Flag  == "Bundesland") & (input$BundeslandSelected !="---")){
+     # browser()
+      print("if( vals$Flag  == Bundesland & input$BundeslandSelected !=---){")
+      vals$Flag  <- "Bundesland"
+      regionSelected = 2
+      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
+      #r0_no_erfasstDf(r0_no_erfasstDf)
+      # set menu of Landkreis to "---"
+      # updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+    }
+    
+    if((vals$Flag  == "Landkreis") & (input$LandkreiseSelected !="---")){
+      print("if(vals$Flag  == Landkreis & input$LandkreiseSelected !=---){")
+      vals$Flag  <- "Landkreis"
+      regionSelected = 3
+      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
+      #r0_no_erfasstDf(r0_no_erfasstDf)
+      # browser()
+      #          updateSelectInput(session, "BundeslandSelected",  selected = "---")
+    }
+    
+    
+    df <-  Rechenkern(r0_no_erfasstDf,input)
     df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                         Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
   }) 
@@ -379,7 +397,7 @@ server <- function(input, output, session) {
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-   # browser()
+    # browser()
     tmp <- rkiAndPredictData()
     tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
@@ -477,49 +495,49 @@ server <- function(input, output, session) {
   })  
   
   
-
-
- 
- # Save extra values in state$values when we bookmark
- onBookmark(function(state) {
-   state$values$currentSum <- vals$Flag
- })
- 
- # copy url into browser url adress field
- onBookmarked(function(url) {
-   showBookmarkUrlModal(url) # Default function
-   updateQueryString(url) # Update Adresse im Browser
- })
- 
- # Read values from state$values when we restore
- onRestore(function(state) {
-   vals$Flag <- state$values$currentSum
-
-     if(input$BundeslandSelected =="---"){
-     }else {
-       vals$Flag  <- "Bundesland"
-       # browser()
-       regionSelected = 2
-       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
-       r0_no_erfasstDf(r0_no_erfasstDf)
-       # set menu of Landkreis to "---"
-       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
-     }
- 
-     if(input$LandkreiseSelected =="---"){
-     }else {
-       #browser()
-       vals$Flag  <- "Landkreis"
-       regionSelected = 3
-       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
-       r0_no_erfasstDf(r0_no_erfasstDf)
-       # browser()
-       updateSelectInput(session, "BundeslandSelected",  selected = "---")
-     }
- 
- })
- 
- }
+  
+  
+  
+  # Save extra values in state$values when we bookmark
+  onBookmark(function(state) {
+    state$values$currentSum <- vals$Flag
+  })
+  
+  # copy url into browser url adress field
+  onBookmarked(function(url) {
+    showBookmarkUrlModal(url) # Default function
+    updateQueryString(url) # Update Adresse im Browser
+  })
+  
+  # Read values from state$values when we restore
+  onRestore(function(state) {
+    vals$Flag <- state$values$currentSum
+    
+    if(input$BundeslandSelected =="---"){
+    }else {
+      vals$Flag  <- "Bundesland"
+      # browser()
+      regionSelected = 2
+      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
+      r0_no_erfasstDf(r0_no_erfasstDf)
+      # set menu of Landkreis to "---"
+      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+    }
+    
+    if(input$LandkreiseSelected =="---"){
+    }else {
+      #browser()
+      vals$Flag  <- "Landkreis"
+      regionSelected = 3
+      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
+      r0_no_erfasstDf(r0_no_erfasstDf)
+      # browser()
+      updateSelectInput(session, "BundeslandSelected",  selected = "---")
+    }
+    
+  })
+  
+}
 
 shinyApp(ui, server, enableBookmarking = "server")
 
