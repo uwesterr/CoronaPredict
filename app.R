@@ -349,11 +349,14 @@ server <- function(input, output, session) {
     
     
     tmp <- rkiAndPredictData()
-    colnames(tmp)[colnames(tmp) == "SumAnzahl"] <- "ErfassteInfizierte"
-    tmp$ErfassteInfizierte <- as.integer(tmp$ErfassteInfizierte)
-    tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$ErfassteInfizierteBerechnet)
-    p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_point(data = tmp, aes(x = Tag, y = ErfassteInfizierte, color = "Erfasste Infizierte")) +
-      geom_line(data = tmp, aes(x = Tag, y = ToteBerechnet, color = "Todesfälle berechnet")) + geom_point(data = tmp, aes(x = Tag, y = sumTote, color = "Todesfälle erfasst")) +
+    colnames(tmp)[colnames(tmp) == "SumAnzahl"] <- "Erfasste_Infizierte"
+    colnames(tmp)[colnames(tmp) == "sumTote"] <- "Erfasste_Todesfaelle"
+    colnames(tmp)[colnames(tmp) == "ToteBerechnet"] <- "Berechnete_Todesfaelle"
+    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet"] <- "Berechnete_Infizierte"
+    tmp$ErfassteInfizierte <- as.integer(tmp$Erfasste_Infizierte)
+    tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$Berechnete_Infizierte)
+    p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = Berechnete_Infizierte)) + geom_point(data = tmp, aes(x = Tag, y = Erfasste_Infizierte, color = "Erfasste Infizierte")) +
+      geom_line(data = tmp, aes(x = Tag, y = Berechnete_Todesfaelle, color = "Todesfälle berechnet")) + geom_point(data = tmp, aes(x = Tag, y = Erfasste_Todesfaelle, color = "Todesfälle erfasst")) +
       scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte / Todesfälle", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
@@ -373,7 +376,7 @@ server <- function(input, output, session) {
       p
       
     }
-    p <- ggplotly(p, tooltip = c("ErfassteInfizierteBerechnet", "ErfassteInfizierte", "Tag"))
+    p <- ggplotly(p, tooltip = c("Berechnete_Infizierte", "Erfasste_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle"))
     p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     #p <- p %>% layout(legend = list(orientation = 'h'))
     p
@@ -384,12 +387,13 @@ server <- function(input, output, session) {
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-   #  browser()
+    #  browser()
     tmp <- rkiAndPredictData()
+    colnames(tmp)[colnames(tmp) == "AnzahlTodesfall"] <- "NeueToteErfasst"
     tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
     p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
-      geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y= AnzahlTodesfall, color = "Neue Todesfälle erfasst")) +
+      geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y=NeueToteErfasst, color = "Neue Todesfälle erfasst")) +
       geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
       
       scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte / Todesfälle", sep =""),
@@ -414,13 +418,13 @@ server <- function(input, output, session) {
     }
     
     
-    p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag"))
+    p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag", "NeueToteErfasst", "NeueToteBerechnet"))
     
     
     p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     p
     
-  })  
+  }) 
   
   output$Krankenhaus <- renderPlotly({
     # browser()
