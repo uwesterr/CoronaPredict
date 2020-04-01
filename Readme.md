@@ -4,9 +4,9 @@
 
 ## **Anleitung**
 
-Version: 1.0
+Version: 1.1
 
-Datum: 30.03.2020
+Datum: 1.04.2020
 
 ## **Inhalt**
 
@@ -104,8 +104,7 @@ xxxx abgeholt.
 <a name="region"></a>
 2.1 Region
 ------
-
-![](.//media/image2.png)
+<img src=".//media/image2.png" width="450">
 
 Auswahlmöglichkeiten: Deutschland -- Bundesländer -- Land- und Stadtkreise
 Treffen Sie die Auswahl über die Dropdown-Liste oder geben Sie die gewünschte Region direkt im Feld ein (zuerst "------" löschen).
@@ -113,8 +112,7 @@ Treffen Sie die Auswahl über die Dropdown-Liste oder geben Sie die gewünschte 
 <a name="reduzierende-massnahmen"></a>
 2.2 Reduzierende Massnahmen
 -----------------------
-
-![](.//media/image3.png)
+<img src=".//media/image3.png" width="450">
 
 Hier können Daten von getroffenen Massnahmen zur Reduzierung der
 Reproduktionsrate angegeben werden.
@@ -133,17 +131,15 @@ Die Expertenparameter für den Infektionsverlauf und den
 Krankenhausaufenthalt wurden aus den Quellen \[1\] und \[2\] übernommen.
 Sie können vom Benutzer angepasst werden.
 
-![](.//media/image4.png)
+<img src=".//media/image4.png" width="450">
 
 <a name="krankenhausaufenthalt"></a>
 2.4 Krankenhausaufenthalt
 ---------------------
 
-![](.//media/image5.png)
+<img src=".//media/image5.png" width="450">
 
-Die Parameter für den erwarteten Krankenhausaufenthalt wurden aus \[1\]
-abgeleitet. Die Grafik aus \[1\] definiert auch die verschiedenen Zeiten
-und den jeweiligen Versatz zwischen den Zuständen:
+Die Parameter für den erwarteten Krankenhausaufenthalt wurden aus \[1\] abgeleitet. Die Grafik aus \[1\] definiert auch die verschiedenen Zeiten und den jeweiligen Versatz zwischen den Zuständen:
 
 ![](.//media/image6.png)
 
@@ -151,7 +147,7 @@ und den jeweiligen Versatz zwischen den Zuständen:
 2.5 Einstellung der Darstellung
 ---------------------------
 Hier kann das Zeitintervall für die Darstellung angegeben werden. Des Weiteren kann zwischen linearer und logarithmischer Skala der y-Achse umgeschaltet werden.
-![](.//media/image7.png)
+<img src=".//media/image7.png" width="450">
 
 <a name="daten-und-darstellung"></a>
 3. Daten und Darstellung
@@ -159,8 +155,8 @@ Hier kann das Zeitintervall für die Darstellung angegeben werden. Des Weiteren 
 <a name="kumulierte-infizierte"></a>
 3.1 Kumulierte Infizierte
 ---------------------------
-![](.//media/image8.png)
-![](.//media/image9.png)
+<img src=".//media/image8.png" width="400"> 
+<img src=".//media/image9.png" width="400">
 
 Kumulierte Infizierte: Gesamtzahl der positiv Getesteten
 
@@ -179,13 +175,13 @@ Daten vor allem im gezoomten Bild.
 
 Alle Grafiken sind interaktiv und erlauben z.B. Zoom und einen Marker, mit dem die tagesaktuellen Zahlen dargestellt werden können:
 
-![](.//media/image10.png)
+<img src=".//media/image10.png" width="450">
 Alle Interaktionen können im Header des Diagramms ativiert werden.
 
 <a name="verlauf-infizierte"></a>
 3.2 Verlauf Infizierte
 ---------------------------
-![](.//media/image11.png)
+<img src=".//media/image11.png" width="450">
 Aktuell Infizierte berechnet:
   * Berechnete Anzahl der Personen, die positiv getestet wurden und die zurzeit ansteckend sind.
 
@@ -195,53 +191,42 @@ Neu Infizierte berechnet:
 <a name="plaetze-im-krankenhaus"></a>
 3.3 Plätze im Krankenhaus/Intensivstation
 ---------------------------
-
-![](.//media/image12.png)
-Plätze in Krankenhaus:
+<img src=".//media/image12.png" width="450">
+Plätze im Krankenhaus:
   * Erwartete Anzahl der Personen, für die ein normales Krankenhausbett zur Verfügung gestellt werden sollte.
 
-Plätze in Intensivstation:
+Plätze auf Intensivstation:
   * Erwartete Anzahl der Personen, für die ein Platz auf einer Intensivstation zur Verfügung gestellt werden sollte. 
 
-Diese Berechnungen erfolgen nach dem in [1] dargestellten Modell. Die Parameter hierfür können in 
-[2.4](#krankenhausaufenthalt) eingestellt werden.
+Diese Berechnungen erfolgen nach dem in \[1\] dargestellten Modell. Die Parameter hierfür können in [2.4](#krankenhausaufenthalt) eingestellt werden.
 
 <a name="taegliche-reproduktionsrate"></a>
 3.4 Tägliche Reproduktionsrate
 ---------------------------
+<img src=".//media/image13.png" width="450">
 
-![](.//media/image13.png)
+Die tägliche Reproduktionsrate Rt beschreibt die Zahl derer, die ein Infizierter im Durchschnitt pro Tag ansteckt.
+Sie kann durch getroffene Maßnahmen verändert werden.
+Im Zeitabschnitt vor den getroffenen Maßnahmen bestimmt hauptsächlich die unveränderte Reproduktionsrate den Kurvenverlauf.
 
 <a name="vorgehensweise"></a>
 4. Vorgehensweise
 ==============
+<img src=".//media/image14.png" width="450">
 
-\-\-\-\-\-\-\-- bis hierher bearbeitet !!
-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\--
+1.	Wählen Sie die zu betrachtende Region aus.
+2.	Passen Sie evtl. das Anfangsdatum der Darstellung an. Dies sollte bei der ersten Erfassung von Infizierten liegen.
+3.	Tragen Sie das Datum von getroffenen Maßnahmen zur Reduzierung der Ausbreitung von Covid19 ein. Verwenden Sie den Prozentsatz zur Reduzierung der Reproduktionsrate Rt, um die berechnete Kurve den realen Daten anzupassen. Dies kann am besten in der logarithmischen Darstellung durchgeführt werden.
 
-Nach Auswahl der Region
+##### Expertenparameter Infektionsverlauf
 
-![](.//media/image14.png)
+Die Expertenparameter wurden für Fallzahlen Covid19 Betroffener im dargestellten Zeitraum für Deutschland ermittelt und das Modell wurde darauf kalibriert.
 
-Verwenden Sie Datum und Prozentsatz, um die berechnete Kurve den realen
-Daten für die gewählte Region anzupassen.
+Wenn eigene Daten (z.B. für einen Kreis) vorhanden sind, können die Parameter darauf angepasst werden.
 
-Expertenparameter
+Sind keine Daten vorhanden, können die Expertendaten für den Infektionsverlauf auf diesen Standardwerten belassen werden.
 
-Die Expertenparameter wurden für Fallzahlen Covid19 Betroffener im
-dargestellten Zeitraum für Deutschland ermittelt und das Modell wurde
-darauf kalibriert.
-
-Wenn eigene Daten (z.B. für einen Kreis) vorhanden sind, können die
-Parameter darauf angepasst werden.
-
-Sind keine Daten vorhanden, können die Expertendaten für den
-Infektionsverlauf auf diesen Standardwerten belassen werden.
-
-Wir verwenden die tägliche Reproduktionsrate Rt als hauptsächlichen
-Parameter zur Anpassung der Kurven in dem Bereich, bis die erste
-Massnahme sich auswirkt (siehe hier auch \[2\] zur Beurteilung der
-Werte)
+Wir verwenden hauptsächlich die tägliche Reproduktionsrate Rt als Parameter zur Anpassung der Kurven in dem Bereich vor der ersten Maßnahme (siehe hier auch [2] zur Beurteilung der Werte).
 
 <a name="literatur"></a>
 5. Literatur
@@ -252,5 +237,6 @@ Werte)
           
 
 ![](.//media/image15.png)
-
+  \[2\]   Kucharski AJ, Russel TW, et al.: Early dynamics of transmission and control of COVID-19: a mathematical modelling study
+  ------- -------------------------------------------------------------------------------------------------------------------------------------
 ![](.//media/image16.png)
