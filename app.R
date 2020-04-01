@@ -50,14 +50,14 @@ ui <- function(request) {
                       
                       sidebarLayout( position ="left",
                                      
-
+                                     
                                      sidebarPanel(
                                        wellPanel(
-                                       h3("Speichern Einstellungen"),
+                                         h3("Speichern Einstellungen"),
                                          bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten 
                                                                                                            Werten aufgerufen werden.", "Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
                                        h3("Auswahl Region"),
-
+                                       
                                        wellPanel(
                                          fluidRow(
                                            
@@ -69,8 +69,8 @@ ui <- function(request) {
                                                   selectInput("LandkreiseSelected", "Landkeis", choices = c("---",historyDfLandkreis$Landkreis %>% unique() %>% str_sort), selected = "LK Esslingen")
                                            ))),
                                        
-
-
+                                       
+                                       
                                        h3("Reduzierende Massnahmen"), 
                                        wellPanel(
                                          fluidRow(
@@ -79,19 +79,19 @@ ui <- function(request) {
                                            column(6,
                                                   sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 50)))),
                                        wellPanel(
-                                       fluidRow(
-                                         column(6,
-                                                dateInput("reduzierung_datum2", label = "2. Massnahme Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                         column(6,
-                                                sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 50)))),
+                                         fluidRow(
+                                           column(6,
+                                                  dateInput("reduzierung_datum2", label = "2. Massnahme Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(6,
+                                                  sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 50)))),
                                        wellPanel(
                                          fluidRow(
-                                       column(6,
-                                              dateInput("reduzierung_datum3", label = "3. Massnahme Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                       column(6,
-                                              sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
-
-
+                                           column(6,
+                                                  dateInput("reduzierung_datum3", label = "3. Massnahme Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(6,
+                                                  sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
+                                       
+                                       
                                        
                                        h3("Expertenparameter Infektionsverlauf"),  
                                        fluidRow(
@@ -105,7 +105,7 @@ ui <- function(request) {
                                                   numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15),
                                                   numericInput("ta", label = "Infektiosität [d]", value = 6),
                                                   numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8)))),
-
+                                       
                                        h3("Krankenhausaufenthalt"), 
                                        fluidRow(
                                          column(6,
@@ -211,23 +211,23 @@ ui <- function(request) {
                       )
              ),
              
-#             tabPanel("Datenimport",
-#                      
-#                      # Show a plot of the generated distribution
-#                      sidebarPanel(
-#                        # daten einlesen
-#                        fileInput("importData",
-#                                  label="Upload der Bettenmeldedaten",         accept = c(
-#                                    "xls",
-#                                    "xlsx"),
-#                                  multiple = FALSE),
-#                        # daten runterladen
-#                        downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
-#                        mainPanel(
-#                          dataTableOutput("uploadedBettenmeldedaten"))
-#                        )
-#             ),
-#             
+             tabPanel("Datenimport",
+                      
+                      # Show a plot of the generated distribution
+                      sidebarPanel(
+                        # daten einlesen
+                        fileInput("importData",
+                                  label="Upload der Bettenmeldedaten",         accept = c(
+                                    "xls",
+                                    "xlsx"),
+                                  multiple = FALSE),
+                        # daten runterladen
+                        downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
+                        mainPanel(
+                          dataTableOutput("uploadedBettenmeldedaten"))
+                      )
+             ),
+             
              tabPanel("Impressum",
                       
                       # Show a plot of the generated distribution
@@ -254,7 +254,7 @@ ui <- function(request) {
 server <- function(input, output, session) {
   
   ######  down and upload of data
- 
+  
   # Downloadable csv of selected dataset ----
   # https://shiny.rstudio.com/reference/shiny/1.0.3/downloadHandler.html
   output$downloadData <- downloadHandler(
@@ -267,7 +267,7 @@ server <- function(input, output, session) {
   )
   
   ####### upload data ----
-# https://shiny.rstudio.com/reference/shiny/latest/fileInput.html
+  # https://shiny.rstudio.com/reference/shiny/latest/fileInput.html
   output$uploadedBettenmeldedaten <- renderDataTable({
     # input$file1 will be NULL initially. After the user selects
     # and uploads a file, it will be a data frame with 'name',
@@ -279,11 +279,12 @@ server <- function(input, output, session) {
     if (is.null(inFile))
       return(NULL)
     
-   a <-  read_excel(inFile$datapath)
-   a$Tag <- a$Tag %>% as.Date( format="%Y-%m-%d")
-  # browser()
-      a
+    a <-  read_excel(inFile$datapath)
+    a$Tag <- a$Tag %>% as.Date( format="%Y-%m-%d")
+    # browser()
+    a
   })
+  
   
   
   
@@ -293,26 +294,26 @@ server <- function(input, output, session) {
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
     if(input$BundeslandSelected =="---"){
     }else {
-    vals$Flag  <- "Bundesland"
-    # browser()
-    regionSelected = 2
-    r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
-    r0_no_erfasstDf(r0_no_erfasstDf)
-    # set menu of Landkreis to "---"
-    updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+      vals$Flag  <- "Bundesland"
+      # browser()
+      regionSelected = 2
+      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
+      r0_no_erfasstDf(r0_no_erfasstDf)
+      # set menu of Landkreis to "---"
+      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
     }
   })
   
   observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
     if(input$LandkreiseSelected =="---"){
     }else {
-    #browser()
-    vals$Flag  <- "Landkreis"
-    regionSelected = 3
-    r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
-    r0_no_erfasstDf(r0_no_erfasstDf)
-    # browser()
-    updateSelectInput(session, "BundeslandSelected",  selected = "---")
+      #browser()
+      vals$Flag  <- "Landkreis"
+      regionSelected = 3
+      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
+      r0_no_erfasstDf(r0_no_erfasstDf)
+      # browser()
+      updateSelectInput(session, "BundeslandSelected",  selected = "---")
     }
   })
   
@@ -325,6 +326,8 @@ server <- function(input, output, session) {
   color1 = 'blue'
   color2 = 'green'
   color3 = '#6ab84d'
+  color4 = 'black'
+  color5 = 'gray'
   # more options at https://ggplot2.tidyverse.org/reference/theme.html
   themeCust <-  theme(
     plot.title = element_text(color="blue", size=24, face="bold.italic"),
@@ -350,12 +353,14 @@ server <- function(input, output, session) {
     tmp$ErfassteInfizierte <- as.integer(tmp$ErfassteInfizierte)
     tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$ErfassteInfizierteBerechnet)
     p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = ErfassteInfizierteBerechnet)) + geom_point(data = tmp, aes(x = Tag, y = ErfassteInfizierte, color = "Erfasste Infizierte")) +
-      
+      geom_line(data = tmp, aes(x = Tag, y = ToteBerechnet, color = "Todesfälle berechnet")) + geom_point(data = tmp, aes(x = Tag, y = sumTote, color = "Todesfälle erfasst")) +
       scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Erfasste Infizierte berechnet' = color1,
-                                                           'Erfasste Infizierte' = color2)) +
+                                                           'Erfasste Infizierte' = color2,
+                                                           'Todesfälle berechnet' = color4,
+                                                           'Todesfälle erfasst' = color5)) +
       
       labs(color = 'Daten') + scale_y_continuous(labels = scales::comma)
     
@@ -369,28 +374,32 @@ server <- function(input, output, session) {
       
     }
     p <- ggplotly(p, tooltip = c("ErfassteInfizierteBerechnet", "ErfassteInfizierte", "Tag"))
-    p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))
+    p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     #p <- p %>% layout(legend = list(orientation = 'h'))
     p
     
   })
-  
+  #browser()
   output$Verlauf <- renderPlotly({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-   # browser()
+   #  browser()
     tmp <- rkiAndPredictData()
     tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
     p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
-      geom_point(aes(x=Tag,y= AnzahlFall, color = "Neu Infizierte erfasst")) +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte", sep =""),
+      geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y= AnzahlTodesfall, color = "Neue Todesfälle erfasst")) +
+      geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
+      
+      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte/Todesfälle", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Aktuell Infizierte berechnet' = color1,
                                                            'Neu Infizierte berechnet' = color2,
-                                                           'Neu Infizierte erfasst' = color3)) +
+                                                           'Neu Infizierte erfasst' = color3,
+                                                           'Neue Todesfälle berechnet' = color4,
+                                                           'Neue Todesfälle erfasst' = color5)) +
       
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
     
@@ -408,7 +417,7 @@ server <- function(input, output, session) {
     p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag"))
     
     
-    p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))
+    p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     p
     
   })  
@@ -477,49 +486,49 @@ server <- function(input, output, session) {
   })  
   
   
-
-
- 
- # Save extra values in state$values when we bookmark
- onBookmark(function(state) {
-   state$values$currentSum <- vals$Flag
- })
- 
- # copy url into browser url adress field
- onBookmarked(function(url) {
-   showBookmarkUrlModal(url) # Default function
-   updateQueryString(url) # Update Adresse im Browser
- })
- 
- # Read values from state$values when we restore
- onRestore(function(state) {
-   vals$Flag <- state$values$currentSum
-
-     if(input$BundeslandSelected =="---"){
-     }else {
-       vals$Flag  <- "Bundesland"
-       # browser()
-       regionSelected = 2
-       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
-       r0_no_erfasstDf(r0_no_erfasstDf)
-       # set menu of Landkreis to "---"
-       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
-     }
- 
-     if(input$LandkreiseSelected =="---"){
-     }else {
-       #browser()
-       vals$Flag  <- "Landkreis"
-       regionSelected = 3
-       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
-       r0_no_erfasstDf(r0_no_erfasstDf)
-       # browser()
-       updateSelectInput(session, "BundeslandSelected",  selected = "---")
-     }
- 
- })
- 
- }
+  
+  
+  
+  # Save extra values in state$values when we bookmark
+  onBookmark(function(state) {
+    state$values$currentSum <- vals$Flag
+  })
+  
+  # copy url into browser url adress field
+  onBookmarked(function(url) {
+    showBookmarkUrlModal(url) # Default function
+    updateQueryString(url) # Update Adresse im Browser
+  })
+  
+  # Read values from state$values when we restore
+  onRestore(function(state) {
+    vals$Flag <- state$values$currentSum
+    
+    if(input$BundeslandSelected =="---"){
+    }else {
+      vals$Flag  <- "Bundesland"
+      # browser()
+      regionSelected = 2
+      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
+      r0_no_erfasstDf(r0_no_erfasstDf)
+      # set menu of Landkreis to "---"
+      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+    }
+    
+    if(input$LandkreiseSelected =="---"){
+    }else {
+      #browser()
+      vals$Flag  <- "Landkreis"
+      regionSelected = 3
+      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
+      r0_no_erfasstDf(r0_no_erfasstDf)
+      # browser()
+      updateSelectInput(session, "BundeslandSelected",  selected = "---")
+    }
+    
+  })
+  
+}
 
 shinyApp(ui, server, enableBookmarking = "server")
 
