@@ -54,8 +54,8 @@ ui <- function(request) {
                                      sidebarPanel(
                                        wellPanel(
                                        h3("Speichern Einstellungen"),
-                                         bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellen 
-                                                                                                           Werten aufgerufen werden")),
+                                         bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten 
+                                                                                                           Werten aufgerufen werden.", " Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
                                        h3("Auswahl Region"),
 
                                        wellPanel(
@@ -77,19 +77,19 @@ ui <- function(request) {
                                            column(6,
                                                   dateInput("reduzierung_datum1", label = "1. Massnahme Datum, Rt [%]", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
                                            column(6,
-                                                  sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
+                                                  sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 50)))),
                                        wellPanel(
                                        fluidRow(
                                          column(6,
                                                 dateInput("reduzierung_datum2", label = "2. Massnahme Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
                                          column(6,
-                                                sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 50)))),
+                                                sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 50)))),
                                        wellPanel(
                                          fluidRow(
                                        column(6,
                                               dateInput("reduzierung_datum3", label = "3. Massnahme Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
                                        column(6,
-                                              sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = 0, max = 100, post  = " %", value = 0)))),
+                                              sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
 
 
                                        
@@ -211,23 +211,23 @@ ui <- function(request) {
                       )
              ),
              
-             tabPanel("Datenimport",
-                      
-                      # Show a plot of the generated distribution
-                      sidebarPanel(
-                        # daten einlesen
-                        fileInput("importData",
-                                  label="Upload der Bettenmeldedaten",         accept = c(
-                                    "xls",
-                                    "xlsx"),
-                                  multiple = FALSE),
-                        # daten runterladen
-                        downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
-                        mainPanel(
-                        tableOutput("uploadedBettenmeldedaten"))
-                        )
-             ),
-             
+#             tabPanel("Datenimport",
+#                      
+#                      # Show a plot of the generated distribution
+#                      sidebarPanel(
+#                        # daten einlesen
+#                        fileInput("importData",
+#                                  label="Upload der Bettenmeldedaten",         accept = c(
+#                                    "xls",
+#                                    "xlsx"),
+#                                  multiple = FALSE),
+#                        # daten runterladen
+#                        downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
+#                        mainPanel(
+#                          dataTableOutput("uploadedBettenmeldedaten"))
+#                        )
+#             ),
+#             
              tabPanel("Impressum",
                       
                       # Show a plot of the generated distribution
@@ -267,8 +267,8 @@ server <- function(input, output, session) {
   )
   
   ####### upload data ----
-
-  output$uploadedBettenmeldedaten <- renderTable({
+# https://shiny.rstudio.com/reference/shiny/latest/fileInput.html
+  output$uploadedBettenmeldedaten <- renderDataTable({
     # input$file1 will be NULL initially. After the user selects
     # and uploads a file, it will be a data frame with 'name',
     # 'size', 'type', and 'datapath' columns. The 'datapath'
@@ -279,7 +279,10 @@ server <- function(input, output, session) {
     if (is.null(inFile))
       return(NULL)
     
-    read_excel(inFile$datapath)
+   a <-  read_excel(inFile$datapath)
+   a$Tag <- a$Tag %>% as.Date( format="%Y-%m-%d")
+  # browser()
+      a
   })
   
   
