@@ -319,8 +319,23 @@ server <- function(input, output, session) {
   })
   
   rkiAndPredictData <- reactive({
-   # browser()
-    df <-  Rechenkern(r0_no_erfasstDf() ,input)
+    #browser()
+    dfRoNo <- r0_no_erfasstDf()[[1]]
+    n0_erfasst_nom_min_max <- r0_no_erfasstDf()[[2]]
+    R0_conf_nom_min_max <- r0_no_erfasstDf()[[3]]
+    
+    rechenDf_nom <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_nom, R0 =R0_conf_nom_min_max$R0_nom)
+    df_nom <-  Rechenkern(rechenDf_nom,input)
+    
+    rechenDf_min <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_min, R0 =R0_conf_nom_min_max$R0_min)
+    df_min <-  Rechenkern(rechenDf_min,input)
+    
+    rechenDf_max <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_max, R0 =R0_conf_nom_min_max$R0_max)
+    df_max <-  Rechenkern(rechenDf_max,input)
+    
+    df <- left_join(df_nom, df_min, by = "Tag", suffix = c("", "_min"))
+    df <- left_join(df, df_max, by = "Tag", suffix = c("", "_max"))
+   #  browser()
     df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                         Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
   }) 
@@ -346,19 +361,33 @@ server <- function(input, output, session) {
   output$Kumuliert <- renderPlotly({
     
     
-    #  browser()
+    
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
     
     tmp <- rkiAndPredictData()
+   # browser()
     colnames(tmp)[colnames(tmp) == "SumAnzahl"] <- "Erfasste_Infizierte"
     colnames(tmp)[colnames(tmp) == "sumTote"] <- "Erfasste_Todesfaelle"
     colnames(tmp)[colnames(tmp) == "ToteBerechnet"] <- "Berechnete_Todesfaelle"
     colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet"] <- "Berechnete_Infizierte"
+    # min
+    colnames(tmp)[colnames(tmp) == "SumAnzahl_min"] <- "Erfasste_Infizierte_min"
+    colnames(tmp)[colnames(tmp) == "sumTote_min"] <- "Erfasste_Todesfaelle_min"
+    colnames(tmp)[colnames(tmp) == "ToteBerechnet_min"] <- "Berechnete_Todesfaelle_min"
+    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_min"] <- "Berechnete_Infizierte_min"
+    # max
+    colnames(tmp)[colnames(tmp) == "SumAnzahl_max"] <- "Erfasste_Infizierte_max"
+    colnames(tmp)[colnames(tmp) == "sumTote_max"] <- "Erfasste_Todesfaelle_max"
+    colnames(tmp)[colnames(tmp) == "ToteBerechnet_max"] <- "Berechnete_Todesfaelle_max"
+    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_max"] <- "Berechnete_Infizierte_max"
     tmp$ErfassteInfizierte <- as.integer(tmp$Erfasste_Infizierte)
     tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$Berechnete_Infizierte)
-    p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = Berechnete_Infizierte)) + geom_point(data = tmp, aes(x = Tag, y = Erfasste_Infizierte, color = "Erfasste Infizierte")) +
-      geom_line(data = tmp, aes(x = Tag, y = Berechnete_Todesfaelle, color = "Todesfälle berechnet")) + geom_point(data = tmp, aes(x = Tag, y = Erfasste_Todesfaelle, color = "Todesfälle erfasst")) +
+    p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = Berechnete_Infizierte)) + geom_line(aes(x=Tag, y = Berechnete_Infizierte_min), color = color1, linetype = 2) +
+      geom_line(aes(x=Tag, y = Berechnete_Infizierte_max), color = color1, linetype = 2) + geom_point(data = tmp, aes(x = Tag, y = Erfasste_Infizierte, color = "Erfasste Infizierte")) +
+      geom_line(data = tmp, aes(x = Tag, y = Berechnete_Todesfaelle, color = "Todesfälle berechnet")) + 
+      geom_line(aes(x=Tag, y = Berechnete_Todesfaelle_min), color = color4, linetype = 2) + geom_line(aes(x=Tag, y = Berechnete_Todesfaelle_max),color = color4, linetype = 2) +
+      geom_point(data = tmp, aes(x = Tag, y = Erfasste_Todesfaelle, color = "Todesfälle erfasst")) +
       scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte / Todesfälle", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
@@ -394,10 +423,13 @@ server <- function(input, output, session) {
     colnames(tmp)[colnames(tmp) == "AnzahlTodesfall"] <- "NeueToteErfasst"
     tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
-    p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
-      geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
+    p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet_min), color = color1, linetype = 2) + 
+      geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet_max), color = color1, linetype = 2) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
+      geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet_min), color = color2, linetype = 2) + 
+      geom_line(aes(x=Tag,y= NeuInfizierteBerechnet_max), color = color2, linetype = 2) +
       geom_point(aes(x=Tag,y= AnzahlFall, color = "Neu Infizierte erfasst")) +
-      geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y=NeueToteErfasst, color = "Neue Todesfälle erfasst")) +
+      geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_line(aes(x=Tag,y= NeueToteBerechnet_min), color = color4, linetype = 2) +
+      geom_line(aes(x=Tag,y= NeueToteBerechnet_max), color = color4, linetype = 2) + geom_point(aes(x=Tag,y=NeueToteErfasst, color = "Neue Todesfälle erfasst")) +
       geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
       
       scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte / Todesfälle", sep =""),
@@ -437,9 +469,20 @@ server <- function(input, output, session) {
     tmp <- rkiAndPredictData()
     colnames(tmp)[colnames(tmp) == "KhBerechnet"] <- "Krankenhaus_berechnet"
     colnames(tmp)[colnames(tmp) == "IntensivBerechnet"] <- "Intensiv_berechnet"
+    
+    #min
+    colnames(tmp)[colnames(tmp) == "KhBerechnet_min"] <- "Krankenhaus_berechnet_min"
+    colnames(tmp)[colnames(tmp) == "IntensivBerechnet_min"] <- "Intensiv_berechnet_min"
+    #max
+    colnames(tmp)[colnames(tmp) == "KhBerechnet_max"] <- "Krankenhaus_berechnet_max"
+    colnames(tmp)[colnames(tmp) == "IntensivBerechnet_max"] <- "Intensiv_berechnet_max"
+    
     tmp$Intensiv_berechnet <- as.integer(tmp$Intensiv_berechnet)
     tmp$Krankenhaus_berechnet <- as.integer(tmp$Krankenhaus_berechnet)
-    p <- ggplot(tmp, aes( color ="KH berechnet")) + geom_line(aes(x=Tag, y = Krankenhaus_berechnet)) + geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) +
+    p <- ggplot(tmp, aes( color ="KH berechnet")) + geom_line(aes(x=Tag, y = Krankenhaus_berechnet)) + geom_line(aes(x=Tag, y = Krankenhaus_berechnet_min), color = color1, linetype = 2) + 
+      geom_line(aes(x=Tag, y = Krankenhaus_berechnet_max), color = color1, linetype = 2) + 
+      geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) + geom_line(aes(x=Tag,y= Intensiv_berechnet_min), color = color2, linetype = 2) +
+      geom_line(aes(x=Tag,y= Intensiv_berechnet_max), color = color2, linetype = 2) +
       scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Plätze in Krankenhaus / Intensivstation", sep ="")  ,
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
@@ -475,11 +518,21 @@ server <- function(input, output, session) {
     tmp <- rkiAndPredictData()
     colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt"] <- "Taegliche_Reproduktionsrate"
     colnames(tmp)[colnames(tmp) == "ReduzierteRt"] <- "Reduzierte_Reproduktionsrate"
+    
+    #min
+    colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt_min"] <- "Taegliche_Reproduktionsrate_min"
+    colnames(tmp)[colnames(tmp) == "ReduzierteRt_min"] <- "Reduzierte_Reproduktionsrate_min"
+    
+    #max
+    colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt_max"] <- "Taegliche_Reproduktionsrate_max"
+    colnames(tmp)[colnames(tmp) == "ReduzierteRt_max"] <- "Reduzierte_Reproduktionsrate_max"
+    
     tmp$Taegliche_Reproduktionsrate <- round(tmp$Taegliche_Reproduktionsrate, digits = 3)
     tmp$Reduzierte_Reproduktionsrate <- round(tmp$Reduzierte_Reproduktionsrate, digits = 3)
     
-    p <- ggplot(tmp, aes(color = "Tägliche Reproduktionsrate")) + geom_line(aes(x=Tag, y = Taegliche_Reproduktionsrate)) + geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Reduzierte Reproduktionsrate")) +
-      
+    p <- ggplot(tmp, aes(color = "Tägliche Reproduktionsrate")) + geom_line(aes(x=Tag, y = Taegliche_Reproduktionsrate)) + geom_line(aes(x=Tag, y = Taegliche_Reproduktionsrate_min), color = color1, linetype = 2) +
+     geom_line(aes(x=Tag, y = Taegliche_Reproduktionsrate_max), color = color1, linetype = 2) + geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Reduzierte Reproduktionsrate")) +
+      geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate_min), color = color2, linetype = 2) + geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate_max), color = color2, linetype = 2) +
       scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  , x = "Datum", y = "Wert",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Tägliche Reproduktionsrate' = color1,
