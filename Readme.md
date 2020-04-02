@@ -1,12 +1,10 @@
 # CoPE - Covid Predictor Estimator
 
-![](.//media/image1.png)
-
 ## **Anleitung**
 
-Version: 1.1
+Version: 1.2
 
-Datum: 1.04.2020
+Datum: 2.04.2020
 
 ## **Inhalt**
 
@@ -59,8 +57,7 @@ Für Hinweise und Fehlerkorrekturen sind wir dankbar.
 29.3.2020, Dr. Thomas Gneiting
 
 <a name="einführung"></a>
-1. Einführung
-==========
+## 1. Einführung
 
 Die Online-App "Rechenmodel Verlauf Covid19 Infektionen und deren
 Auswirkung" soll eine Hilfestellung für alle Entscheidungsträger im
@@ -68,15 +65,13 @@ Bereich der Planung der notwendigen Ressourcen in der Corona-Pandemie
 darstellen.
 
 <a name="aufruf"></a>
-1.1 Aufruf
-------
+### 1.1 Aufruf
 
 Die App kann mit <https://covid19.admos.de> in jedem Browser aufgerufen
 werden.
 
 <a name="algorithmus"></a>
-1.2 Algorithmus
------------
+### 1.2 Algorithmus
 
 Bei der Entwicklung der App wurde ein vereinfachter Algorithmus
 angewandt. Im Gegensatz zum allgemeingültigen SIR Modell, werden
@@ -98,21 +93,21 @@ real erfassten Daten bestimmt. Diese Daten werden direkt vom Datenserver
 xxxx abgeholt.
 
 <a name="eingaben"></a>
-2. Eingaben
-========
+## 2. Eingaben
 
 <a name="region"></a>
-2.1 Region
-------
-<img src=".//media/image2.png" width="450">
+### 2.1 Region
+
+<img src=".//media/Region.png" width="350">
 
 Auswahlmöglichkeiten: Deutschland -- Bundesländer -- Land- und Stadtkreise
-Treffen Sie die Auswahl über die Dropdown-Liste oder geben Sie die gewünschte Region direkt im Feld ein (zuerst "------" löschen).
+
+Treffen Sie die Auswahl über die Dropdown-Liste oder geben Sie die gewünschte Region direkt im Feld ein (zuerst "----" löschen).
 
 <a name="reduzierende-massnahmen"></a>
-2.2 Reduzierende Massnahmen
------------------------
-<img src=".//media/image3.png" width="450">
+### 2.2 Reduzierende Massnahmen
+
+<img src=".//media/RedMassnahmen.png" width="350">
 
 Hier können Daten von getroffenen Massnahmen zur Reduzierung der
 Reproduktionsrate angegeben werden.
@@ -124,39 +119,37 @@ Als Voreinstellung sind angegeben:
 23.3.2020: Einführung der Kontaktbeschränkungen
 
 <a name="expertenparameter-infektionsverlauf"></a>
-2.3 Expertenparameter Infektionsverlauf
------------------------------------
+### 2.3 Expertenparameter Infektionsverlauf
 
 Die Expertenparameter für den Infektionsverlauf und den
-Krankenhausaufenthalt wurden aus den Quellen \[1\] und \[2\] übernommen.
+Krankenhausaufenthalt wurden aus den Quellen [1] und [2] übernommen.
 Sie können vom Benutzer angepasst werden.
 
-<img src=".//media/image4.png" width="450">
+<img src=".//media/Expertenparameter.png" width="350">
 
 <a name="krankenhausaufenthalt"></a>
-2.4 Krankenhausaufenthalt
----------------------
+### 2.4 Krankenhausaufenthalt
 
-<img src=".//media/image5.png" width="450">
+<img src=".//media/Krankenhausaufenthalt.png" width="350">
 
-Die Parameter für den erwarteten Krankenhausaufenthalt wurden aus \[1\] abgeleitet. Die Grafik aus \[1\] definiert auch die verschiedenen Zeiten und den jeweiligen Versatz zwischen den Zuständen:
+Die Parameter für den erwarteten Krankenhausaufenthalt wurden aus [1] abgeleitet. Die Grafik aus [1] definiert auch die verschiedenen Zeiten und den jeweiligen Versatz zwischen den Zuständen:
 
-![](.//media/image6.png)
+<img src=".//media/image6.png" width="550">
 
 <a name="einstellung-der-darstellung"></a>
-2.5 Einstellung der Darstellung
----------------------------
+### 2.5 Einstellung der Darstellung
+
 Hier kann das Zeitintervall für die Darstellung angegeben werden. Des Weiteren kann zwischen linearer und logarithmischer Skala der y-Achse umgeschaltet werden.
-<img src=".//media/image7.png" width="450">
+
+<img src=".//media/Datum.png" width="350">
 
 <a name="daten-und-darstellung"></a>
-3. Daten und Darstellung
-=====================
+## 3. Daten und Darstellung
+
 <a name="kumulierte-infizierte"></a>
-3.1 Kumulierte Infizierte
----------------------------
-<img src=".//media/image8.png" width="400"> 
-<img src=".//media/image9.png" width="400">
+### 3.1 Kumulierte Infizierte
+
+<img src=".//media/KumInf.png" width="1000">
 
 Kumulierte Infizierte: Gesamtzahl der positiv Getesteten
 
@@ -166,22 +159,24 @@ Kumulierte Infizierte: Gesamtzahl der positiv Getesteten
     wird z.T. automatisch an die realen Fallzahlen angepasst bzw. wird
     durch die Massnahmen beeinflusst.
 
-Die Darstellung im logarithmischen Maßstab (oben) erleichtert die
+Die Darstellung im logarithmischen Maßstab (links) erleichtert die
 Anpassung vor allem im Anfangsstadium sowie das Erkennen der Auswirkung
 von Maßnahmen.
 
-Die lineare Darstellung (unten) ermöglicht eine genauere Visualisierung der
+Die lineare Darstellung (rechts) ermöglicht eine genauere Visualisierung der
 Daten vor allem im gezoomten Bild.
 
 Alle Grafiken sind interaktiv und erlauben z.B. Zoom und einen Marker, mit dem die tagesaktuellen Zahlen dargestellt werden können:
 
-<img src=".//media/image10.png" width="450">
+<img src=".//media/Marker.png" width="350">
+
 Alle Interaktionen können im Header des Diagramms ativiert werden.
 
 <a name="verlauf-infizierte"></a>
-3.2 Verlauf Infizierte
----------------------------
-<img src=".//media/image11.png" width="450">
+### 3.2 Verlauf Infizierte
+
+<img src=".//media/VerlaufInf.png" width="350">
+
 Aktuell Infizierte berechnet:
   * Berechnete Anzahl der Personen, die positiv getestet wurden und die zurzeit ansteckend sind.
 
@@ -189,36 +184,37 @@ Neu Infizierte berechnet:
   * Berechnete Anzahl der Personen, die positiv getestet wurden und die an diesem Tag zu den Aktuell Infizierten neu dazugekommen sind.
 
 <a name="plaetze-im-krankenhaus"></a>
-3.3 Plätze im Krankenhaus/Intensivstation
----------------------------
-<img src=".//media/image12.png" width="450">
+### 3.3 Plätze im Krankenhaus/Intensivstation
+
+<img src=".//media/Krankenhaus.png" width="350">
+
 Plätze im Krankenhaus:
   * Erwartete Anzahl der Personen, für die ein normales Krankenhausbett zur Verfügung gestellt werden sollte.
 
 Plätze auf Intensivstation:
-  * Erwartete Anzahl der Personen, für die ein Platz auf einer Intensivstation zur Verfügung gestellt werden sollte. 
+  * Erwartete Anzahl der Personen, für die ein Platz auf einer Intensivstation zur Verfügung gestellt werden sollte.
 
-Diese Berechnungen erfolgen nach dem in \[1\] dargestellten Modell. Die Parameter hierfür können in [2.4](#krankenhausaufenthalt) eingestellt werden.
+Diese Berechnungen erfolgen nach dem in [1] dargestellten Modell. Die Parameter hierfür können in [2.4](#krankenhausaufenthalt) eingestellt werden.
 
 <a name="taegliche-reproduktionsrate"></a>
-3.4 Tägliche Reproduktionsrate
----------------------------
-<img src=".//media/image13.png" width="450">
+### 3.4 Tägliche Reproduktionsrate
+
+<img src=".//media/Rt.png" width="350">
 
 Die tägliche Reproduktionsrate Rt beschreibt die Zahl derer, die ein Infizierter im Durchschnitt pro Tag ansteckt.
 Sie kann durch getroffene Maßnahmen verändert werden.
 Im Zeitabschnitt vor den getroffenen Maßnahmen bestimmt hauptsächlich die unveränderte Reproduktionsrate den Kurvenverlauf.
 
 <a name="vorgehensweise"></a>
-4. Vorgehensweise
-==============
-<img src=".//media/image14.png" width="450">
+## 4. Vorgehensweise
+
+<img src=".//media/KumInfLog.png" width="450">
 
 1.	Wählen Sie die zu betrachtende Region aus.
 2.	Passen Sie evtl. das Anfangsdatum der Darstellung an. Dies sollte bei der ersten Erfassung von Infizierten liegen.
 3.	Tragen Sie das Datum von getroffenen Maßnahmen zur Reduzierung der Ausbreitung von Covid19 ein. Verwenden Sie den Prozentsatz zur Reduzierung der Reproduktionsrate Rt, um die berechnete Kurve den realen Daten anzupassen. Dies kann am besten in der logarithmischen Darstellung durchgeführt werden.
 
-##### Expertenparameter Infektionsverlauf
+#### Expertenparameter Infektionsverlauf
 
 Die Expertenparameter wurden für Fallzahlen Covid19 Betroffener im dargestellten Zeitraum für Deutschland ermittelt und das Modell wurde darauf kalibriert.
 
@@ -229,14 +225,14 @@ Sind keine Daten vorhanden, können die Expertendaten für den Infektionsverlauf
 Wir verwenden hauptsächlich die tägliche Reproduktionsrate Rt als Parameter zur Anpassung der Kurven in dem Bereich vor der ersten Maßnahme (siehe hier auch [2] zur Beurteilung der Werte).
 
 <a name="literatur"></a>
-5. Literatur
-=========
+## 5. Literatur
 
-  \[1\]   an der Heiden M, Buchholz U: Modellierung von Beispielszenarien der SARS-CoV-2-Epidemie 2020 in Deutschland. \| DOI 10.25646/6571.2
+  **[1]**   an der Heiden M, Buchholz U: Modellierung von Beispielszenarien der SARS-CoV-2-Epidemie 2020 in Deutschland. | DOI 10.25646/6571.2
   ------- -------------------------------------------------------------------------------------------------------------------------------------
           
 
 ![](.//media/image15.png)
-  \[2\]   Kucharski AJ, Russel TW, et al.: Early dynamics of transmission and control of COVID-19: a mathematical modelling study
+
+  **[2]**   Kucharski AJ, Russel TW, et al.: Early dynamics of transmission and control of COVID-19: a mathematical modelling study
   ------- -------------------------------------------------------------------------------------------------------------------------------------
 ![](.//media/image16.png)
