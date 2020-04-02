@@ -394,7 +394,9 @@ server <- function(input, output, session) {
     colnames(tmp)[colnames(tmp) == "AnzahlTodesfall"] <- "NeueToteErfasst"
     tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
-    p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
+    p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
+      geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
+      geom_point(aes(x=Tag,y= AnzahlFall, color = "Neu Infizierte erfasst")) +
       geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y=NeueToteErfasst, color = "Neue Todesfälle erfasst")) +
       geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
       
@@ -420,7 +422,7 @@ server <- function(input, output, session) {
     }
     
     
-    p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag", "NeueToteErfasst", "NeueToteBerechnet"))
+    p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag", "NeueToteErfasst", "NeueToteBerechnet","AnzahlFall"))
     
     
     p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
