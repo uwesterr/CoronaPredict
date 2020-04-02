@@ -15,6 +15,7 @@ library(tidyr)
 library(broom)
 library(modelr)
 library(DT)
+library(shinyalert)
 
 
 
@@ -54,15 +55,28 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) %>% 
     rename_at(vars(contains("sumTote")), ~ "sumTote" )
   
-  nesteddf <- df %>% filter(MeldeDate <=  as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d")) )  %>% nest()
+  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
+  endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))  %>% unique() 
+  #browser()
+  # Gewährleiste, dass genügend Fälle in der Zeit bis zur Reduzierung liegen:
+  mindest_faelle <- 12
+  tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
+  while ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate<max(df$MeldeDate))) {
+    endDate <- endDate +1
+    tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
+  }
+  if ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate>=max(df$MeldeDate))) {
+    showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. Hierdurch ist aber auch keine valide Zukunftsschätzung möglich.",  footer = modalButton("Ok")))
+  }
+  #browser()
+  nesteddf <- df %>% filter(MeldeDate <=  endDate)   %>% nest()
   
   # Define function to calculate regression
-  expoModel <- function(df) {
+  expoModel <- function(df, startDate, endDate) {
     
     #TG: Regression zwischen Startdatum bzw. erstem Meldedatum und erster Massnahme. Annahme: bis dahin exponentieller Verlauf
     #    Wenn Start-Date > erste Massnahme ist: Ausnahme --> 10 Tage nach Start
-    endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))
-    startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) 
+    
     
     if (endDate > startDate) {
       df <- df %>% filter(MeldeDate >= startDate)
@@ -77,16 +91,14 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     lm(log10(SumAnzahl) ~ MeldeDate, data = df)
   }
   
-  
-  predictLm <- function( model, data){
+
+  predictLm <- function( model, data, startDate, endDate){
     #browser()
     #TG ersetzt durch unten: startDate <- data$FirstMelde %>% unique()
     #TG ersetzt durch unten: endDate <- as.Date('2020-03-16')  
     
     #TG: Wie in expoModel, wieso 2x ? habe ich noch nicht richtig verstanden
-    startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
-    endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))  %>% unique() 
-    
+     
     if (endDate <= startDate) {
       endDate <- startDate+10
     } 
@@ -97,8 +109,8 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   }
   browser()
   nesteddfModel <- nesteddf %>% 
-    mutate(model = map(data, expoModel),
-           predictionsRegressionPeriode  = map2(model,data, predictLm),
+    mutate(model = pmap(list(data, startDate, endDate), expoModel),
+           predictionsRegressionPeriode  = pmap(list(model,data, startDate, endDate), predictLm),
            predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
            tidiedFit = map(model,tidy)) 
   # get predictions with 95% confidence level
@@ -111,7 +123,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   predicteddfR0 <- nesteddfModel  %>% unnest(data) %>% unnest(c(predictions), .sep ="_")%>% unnest(c(predictionsRegressionPeriode), .sep ="_") %>% unnest(tidiedFit)
  #browser()
   r0Df <- predicteddfR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA),
-                                   RO_std.error = ifelse(term == "MeldeDate", 10^std.error, NA))  # this std.error is a multiplier not to add to R0
+                                   RO_std.error = ifelse(term == "MeldeDate", 10^std.error, NA))
   
   r0Df <- r0Df  %>% select(-c(statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
   
@@ -126,7 +138,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   dfRoNo <- left_join(df , r0_no_erfasstDf) %>%    mutate( Ygesamt = Einwohner)
   
   
- # browser()
+  #browser()
   return(dfRoNo)
 }
 
@@ -280,7 +292,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
                    MaxIntBerechnet                   = 0,
                    
   )
- # browser()
+  #browser()
   initCalcDf <- function(calcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta, n0_erfasst, startDate, faktor_n_inf) {
     calcDf$ReduzierteRt <- calcReduzierung(calcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
     
