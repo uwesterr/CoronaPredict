@@ -68,6 +68,9 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   #browser()
   # Gewährleiste, dass genügend Fälle in der Zeit bis zur Reduzierung liegen:
   mindest_faelle <- 12
+  mindest_anzahl_faelle_start <- 10
+  tmp <- df %>% filter(SumAnzahl >=  mindest_anzahl_faelle_start)
+  startDate <- max(startDate, min(tmp$MeldeDate))
   tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
   while ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate<max(df$MeldeDate))) {
     endDate <- endDate +1
@@ -153,8 +156,8 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
    dfRoNo <- df %>% mutate( Ygesamt = Einwohner)
 
   
-  # browser()
-  return(list(dfRoNo, n0_erfasst_nom_min_max, R0_conf_nom_min_max))
+  #browser()
+  return(list(dfRoNo, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
 }
 
 createDfBundLandKreis <- function() {
@@ -196,14 +199,14 @@ createDfBundLandKreis <- function() {
 }
 
 
-Rechenkern <- function(r0_no_erfasstDf, input) {
+Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   
   # Betroffene
   # US 31.03.2020: use only one value, before the whole column was used this lead to a init CalcDf with many rows instead of one which could screw up the rollapply later on
   Ygesamt	<- r0_no_erfasstDf$Einwohner %>% unique() # Gesamtmenge
   # US 31.03.2020: use only one value, before the whole column was used this lead to a init CalcDf with many rows instead of one which could screw up the rollapply later on
   n0_erfasst <- 	r0_no_erfasstDf$n0_erfasst %>% unique() # Anzahl erfasster Infizierter am Beginn 
-  beginn_date	<- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) # Datum Beginn
+  beginn_date	<- startDate # Datum Beginn
   
   
   #Krankenhausaufenthalt
@@ -286,7 +289,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
 
   #startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
   #TG wieder variabel gesetzt, damit Anpassung stimmt
-  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d"))
+  startDate <- startDate
 
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))
   calcDf <- tibble(Tag                     = startDate,
@@ -345,7 +348,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
 
   #startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
   #TG wieder variabel gesetzt, damit Anpassung stimmt
-  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) # Datum Beginn
+  startDate <- startDate # Datum Beginn
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")) # Datum Ende
 
   
