@@ -20,8 +20,9 @@ if (!("tidyr" %in% rownames(installed.packages()))) install.packages("tidyr")
 if (!("modelr" %in% rownames(installed.packages()))) install.packages("modelr")
 if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 if (!("rlang" %in% rownames(installed.packages()))) install.packages("rlang")
-if (!("writexl" %in% rownames(installed.packages()))) install.packages("writexl")
+if (!("shinyalert" %in% rownames(installed.packages()))) install.packages("shinyalert")
 
+library(shinyalert)
 library(writexl)
 library(rlang)
 library(DT)
@@ -174,7 +175,7 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.11", color = "blue"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.12", color = "blue"),
                                        tags$head(tags$style('h2 {color:blue;}')),
                                        tags$head(tags$style('h3 {color:blue;}')),
                                        
@@ -318,16 +319,34 @@ server <- function(input, output, session) {
   })
   
   rkiAndPredictData <- reactive({
-    df <-  Rechenkern(r0_no_erfasstDf() ,input)
+    #browser()
+    dfRoNo <- r0_no_erfasstDf()[[1]]
+    n0_erfasst_nom_min_max <- r0_no_erfasstDf()[[2]]
+    R0_conf_nom_min_max <- r0_no_erfasstDf()[[3]]
+    
+    rechenDf_nom <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_nom, R0 =R0_conf_nom_min_max$R0_nom)
+    df_nom <-  Rechenkern(rechenDf_nom,input)
+    
+    rechenDf_min <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_min, R0 =R0_conf_nom_min_max$R0_min)
+    df_min <-  Rechenkern(rechenDf_min,input)
+    
+    rechenDf_max <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_max, R0 =R0_conf_nom_min_max$R0_max)
+    df_max <-  Rechenkern(rechenDf_max,input)
+    
+    df <- left_join(df_nom, df_min, by = "Tag", suffix = c("", "_min"))
+    df <- left_join(df, df_max, by = "Tag", suffix = c("", "_max"))
+    #  browser()
     df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                         Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
   }) 
-  
+  #browser()
   color1 = 'blue'
   color2 = 'green'
   color3 = '#6ab84d'
   color4 = 'black'
   color5 = 'gray'
+  perdictionHorizon <- Sys.Date()+14 # how far in the future confidance will be displayed
+  alphaForConfidence <- 0.1 
   # more options at https://ggplot2.tidyverse.org/reference/theme.html
   themeCust <-  theme(
     plot.title = element_text(color="blue", size=24, face="bold.italic"),
@@ -344,20 +363,44 @@ server <- function(input, output, session) {
   output$Kumuliert <- renderPlotly({
     
     
-    #  browser()
+    
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
     
+    
+    
     tmp <- rkiAndPredictData()
+    # browser()
     colnames(tmp)[colnames(tmp) == "SumAnzahl"] <- "Erfasste_Infizierte"
     colnames(tmp)[colnames(tmp) == "sumTote"] <- "Erfasste_Todesfaelle"
     colnames(tmp)[colnames(tmp) == "ToteBerechnet"] <- "Berechnete_Todesfaelle"
     colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet"] <- "Berechnete_Infizierte"
+    # min
+    colnames(tmp)[colnames(tmp) == "SumAnzahl_min"] <- "Erfasste_Infizierte_min"
+    colnames(tmp)[colnames(tmp) == "sumTote_min"] <- "Erfasste_Todesfaelle_min"
+    colnames(tmp)[colnames(tmp) == "ToteBerechnet_min"] <- "Berechnete_Todesfaelle_min"
+    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_min"] <- "Berechnete_Infizierte_min"
+    # max
+    colnames(tmp)[colnames(tmp) == "SumAnzahl_max"] <- "Erfasste_Infizierte_max"
+    colnames(tmp)[colnames(tmp) == "sumTote_max"] <- "Erfasste_Todesfaelle_max"
+    colnames(tmp)[colnames(tmp) == "ToteBerechnet_max"] <- "Berechnete_Todesfaelle_max"
+    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_max"] <- "Berechnete_Infizierte_max"
     tmp$ErfassteInfizierte <- as.integer(tmp$Erfasste_Infizierte)
     tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$Berechnete_Infizierte)
-    p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = Berechnete_Infizierte)) + geom_point(data = tmp, aes(x = Tag, y = Erfasste_Infizierte, color = "Erfasste Infizierte")) +
-      geom_line(data = tmp, aes(x = Tag, y = Berechnete_Todesfaelle, color = "Todesfälle berechnet")) + geom_point(data = tmp, aes(x = Tag, y = Erfasste_Todesfaelle, color = "Todesfälle erfasst")) +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte / Todesfälle", sep =""),
+  
+    
+    # browser()
+    
+    p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = Berechnete_Infizierte)) +   
+      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon), 
+                  aes( x= Tag, ymin = Berechnete_Infizierte_min, ymax = Berechnete_Infizierte_max), alpha =alphaForConfidence, outline.type = "full", fill = color1) + 
+      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon), 
+                  aes( x= Tag, ymin = Berechnete_Todesfaelle_min, ymax = Berechnete_Todesfaelle_max), alpha =alphaForConfidence, outline.type = "full", fill = color4) + 
+      
+      geom_point(data = tmp, aes(x = Tag, y = Erfasste_Infizierte, color = "Erfasste Infizierte")) +
+      geom_line(data = tmp, aes(x = Tag, y = Berechnete_Todesfaelle, color = "Todesfälle berechnet")) + 
+      geom_point(data = tmp, aes(x = Tag, y = Erfasste_Todesfaelle, color = "Todesfälle erfasst")) +
+      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte / Todesfälle, CI 95%", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Erfasste Infizierte berechnet' = color1,
@@ -369,6 +412,7 @@ server <- function(input, output, session) {
     
     
     
+    
     if(logy){
       p <- p +  scale_y_log10(label = label_number_si())
       
@@ -376,7 +420,7 @@ server <- function(input, output, session) {
       p
       
     }
-    p <- ggplotly(p, tooltip = c("Berechnete_Infizierte", "Erfasste_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle"))
+    p <- ggplotly(p, tooltip = c("Berechnete_Infizierte", "Erfasste_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle", "Berechnete_Infizierte_min"))
     p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     #p <- p %>% layout(legend = list(orientation = 'h'))
     p
@@ -392,11 +436,17 @@ server <- function(input, output, session) {
     colnames(tmp)[colnames(tmp) == "AnzahlTodesfall"] <- "NeueToteErfasst"
     tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
-    p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
+    p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) +  geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
+      geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
+      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = NeuInfizierteBerechnet_min, ymax = NeuInfizierteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
+      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = NeueToteBerechnet_min, ymax = NeueToteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color4) + 
+      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = AktuellInfizierteBerechnet_min, ymax = AktuellInfizierteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color1) + 
+      
+      geom_point(aes(x=Tag,y= AnzahlFall, color = "Neu Infizierte erfasst")) +
       geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y=NeueToteErfasst, color = "Neue Todesfälle erfasst")) +
       geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
       
-      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte / Todesfälle", sep =""),
+      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte / Todesfälle, CI 95%", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Aktuell Infizierte berechnet' = color1,
@@ -418,7 +468,7 @@ server <- function(input, output, session) {
     }
     
     
-    p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag", "NeueToteErfasst", "NeueToteBerechnet"))
+    p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag", "NeueToteErfasst", "NeueToteBerechnet","AnzahlFall"))
     
     
     p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
@@ -433,10 +483,22 @@ server <- function(input, output, session) {
     tmp <- rkiAndPredictData()
     colnames(tmp)[colnames(tmp) == "KhBerechnet"] <- "Krankenhaus_berechnet"
     colnames(tmp)[colnames(tmp) == "IntensivBerechnet"] <- "Intensiv_berechnet"
+    
+    #min
+    colnames(tmp)[colnames(tmp) == "KhBerechnet_min"] <- "Krankenhaus_berechnet_min"
+    colnames(tmp)[colnames(tmp) == "IntensivBerechnet_min"] <- "Intensiv_berechnet_min"
+    #max
+    colnames(tmp)[colnames(tmp) == "KhBerechnet_max"] <- "Krankenhaus_berechnet_max"
+    colnames(tmp)[colnames(tmp) == "IntensivBerechnet_max"] <- "Intensiv_berechnet_max"
+    
     tmp$Intensiv_berechnet <- as.integer(tmp$Intensiv_berechnet)
     tmp$Krankenhaus_berechnet <- as.integer(tmp$Krankenhaus_berechnet)
-    p <- ggplot(tmp, aes( color ="KH berechnet")) + geom_line(aes(x=Tag, y = Krankenhaus_berechnet)) + geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Plätze in Krankenhaus / Intensivstation", sep ="")  ,
+    p <- ggplot(tmp, aes( color ="KH berechnet")) + geom_line(aes(x=Tag, y = Krankenhaus_berechnet)) + 
+      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Krankenhaus_berechnet_min, ymax = Krankenhaus_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color1) + 
+      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Intensiv_berechnet_min, ymax = Intensiv_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
+      
+      geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) +
+      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Plätze in Krankenhaus / Intensivstation, CI 95%", sep ="")  ,
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'KH berechnet' = color1,
@@ -471,15 +533,25 @@ server <- function(input, output, session) {
     tmp <- rkiAndPredictData()
     colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt"] <- "Taegliche_Reproduktionsrate"
     colnames(tmp)[colnames(tmp) == "ReduzierteRt"] <- "Reduzierte_Reproduktionsrate"
+    
+    #min
+    colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt_min"] <- "Taegliche_Reproduktionsrate_min"
+    colnames(tmp)[colnames(tmp) == "ReduzierteRt_min"] <- "Reduzierte_Reproduktionsrate_min"
+    
+    #max
+    colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt_max"] <- "Taegliche_Reproduktionsrate_max"
+    colnames(tmp)[colnames(tmp) == "ReduzierteRt_max"] <- "Reduzierte_Reproduktionsrate_max"
+    
     tmp$Taegliche_Reproduktionsrate <- round(tmp$Taegliche_Reproduktionsrate, digits = 3)
     tmp$Reduzierte_Reproduktionsrate <- round(tmp$Reduzierte_Reproduktionsrate, digits = 3)
     
-    p <- ggplot(tmp, aes(color = "Tägliche Reproduktionsrate")) + geom_line(aes(x=Tag, y = Taegliche_Reproduktionsrate)) + geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Reduzierte Reproduktionsrate")) +
-      
-      scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  , x = "Datum", y = "Wert",
+    p <- ggplot(tmp, aes(color = "Rt ohne Maßnahmen")) + geom_line(aes(x=Tag, y = Taegliche_Reproduktionsrate), linetype = 2) +
+      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Reduzierte_Reproduktionsrate_min, ymax = Reduzierte_Reproduktionsrate_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
+geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Rt aktuell"))  +
+      scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Tägliche Reproduktionsrate Rt, CI 95%", sep ="")  , x = "Datum", y = "Wert",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
-                                                           'Tägliche Reproduktionsrate' = color1,
-                                                           'Reduzierte Reproduktionsrate' = color2)) +
+                                                           'Rt ohne Maßnahmen' = color1,
+                                                           'Rt aktuell' = color2)) +
       
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
     p <- ggplotly(p, tooltip = c("Taegliche_Reproduktionsrate","Reduzierte_Reproduktionsrate", "Tag"))
