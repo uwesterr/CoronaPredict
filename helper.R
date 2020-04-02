@@ -95,11 +95,14 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     add_predictions(data, model)
     
   }
+  browser()
   nesteddfModel <- nesteddf %>% 
     mutate(model = map(data, expoModel),
            predictionsRegressionPeriode  = map2(model,data, predictLm),
            predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
            tidiedFit = map(model,tidy)) 
+  # get predictions with 95% confidence level
+  # nesteddfModel$model[[1]] %>% predict(data, interval = "confidence", level = 0.95)
   #browser()
   #   predicteddfModel <- nesteddfModel %>% unnest(c(predictions), .sep ="_") %>% unnest(data) 
   

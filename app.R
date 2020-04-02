@@ -318,6 +318,7 @@ server <- function(input, output, session) {
   })
   
   rkiAndPredictData <- reactive({
+   # browser()
     df <-  Rechenkern(r0_no_erfasstDf() ,input)
     df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                         Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
