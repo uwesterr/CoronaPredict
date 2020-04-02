@@ -18,10 +18,11 @@ library(DT)
 library(shinyalert)
 
 calcR0ConN0Conf <- function(lmModel, startDate) {
-  n0_erfasst_conf <- lmModel %>% predict(data.frame(MeldeDate =startDate), interval = "confidence", level = 0.95)
+  confidenceLevel <- 0.95
+  n0_erfasst_conf <- lmModel %>% predict(data.frame(MeldeDate =startDate), interval = "confidence", level = confidenceLevel)
   n0_erfasst_nom_min_max <- 10^n0_erfasst_conf %>% as_tibble() %>% set_names("n0_erfasst_nom", "n0_erfasst_min", "n0_erfasst_max")
   R0_nom <- 10^lmModel[["coefficients"]][["MeldeDate"]]
-  R0_min_max <- 10^confint(lmModel, level = .95)
+  R0_min_max <- 10^confint(lmModel, level = confidenceLevel)
   R0_conf_nom_min_max <- tibble(R0_nom = R0_nom, R0_min = R0_min_max[[2]], R0_max = R0_min_max[[4]] )
   return(list(n0_erfasst_nom_min_max, R0_conf_nom_min_max))
 }
