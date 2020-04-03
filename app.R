@@ -21,7 +21,10 @@ if (!("modelr" %in% rownames(installed.packages()))) install.packages("modelr")
 if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 if (!("rlang" %in% rownames(installed.packages()))) install.packages("rlang")
 if (!("shinyalert" %in% rownames(installed.packages()))) install.packages("shinyalert")
+if (!("shinyWidgets" %in% rownames(installed.packages()))) install.packages("shinyWidgets")
 
+
+library(shinyWidgets)
 library(shinyalert)
 library(writexl)
 library(rlang)
@@ -45,9 +48,17 @@ historyDfBundesLand <- outpput[[2]]
 historyDfLandkreis <- outpput[[3]]
 
 ui <- function(request) {
+
+
   # widgets website https://shiny.rstudio.com/gallery/widget-gallery.html
   navbarPage("Covid19 Meldungen in Deutschland!",  position = c("fixed-bottom"),
+             
              tabPanel("Einstellung und Ausgabe",
+                      setBackgroundColor("#ECF0F5"
+                       # color = c("#F7FBFF", "#2171B5"),
+                       # gradient = "radial",
+                       # direction = c("top", "left")
+                      ),
                       
                       sidebarLayout( position ="left",
                                      
@@ -107,19 +118,19 @@ ui <- function(request) {
                                                   numericInput("ta", label = "Infektiosität [d]", value = 6),
                                                   numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8)))),
                                        
-                                       h3("Krankenhausaufenthalt"), 
-                                       fluidRow(
-                                         column(6,
-                                                wellPanel(
-                                                  numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5, step = 0.1),
-                                                  numericInput("t_kh", label = "Dauer", value = 14),
-                                                  numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8))),
-                                         column(6,
-                                                wellPanel(
-                                                  numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25),
-                                                  numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10),
-                                                  numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1)))) ,                                        
-                                       
+#                                      h3("Krankenhausaufenthalt"), 
+#                                      fluidRow(
+#                                        column(6,
+#                                               wellPanel(
+#                                                 numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5, step = 0.1),
+#                                                 numericInput("t_kh", label = "Dauer", value = 14),
+#                                                 numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8))),
+#                                        column(6,
+#                                               wellPanel(
+#                                                 numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25),
+#                                                 numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10),
+#                                                 numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1)))) ,                                        
+#                                      
                                        h3("Einstellen der Darstellung") ,
                                        column(6,   
                                               wellPanel(
@@ -190,6 +201,25 @@ ui <- function(request) {
                                              plotlyOutput(outputId ="Kumuliert"), plotlyOutput(outputId ="Verlauf"))
                                          )
                                        ),
+                                       
+                                       wellPanel(
+                                       h3("Krankenhausaufenthalt"), 
+                                       
+                                       fluidRow(
+                                        
+                                         column(4,
+                                                wellPanel(
+                                                  numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5, step = 0.1),
+                                                  numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25))),
+                                         column(4,  
+                                                wellPanel(
+                                                  numericInput("t_kh", label = "Dauer", value = 14),
+                                                  numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10))),
+                                                  
+                                         column(4,
+                                                wellPanel(
+                                                  numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8),
+                                                  numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1))))) , 
                                        fluidRow(
                                          wellPanel(
                                            splitLayout(
