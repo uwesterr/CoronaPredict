@@ -323,9 +323,10 @@ server <- function(input, output, session) {
     dfRoNo <- r0_no_erfasstDf()[[1]]
     n0_erfasst_nom_min_max <- r0_no_erfasstDf()[[2]]
     R0_conf_nom_min_max <- r0_no_erfasstDf()[[3]]
-    
+    startDate <- r0_no_erfasstDf()[[4]]
+    #browser()
     rechenDf_nom <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_nom, R0 =R0_conf_nom_min_max$R0_nom)
-    df_nom <-  Rechenkern(rechenDf_nom,input)
+    df_nom <-  Rechenkern(rechenDf_nom,input, startDate)
     
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
@@ -346,6 +347,7 @@ server <- function(input, output, session) {
     }
       
     
+
     df_nom$ErfassteInfizierteBerechnet_min <- KonfidenzVektor(df_nom$ErfassteInfizierteBerechnet, df_nom$Tag, 0, -konfidenz_je_tag, letzter_Tag, 0)
     df_nom$ErfassteInfizierteBerechnet_max <- KonfidenzVektor(df_nom$ErfassteInfizierteBerechnet, df_nom$Tag,0, +konfidenz_je_tag, letzter_Tag, 0)
     
