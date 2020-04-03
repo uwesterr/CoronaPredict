@@ -98,7 +98,7 @@ xxxx abgeholt.
 <a name="region"></a>
 ### 2.1 Region
 
-<img src=".//media/Region.png" width="350">
+<img src="..//media/Region.png" width="350">
 
 Auswahlmöglichkeiten: Deutschland -- Bundesländer -- Land- und Stadtkreise
 
