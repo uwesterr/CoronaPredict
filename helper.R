@@ -9,13 +9,23 @@ library(lubridate)
 library(zoo)
 library(plotly)
 library(readxl)
+library(writexl)
 library(scales)
 library(tidyr)
 library(broom)
 library(modelr)
 library(DT)
+library(shinyalert)
 
-
+calcR0ConN0Conf <- function(lmModel, startDate) {
+  confidenceLevel <- 0.95
+  n0_erfasst_conf <- lmModel %>% predict(data.frame(MeldeDate =startDate), interval = "confidence", level = confidenceLevel)
+  n0_erfasst_nom_min_max <- 10^n0_erfasst_conf %>% as_tibble() %>% set_names("n0_erfasst_nom", "n0_erfasst_min", "n0_erfasst_max")
+  R0_nom <- 10^lmModel[["coefficients"]][["MeldeDate"]]
+  R0_min_max <- 10^confint(lmModel, level = confidenceLevel)
+  R0_conf_nom_min_max <- tibble(R0_nom = R0_nom, R0_min = R0_min_max[[2]], R0_max = R0_min_max[[4]] )
+  return(list(n0_erfasst_nom_min_max, R0_conf_nom_min_max))
+}
 
 
 createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, vals, input,session){
@@ -50,17 +60,34 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   df <- df %>% ungroup() %>%  filter(whichRegion == regionSelected)
   
   df <- df %>% rename_at(vars(contains("sumAnzahlFall")), ~ "SumAnzahl" ) %>% 
-    rename_at(vars(contains("Einwohner")), ~ "Einwohner" )
+    rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) %>% 
+    rename_at(vars(contains("sumTote")), ~ "sumTote" )
   
-  nesteddf <- df %>% filter(MeldeDate <=  as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d")) )  %>% nest()
+  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
+  endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))  %>% unique() 
+  #browser()
+  # Gewährleiste, dass genügend Fälle in der Zeit bis zur Reduzierung liegen:
+  mindest_faelle <- 12
+  mindest_anzahl_faelle_start <- 10
+  tmp <- df %>% filter(SumAnzahl >=  mindest_anzahl_faelle_start)
+  startDate <- max(startDate, min(tmp$MeldeDate))
+  tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
+  while ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate<max(df$MeldeDate))) {
+    endDate <- endDate +1
+    tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
+  }
+  if ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate>=max(df$MeldeDate))) {
+    showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. Hierdurch ist aber auch keine valide Zukunftsschätzung möglich.",  footer = modalButton("Ok")))
+  }
+  #browser()
+  nesteddf <- df %>% filter(MeldeDate <=  endDate)   %>% nest()
   
   # Define function to calculate regression
-  expoModel <- function(df) {
+  expoModel <- function(df, startDate, endDate) {
     
     #TG: Regression zwischen Startdatum bzw. erstem Meldedatum und erster Massnahme. Annahme: bis dahin exponentieller Verlauf
     #    Wenn Start-Date > erste Massnahme ist: Ausnahme --> 10 Tage nach Start
-    endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))
-    startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) 
+    
     
     if (endDate > startDate) {
       df <- df %>% filter(MeldeDate >= startDate)
@@ -75,53 +102,62 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     lm(log10(SumAnzahl) ~ MeldeDate, data = df)
   }
   
-  
-  predictLm <- function( model, data){
+
+  predictLm <- function( model, data, startDate, endDate){
     #browser()
     #TG ersetzt durch unten: startDate <- data$FirstMelde %>% unique()
     #TG ersetzt durch unten: endDate <- as.Date('2020-03-16')  
     
     #TG: Wie in expoModel, wieso 2x ? habe ich noch nicht richtig verstanden
-    startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
-    endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))  %>% unique() 
-    
+     
     if (endDate <= startDate) {
       endDate <- startDate+10
     } 
-    
     data <- data.frame(MeldeDate = seq(startDate, endDate,by =1))
     add_predictions(data, model)
-    
   }
   nesteddfModel <- nesteddf %>% 
-    mutate(model = map(data, expoModel),
-           predictionsRegressionPeriode  = map2(model,data, predictLm),
+    mutate(model = pmap(list(data, startDate, endDate), expoModel),
+           predictionsRegressionPeriode  = pmap(list(model,data, startDate, endDate), predictLm),
            predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
            tidiedFit = map(model,tidy)) 
+  
+  # US 02.04.2020 Read n0_erfasst with 95% confidence interval
+  lmModel <- nesteddfModel$model[[1]]
+  calcR0ConN0Conf_res  <- calcR0ConN0Conf(lmModel, startDate)
+  n0_erfasst_nom_min_max <- calcR0ConN0Conf_res[[1]]
+  R0_conf_nom_min_max <- calcR0ConN0Conf_res[[2]]
+  
+#  no_erfasst_conf <- nesteddfModel$model[[1]] %>% predict(data.frame(MeldeDate =startDate), interval = "confidence", level = 0.95)
+#  no_erfasst_conf <- 10^no_erfasst_conf
+#  #browser()
+#  
+#    predicteddfModel <- nesteddfModel %>% unnest(c(predictions), .sep ="_") %>% unnest(data) 
+#  #  nesteddfModel$model[[1]]$
+#  
+#  # US 29.03.2020: Vereinfachuchung der der nest und unnest vorgänge
+#  
+#  predicteddfR0 <- nesteddfModel  %>% unnest(data) %>% unnest(c(predictions), .sep ="_")%>% unnest(c(predictionsRegressionPeriode), .sep ="_") %>% unnest(tidiedFit)
+# #browser()
+#  r0Df <- predicteddfR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA),
+#                                   RO_std.error = ifelse(term == "MeldeDate", 10^std.error, NA))
+#  
+#  r0Df <- r0Df  %>% select(-c(statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
+#  
+#  # find regression value of first melde day, here is the problem, with first day of melde the results are useless
+#  #firstMeldeDay <- df$FirstMelde %>% min
+#  
+#  n0_erfasstDf <- predicteddfR0 %>% select(whichRegion, predictionsRegressionPeriode_MeldeDate, predictionsRegressionPeriode_pred)  %>% 
+#    filter(predictionsRegressionPeriode_MeldeDate == as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) ) %>% unique() %>% mutate(n0_erfasst = 10^predictionsRegressionPeriode_pred) 
+#  
+  
+#  r0_no_erfasstDf <- cbind(r0Df ,n0_erfasstDf %>% select(whichRegion, n0_erfasst) ) %>% select(whichRegion, p.value, R0, RO_std.error, n0_erfasst) 
+ # browser()
+   dfRoNo <- df %>% mutate( Ygesamt = Einwohner)
+
+  
   #browser()
-  #   predicteddfModel <- nesteddfModel %>% unnest(c(predictions), .sep ="_") %>% unnest(data) 
-  
-  # US 29.03.2020: Vereinfachuchung der der nest und unnest vorgänge
-  
-  predicteddfR0 <- nesteddfModel  %>% unnest(data) %>% unnest(c(predictions), .sep ="_")%>% unnest(c(predictionsRegressionPeriode), .sep ="_") %>% unnest(tidiedFit)
-  
-  r0Df <- predicteddfR0 %>% mutate(R0 = ifelse(term == "MeldeDate", 10^estimate, NA))
-  
-  r0Df <- r0Df  %>% select(-c(std.error, statistic)) %>% summarise_if(is.numeric, max, na.rm = TRUE) 
-  
-  # find regression value of first melde day, here is the problem, with first day of melde the results are useless
-  #firstMeldeDay <- df$FirstMelde %>% min
-  
-  n0_erfasstDf <- predicteddfR0 %>% select(whichRegion, predictionsRegressionPeriode_MeldeDate, predictionsRegressionPeriode_pred)  %>% 
-    filter(predictionsRegressionPeriode_MeldeDate == as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) ) %>% unique() %>% mutate(n0_erfasst = 10^predictionsRegressionPeriode_pred) 
-  
-  
-  r0_no_erfasstDf <- cbind(r0Df ,n0_erfasstDf %>% select(whichRegion, n0_erfasst) ) %>% select(whichRegion, p.value, R0, n0_erfasst) 
-  dfRoNo <- left_join(df , r0_no_erfasstDf) %>%    mutate( Ygesamt = Einwohner)
-  
-  
-  dfRoNo
-  #browser()
+  return(list(dfRoNo, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
 }
 
 createDfBundLandKreis <- function() {
@@ -135,10 +171,10 @@ createDfBundLandKreis <- function() {
   ## read population file from thonmas
   bundesLandPopulation <- read_excel("bundesland_landkreis_200326_2.xlsx", "bundesland", col_names = c("Bundesland", "EinwohnerBundesland"))
   landKreisPopulation <- read_excel("bundesland_landkreis_200326_2.xlsx", "landkreis", col_names = c("Landkreis", "EinwohnerLandkreis"))
-  
+  # browser()
   BundFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% summarise(FirstMelde = min(MeldeDate))
   historyDfBund <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, list(sum), na.rm = TRUE) %>% 
-    mutate(sumAnzahlFallBund = cumsum(AnzahlFall),
+    mutate(sumAnzahlFallBund = cumsum(AnzahlFall), sumToteBund = cumsum(AnzahlTodesfall),
            BundIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% mutate(EinwohnerBund = bundesLandPopulation %>% summarise(sum = sum(EinwohnerBundesland)) %>% unlist) 
   historyDfBund$FirstMelde <- BundFirstMeldung %>% unlist %>% as.Date()
   
@@ -146,7 +182,8 @@ createDfBundLandKreis <- function() {
   
   BundesLandFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% group_by(Bundesland) %>% summarise(FirstMelde = min(MeldeDate))
   historyDfBundesLand  <- historyDf %>% dplyr::ungroup() %>% group_by(Bundesland, MeldeDate)  %>% summarise_if(is.numeric, sum, na.rm = TRUE)  %>% 
-    mutate(sumAnzahlFallBundesland = cumsum(AnzahlFall), sumAnzahlFallBundesland = ifelse(sumAnzahlFallBundesland <1, 0.1,sumAnzahlFallBundesland),
+    mutate(sumAnzahlFallBundesland = cumsum(AnzahlFall), sumToteBundesland = cumsum(AnzahlTodesfall),
+            sumAnzahlFallBundesland = ifelse(sumAnzahlFallBundesland <1, 0.1,sumAnzahlFallBundesland),
            LandIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(BundesLandFirstMeldung) %>% left_join(bundesLandPopulation)
   
   
@@ -154,19 +191,22 @@ createDfBundLandKreis <- function() {
   
   LandkreisFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% group_by(Landkreis) %>% summarise(FirstMelde = min(MeldeDate))
   historyDfLandkreis <- historyDf  %>% dplyr::group_by(Bundesland,Landkreis, MeldeDate)%>% dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)  %>%
-    mutate(sumAnzahlFallLandkreis = cumsum(AnzahlFall), sumAnzahlFallLandkreis = ifelse(sumAnzahlFallLandkreis <1, 0.1,sumAnzahlFallLandkreis),
+    mutate(sumAnzahlFallLandkreis = cumsum(AnzahlFall), sumToteLandkreis = cumsum(AnzahlTodesfall),
+           sumAnzahlFallLandkreis = ifelse(sumAnzahlFallLandkreis <1, 0.1,sumAnzahlFallLandkreis),
            KreisIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(LandkreisFirstMeldung) %>%  left_join(landKreisPopulation)
   
   return(list(historyDfBund, historyDfBundesLand, historyDfLandkreis))
 }
 
 
-Rechenkern <- function(r0_no_erfasstDf, input) {
+Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   
   # Betroffene
-  Ygesamt	<- r0_no_erfasstDf$Einwohner # Gesamtmenge
-  n0_erfasst <- 	r0_no_erfasstDf$n0_erfasst # Anzahl erfasster Infizierter am Beginn 
-  beginn_date	<- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) # Datum Beginn
+  # US 31.03.2020: use only one value, before the whole column was used this lead to a init CalcDf with many rows instead of one which could screw up the rollapply later on
+  Ygesamt	<- r0_no_erfasstDf$Einwohner %>% unique() # Gesamtmenge
+  # US 31.03.2020: use only one value, before the whole column was used this lead to a init CalcDf with many rows instead of one which could screw up the rollapply later on
+  n0_erfasst <- 	r0_no_erfasstDf$n0_erfasst %>% unique() # Anzahl erfasster Infizierter am Beginn 
+  beginn_date	<- startDate # Datum Beginn
   
   
   #Krankenhausaufenthalt
@@ -199,7 +239,8 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   
   # Ausgabe
   Y_inf_limit <- Ygesamt*ges_inf_rate/faktor_n_inf
-  Rt <- r0_no_erfasstDf$R0
+  # US 31.03.2020: use only one value, before the whole column was used this lead to a init CalcDf with many rows instead of one which could screw up the rollapply later on
+  Rt <- r0_no_erfasstDf$R0 %>% unique()
   r0 <- Rt^ta
   
   # functions
@@ -245,7 +286,11 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   
   # Initialize the dataframe
   #US 30.03.20202 Startdatum fix gesetzt damit bei verändern des startdatums keine anderen berechnungsergebnisse entstehen
-  startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
+
+  #startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
+  #TG wieder variabel gesetzt, damit Anpassung stimmt
+  startDate <- startDate
+
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))
   calcDf <- tibble(Tag                     = startDate,
                    TaeglichReproduktionsRateRt       = Rt,
@@ -265,7 +310,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
                    MaxIntBerechnet                   = 0,
                    
   )
-  
+  #browser()
   initCalcDf <- function(calcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta, n0_erfasst, startDate, faktor_n_inf) {
     calcDf$ReduzierteRt <- calcReduzierung(calcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
     
@@ -300,8 +345,12 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   }
   
   #US 30.03.20202 Startdatum fix gesetzt damit bei verändern des startdatums keine anderen berechnungsergebnisse entstehen
-  startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
-  endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")) # Datum Beginn
+
+  #startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
+  #TG wieder variabel gesetzt, damit Anpassung stimmt
+  startDate <- startDate # Datum Beginn
+  endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")) # Datum Ende
+
   
   
   for (i in seq(startDate, endDate,by = 1)) {
@@ -326,7 +375,7 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
       MaxIntBerechnet                   = 0,
       
     )
-    
+   # browser()
     # Reduzierung Rt (max. 3x)
     updatecalcDf$ReduzierteRt <- calcReduzierung(updatecalcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
     updatecalcDf$GesamtInfizierteBerechnet <-  round(calcGesamtInfizierteBerechnet(tailCalcDf),digits = 0)
@@ -340,7 +389,8 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
     calcDf <- rbind(calcDf,updatecalcDf)
     
   }
-  calcDf$ID <- seq.int(nrow(calcDf))
+
+ calcDf$ID <- seq.int(nrow(calcDf))
   
   #    Infiziert
   ende_inf <- ti+ta
@@ -350,17 +400,23 @@ Rechenkern <- function(r0_no_erfasstDf, input) {
   # Diese Formel sollte noch einmal ueberprueft werden
   beginn_intensiv <- dt_inf_kh + dt_kh_int
   ende_intensiv   <- dt_inf_kh + dt_kh_int + t_intensiv
-  calcDf <- calcDf %>% mutate(IntensivBerechnet = round(kh_normal * kh_intensiv * (rollapply(NeuInfizierteBerechnet, ende_intensiv, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, beginn_intensiv, sum,align = "left", partial = TRUE ))), digits=0)
+  calcDf <- calcDf %>% mutate(IntensivBerechnet = round(kh_normal * kh_intensiv * (rollapply(NeuInfizierteBerechnet, ende_intensiv, sum,align = "right", partial = TRUE )- 
+                                                                                     rollapply(NeuInfizierteBerechnet, beginn_intensiv, sum,align = "right", partial = TRUE ))), digits=0)
   
   # In KH
   beginn_kh <- dt_inf_kh
   ende_kh   <- dt_inf_kh + t_kh
-  calcDf <- calcDf %>% mutate(KhBerechnet       = kh_normal * (rollapply(NeuInfizierteBerechnet, ende_kh, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, beginn_kh, sum,align = "left", partial = TRUE )))
+  calcDf <- calcDf %>% mutate(KhBerechnet       = kh_normal * (rollapply(NeuInfizierteBerechnet, ende_kh, sum,align = "right", partial = TRUE )- rollapply(NeuInfizierteBerechnet, beginn_kh, sum,align = "right", partial = TRUE )))
   calcDf <- calcDf %>% mutate(KhBerechnet       = round(KhBerechnet-IntensivBerechnet),digits=0)
   
+  # Verstorben
+  
+  calcDf <- calcDf %>% mutate(NeueToteBerechnet = round(tod_rate* lag(NeuInfizierteBerechnet, td_tod, default = 0),digits=0)) %>% mutate(ToteBerechnet = cumsum(NeueToteBerechnet))
+ 
   
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
-  
+ # browser()
   return(df)
   
-  }
+}
+
