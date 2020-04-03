@@ -242,23 +242,23 @@ ui <- function(request) {
                       )
              ),
              
-             tabPanel("Datenimport",
-                      
-                      # Show a plot of the generated distribution
-                      sidebarPanel(
-                        # daten einlesen
-                        fileInput("importData",
-                                  label="Upload der Bettenmeldedaten",         accept = c(
-                                    "xls",
-                                    "xlsx"),
-                                  multiple = FALSE),
-                        # daten runterladen
-                        downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
-                        mainPanel(
-                          dataTableOutput("uploadedBettenmeldedaten"))
-                      )
-             ),
-             
+ #            tabPanel("Datenimport",
+ #                     
+ #                     # Show a plot of the generated distribution
+ #                     sidebarPanel(
+ #                       # daten einlesen
+ #                       fileInput("importData",
+ #                                 label="Upload der Bettenmeldedaten",         accept = c(
+ #                                   "xls",
+ #                                   "xlsx"),
+ #                                 multiple = FALSE),
+ #                       # daten runterladen
+ #                       downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
+ #                       mainPanel(
+ #                         dataTableOutput("uploadedBettenmeldedaten"))
+ #                     )
+ #            ),
+ #            
              tabPanel("Impressum",
                       
                       # Show a plot of the generated distribution
@@ -360,7 +360,7 @@ server <- function(input, output, session) {
     
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
-    konfidenz_je_tag <- mean(c(0.023, 0.029/2)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
+    konfidenz_je_tag <- mean(c(0.023, 0.029)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
     #browser()
     KonfidenzVektor <- function(v, Tag, konfidenz, konfidenz_je_tag, letzter_Tag, time_lag){
       tmp <- log10(v)
@@ -391,16 +391,6 @@ server <- function(input, output, session) {
     df_nom$IntensivBerechnet_min <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
     df_nom$IntensivBerechnet_max <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
     
-  
-    #rechenDf_min <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_min, R0 =R0_conf_nom_min_max$R0_min)
-    #df_min <-  Rechenkern(rechenDf_min,input)
-    
-    #rechenDf_max <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_max, R0 =R0_conf_nom_min_max$R0_max)
-    #df_max <-  Rechenkern(rechenDf_max,input)
-    
-    #df <- left_join(df_nom, df_min, by = "Tag", suffix = c("", "_min"))
-    #df <- left_join(df, df_max, by = "Tag", suffix = c("", "_max"))
-    #  browser()
     df <- df_nom %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                         Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
   }) 
@@ -455,6 +445,7 @@ server <- function(input, output, session) {
   
     
     # browser()
+   #  tmp  %>% mutate_at(vars( is.numeric), log)
     
     p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = Berechnete_Infizierte)) +   
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon), 
@@ -485,7 +476,8 @@ server <- function(input, output, session) {
       p
       
     }
-    p <- ggplotly(p, tooltip = c("Berechnete_Infizierte", "Erfasste_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle"))
+    p <- ggplotly(p, tooltip = c("Berechnete_Infizierte", "Erfasste_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle", 
+                                 "Berechnete_Todesfaelle_min", "Berechnete_Todesfaelle_max"))
     p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     #p <- p %>% layout(legend = list(orientation = 'h'))
     p
