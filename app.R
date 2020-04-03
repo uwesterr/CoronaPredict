@@ -360,7 +360,7 @@ server <- function(input, output, session) {
     
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
-    konfidenz_je_tag <- mean(c(0.023, 0.029)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
+    konfidenz_je_tag <- mean(c(0.023, 0.029/2)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
     #browser()
     KonfidenzVektor <- function(v, Tag, konfidenz, konfidenz_je_tag, letzter_Tag, time_lag){
       tmp <- log10(v)
