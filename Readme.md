@@ -90,7 +90,7 @@ Auswirkungen von administrativen Massnahmen mit einfliessen.
 
 Die Startwerte der Berechnungen werden automatisch aus dem Verlauf der
 real erfassten Daten bestimmt. Diese Daten werden direkt vom Datenserver
-xxxx abgeholt.
+des [Corona Hub von Esri](https://npgeo-corona-npgeo-de.hub.arcgis.com/datasets/ef4b445a53c1406892257fe63129a8ea_0?geometry=-23.139%2C46.270%2C39.395%2C55.886&selectedAttribute=faelle_100000_EW) abgeholt.
 
 <a name="eingaben"></a>
 ## 2. Eingaben
@@ -98,16 +98,16 @@ xxxx abgeholt.
 <a name="region"></a>
 ### 2.1 Region
 
-<img src=".//media/Region.png" width="350">
+<img src=".//media/Region.PNG" width="350">
 
 Auswahlmöglichkeiten: Deutschland -- Bundesländer -- Land- und Stadtkreise
 
-Treffen Sie die Auswahl über die Dropdown-Liste oder geben Sie die gewünschte Region direkt im Feld ein (zuerst "----" löschen).
+Treffen Sie die Auswahl über die Dropdown-Liste oder geben Sie die gewünschte Region direkt im Feld ein (zuerst "---" löschen).
 
 <a name="reduzierende-massnahmen"></a>
 ### 2.2 Reduzierende Massnahmen
 
-<img src=".//media/RedMassnahmen.png" width="350">
+<img src=".//media/RedMassnahmen.PNG" width="350">
 
 Hier können Daten von getroffenen Massnahmen zur Reduzierung der
 Reproduktionsrate angegeben werden.
@@ -125,23 +125,23 @@ Die Expertenparameter für den Infektionsverlauf und den
 Krankenhausaufenthalt wurden aus den Quellen [1] und [2] übernommen.
 Sie können vom Benutzer angepasst werden.
 
-<img src=".//media/Expertenparameter.png" width="350">
+<img src=".//media/Expertenparameter.PNG" width="350">
 
 <a name="krankenhausaufenthalt"></a>
 ### 2.4 Krankenhausaufenthalt
 
-<img src=".//media/Krankenhausaufenthalt.png" width="350">
+<img src=".//media/Krankenhausaufenthalt.PNG" width="350">
 
 Die Parameter für den erwarteten Krankenhausaufenthalt wurden aus [1] abgeleitet. Die Grafik aus [1] definiert auch die verschiedenen Zeiten und den jeweiligen Versatz zwischen den Zuständen:
 
-<img src=".//media/image6.png" width="550">
+<img src=".//media/image6.png" width="650">
 
 <a name="einstellung-der-darstellung"></a>
 ### 2.5 Einstellung der Darstellung
 
 Hier kann das Zeitintervall für die Darstellung angegeben werden. Des Weiteren kann zwischen linearer und logarithmischer Skala der y-Achse umgeschaltet werden.
 
-<img src=".//media/Datum.png" width="350">
+<img src=".//media/Datum.PNG" width="350">
 
 <a name="daten-und-darstellung"></a>
 ## 3. Daten und Darstellung
@@ -153,7 +153,7 @@ Hier kann das Zeitintervall für die Darstellung angegeben werden. Des Weiteren 
 
 Kumulierte Infizierte: Gesamtzahl der positiv Getesteten
 
--   Erfasste Infizierte: Diese Zahl wird online von ... übernommen
+-   Erfasste Infizierte: Diese Zahl wird online vom Datenserver des [Corona Hub von Esri](https://npgeo-corona-npgeo-de.hub.arcgis.com/datasets/ef4b445a53c1406892257fe63129a8ea_0?geometry=-23.139%2C46.270%2C39.395%2C55.886&selectedAttribute=faelle_100000_EW) übernommen
 
 -   Erfasste Infizierte berechnet: Ausgabe der Modellierung. Diese Kurve
     wird z.T. automatisch an die realen Fallzahlen angepasst bzw. wird
@@ -168,14 +168,14 @@ Daten vor allem im gezoomten Bild.
 
 Alle Grafiken sind interaktiv und erlauben z.B. Zoom und einen Marker, mit dem die tagesaktuellen Zahlen dargestellt werden können:
 
-<img src=".//media/Marker.png" width="350">
+<img src=".//media/Marker.PNG" width="350">
 
 Alle Interaktionen können im Header des Diagramms ativiert werden.
 
 <a name="verlauf-infizierte"></a>
 ### 3.2 Verlauf Infizierte
 
-<img src=".//media/VerlaufInf.png" width="350">
+<img src=".//media/VerlaufInf.png" width="450">
 
 Aktuell Infizierte berechnet:
   * Berechnete Anzahl der Personen, die positiv getestet wurden und die zurzeit ansteckend sind.
@@ -186,7 +186,7 @@ Neu Infizierte berechnet:
 <a name="plaetze-im-krankenhaus"></a>
 ### 3.3 Plätze im Krankenhaus/Intensivstation
 
-<img src=".//media/Krankenhaus.png" width="350">
+<img src=".//media/Krankenhaus.png" width="450">
 
 Plätze im Krankenhaus:
   * Erwartete Anzahl der Personen, für die ein normales Krankenhausbett zur Verfügung gestellt werden sollte.
@@ -199,7 +199,7 @@ Diese Berechnungen erfolgen nach dem in [1] dargestellten Modell. Die Parameter 
 <a name="taegliche-reproduktionsrate"></a>
 ### 3.4 Tägliche Reproduktionsrate
 
-<img src=".//media/Rt.png" width="350">
+<img src=".//media/Rt.png" width="450">
 
 Die tägliche Reproduktionsrate Rt beschreibt die Zahl derer, die ein Infizierter im Durchschnitt pro Tag ansteckt.
 Sie kann durch getroffene Maßnahmen verändert werden.
