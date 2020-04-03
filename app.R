@@ -628,6 +628,7 @@ geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Rt aktuell"))  +
   
   
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 
  
@@ -674,6 +675,8 @@ geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Rt aktuell"))  +
  
  }
 =======
+=======
+>>>>>>> e86f27b068c4263b172662be8b35a6b0e2bfc87d
   
   
   
@@ -717,6 +720,9 @@ geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Rt aktuell"))  +
   })
   
 }
+<<<<<<< HEAD
+>>>>>>> e86f27b068c4263b172662be8b35a6b0e2bfc87d
+=======
 >>>>>>> e86f27b068c4263b172662be8b35a6b0e2bfc87d
 
 shinyApp(ui, server, enableBookmarking = "server")
