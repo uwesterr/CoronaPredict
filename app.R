@@ -327,16 +327,49 @@ server <- function(input, output, session) {
     rechenDf_nom <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_nom, R0 =R0_conf_nom_min_max$R0_nom)
     df_nom <-  Rechenkern(rechenDf_nom,input)
     
-    rechenDf_min <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_min, R0 =R0_conf_nom_min_max$R0_min)
-    df_min <-  Rechenkern(rechenDf_min,input)
+    tmp <- df_nom %>% filter(!is.na(SumAnzahl))
+    letzter_Tag <- max(tmp$Tag)
+    konfidenz_je_tag <- mean(c(0.023, 0.029/2)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
+    #browser()
+    KonfidenzVektor <- function(v, Tag, konfidenz, konfidenz_je_tag, letzter_Tag, time_lag){
+      tmp <- log10(v)
+      i0 <- which(Tag == letzter_Tag)
+      for (k in (i0+1):(i0+time_lag)){
+        tmp[k] <- tmp[k] + konfidenz
+      }
+      j <- 1
+      for (i in (i0+1+time_lag):length(v)){
+        tmp[i] <- tmp[i] + j*konfidenz_je_tag + konfidenz 
+        j <- j +1
+      }
+      10^tmp
+    }
+      
     
-    rechenDf_max <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_max, R0 =R0_conf_nom_min_max$R0_max)
-    df_max <-  Rechenkern(rechenDf_max,input)
+    df_nom$ErfassteInfizierteBerechnet_min <- KonfidenzVektor(df_nom$ErfassteInfizierteBerechnet, df_nom$Tag, 0, -konfidenz_je_tag, letzter_Tag, 0)
+    df_nom$ErfassteInfizierteBerechnet_max <- KonfidenzVektor(df_nom$ErfassteInfizierteBerechnet, df_nom$Tag,0, +konfidenz_je_tag, letzter_Tag, 0)
     
-    df <- left_join(df_nom, df_min, by = "Tag", suffix = c("", "_min"))
-    df <- left_join(df, df_max, by = "Tag", suffix = c("", "_max"))
+    konfidenz <- log10(1.1)
+    df_nom$ToteBerechnet_min <- KonfidenzVektor(df_nom$ToteBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$td_tod)
+    df_nom$ToteBerechnet_max <- KonfidenzVektor(df_nom$ToteBerechnet, df_nom$Tag,konfidenz, +konfidenz_je_tag, letzter_Tag, input$td_tod)
+    
+    df_nom$KhBerechnet_min <- KonfidenzVektor(df_nom$KhBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$dt_inf_kh)
+    df_nom$KhBerechnet_max <- KonfidenzVektor(df_nom$KhBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, input$dt_inf_kh)
+    
+    df_nom$IntensivBerechnet_min <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
+    df_nom$IntensivBerechnet_max <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
+    
+  
+    #rechenDf_min <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_min, R0 =R0_conf_nom_min_max$R0_min)
+    #df_min <-  Rechenkern(rechenDf_min,input)
+    
+    #rechenDf_max <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_max, R0 =R0_conf_nom_min_max$R0_max)
+    #df_max <-  Rechenkern(rechenDf_max,input)
+    
+    #df <- left_join(df_nom, df_min, by = "Tag", suffix = c("", "_min"))
+    #df <- left_join(df, df_max, by = "Tag", suffix = c("", "_max"))
     #  browser()
-    df <- df %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
+    df <- df_nom %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                         Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
   }) 
   #browser()
@@ -345,7 +378,7 @@ server <- function(input, output, session) {
   color3 = '#6ab84d'
   color4 = 'black'
   color5 = 'gray'
-  perdictionHorizon <- Sys.Date()+14 # how far in the future confidance will be displayed
+  perdictionHorizon <- Sys.Date()+21 # how far in the future confidance will be displayed
   alphaForConfidence <- 0.1 
   # more options at https://ggplot2.tidyverse.org/reference/theme.html
   themeCust <-  theme(
@@ -420,7 +453,7 @@ server <- function(input, output, session) {
       p
       
     }
-    p <- ggplotly(p, tooltip = c("Berechnete_Infizierte", "Erfasste_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle", "Berechnete_Infizierte_min"))
+    p <- ggplotly(p, tooltip = c("Berechnete_Infizierte", "Erfasste_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle"))
     p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     #p <- p %>% layout(legend = list(orientation = 'h'))
     p
@@ -438,9 +471,9 @@ server <- function(input, output, session) {
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
     p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) +  geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
       geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
-      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = NeuInfizierteBerechnet_min, ymax = NeuInfizierteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
-      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = NeueToteBerechnet_min, ymax = NeueToteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color4) + 
-      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = AktuellInfizierteBerechnet_min, ymax = AktuellInfizierteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color1) + 
+      #geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = NeuInfizierteBerechnet_min, ymax = NeuInfizierteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
+      #geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = NeueToteBerechnet_min, ymax = NeueToteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color4) + 
+      #geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = AktuellInfizierteBerechnet_min, ymax = AktuellInfizierteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color1) + 
       
       geom_point(aes(x=Tag,y= AnzahlFall, color = "Neu Infizierte erfasst")) +
       geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y=NeueToteErfasst, color = "Neue Todesfälle erfasst")) +
@@ -535,18 +568,18 @@ server <- function(input, output, session) {
     colnames(tmp)[colnames(tmp) == "ReduzierteRt"] <- "Reduzierte_Reproduktionsrate"
     
     #min
-    colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt_min"] <- "Taegliche_Reproduktionsrate_min"
-    colnames(tmp)[colnames(tmp) == "ReduzierteRt_min"] <- "Reduzierte_Reproduktionsrate_min"
+    #colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt_min"] <- "Taegliche_Reproduktionsrate_min"
+    #colnames(tmp)[colnames(tmp) == "ReduzierteRt_min"] <- "Reduzierte_Reproduktionsrate_min"
     
     #max
-    colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt_max"] <- "Taegliche_Reproduktionsrate_max"
-    colnames(tmp)[colnames(tmp) == "ReduzierteRt_max"] <- "Reduzierte_Reproduktionsrate_max"
+    #colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt_max"] <- "Taegliche_Reproduktionsrate_max"
+    #colnames(tmp)[colnames(tmp) == "ReduzierteRt_max"] <- "Reduzierte_Reproduktionsrate_max"
     
     tmp$Taegliche_Reproduktionsrate <- round(tmp$Taegliche_Reproduktionsrate, digits = 3)
     tmp$Reduzierte_Reproduktionsrate <- round(tmp$Reduzierte_Reproduktionsrate, digits = 3)
     
     p <- ggplot(tmp, aes(color = "Rt ohne Maßnahmen")) + geom_line(aes(x=Tag, y = Taegliche_Reproduktionsrate), linetype = 2) +
-      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Reduzierte_Reproduktionsrate_min, ymax = Reduzierte_Reproduktionsrate_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
+      #geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Reduzierte_Reproduktionsrate_min, ymax = Reduzierte_Reproduktionsrate_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
 geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Rt aktuell"))  +
       scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Tägliche Reproduktionsrate Rt, CI 95%", sep ="")  , x = "Datum", y = "Wert",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
