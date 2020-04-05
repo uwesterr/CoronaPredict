@@ -450,4 +450,3 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   return(df)
   
 }
-
