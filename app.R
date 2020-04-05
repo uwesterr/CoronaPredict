@@ -21,10 +21,7 @@ if (!("modelr" %in% rownames(installed.packages()))) install.packages("modelr")
 if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 if (!("rlang" %in% rownames(installed.packages()))) install.packages("rlang")
 if (!("shinyalert" %in% rownames(installed.packages()))) install.packages("shinyalert")
-if (!("shinyWidgets" %in% rownames(installed.packages()))) install.packages("shinyWidgets")
 
-
-library(shinyWidgets)
 library(shinyalert)
 library(writexl)
 library(rlang)
@@ -48,16 +45,16 @@ historyDfBundesLand <- outpput[[2]]
 historyDfLandkreis <- outpput[[3]]
 
 ui <- function(request) {
-
-
+  
+  
   # widgets website https://shiny.rstudio.com/gallery/widget-gallery.html
   navbarPage("Covid19 Meldungen in Deutschland!",  position = c("fixed-bottom"),
              
              tabPanel("Einstellung und Ausgabe",
                       setBackgroundColor("#ECF0F5"
-                       # color = c("#F7FBFF", "#2171B5"),
-                       # gradient = "radial",
-                       # direction = c("top", "left")
+                                         # color = c("#F7FBFF", "#2171B5"),
+                                         # gradient = "radial",
+                                         # direction = c("top", "left")
                       ),
                       
                       sidebarLayout( position ="left",
@@ -118,19 +115,19 @@ ui <- function(request) {
                                                   numericInput("ta", label = "Infektiosität [d]", value = 6),
                                                   numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8)))),
                                        
-#                                      h3("Krankenhausaufenthalt"), 
-#                                      fluidRow(
-#                                        column(6,
-#                                               wellPanel(
-#                                                 numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5, step = 0.1),
-#                                                 numericInput("t_kh", label = "Dauer", value = 14),
-#                                                 numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8))),
-#                                        column(6,
-#                                               wellPanel(
-#                                                 numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25),
-#                                                 numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10),
-#                                                 numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1)))) ,                                        
-#                                      
+                                       #                                      h3("Krankenhausaufenthalt"), 
+                                       #                                      fluidRow(
+                                       #                                        column(6,
+                                       #                                               wellPanel(
+                                       #                                                 numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5, step = 0.1),
+                                       #                                                 numericInput("t_kh", label = "Dauer", value = 14),
+                                       #                                                 numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8))),
+                                       #                                        column(6,
+                                       #                                               wellPanel(
+                                       #                                                 numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25),
+                                       #                                                 numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10),
+                                       #                                                 numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1)))) ,                                        
+                                       #                                      
                                        h3("Einstellen der Darstellung") ,
                                        column(6,   
                                               wellPanel(
@@ -203,23 +200,23 @@ ui <- function(request) {
                                        ),
                                        
                                        wellPanel(
-                                       h3("Krankenhausaufenthalt"), 
-                                       
-                                       fluidRow(
-                                        
-                                         column(4,
-                                                wellPanel(
-                                                  numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5, step = 0.1),
-                                                  numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25))),
-                                         column(4,  
-                                                wellPanel(
-                                                  numericInput("t_kh", label = "Dauer", value = 14),
-                                                  numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10))),
-                                                  
-                                         column(4,
-                                                wellPanel(
-                                                  numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8),
-                                                  numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1))))) , 
+                                         h3("Krankenhausaufenthalt"), 
+                                         
+                                         fluidRow(
+                                           
+                                           column(4,
+                                                  wellPanel(
+                                                    numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5, step = 0.1),
+                                                    numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25))),
+                                           column(4,  
+                                                  wellPanel(
+                                                    numericInput("t_kh", label = "Dauer", value = 14),
+                                                    numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10))),
+                                           
+                                           column(4,
+                                                  wellPanel(
+                                                    numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8),
+                                                    numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1))))) , 
                                        fluidRow(
                                          wellPanel(
                                            splitLayout(
@@ -242,23 +239,23 @@ ui <- function(request) {
                       )
              ),
              
- #            tabPanel("Datenimport",
- #                     
- #                     # Show a plot of the generated distribution
- #                     sidebarPanel(
- #                       # daten einlesen
- #                       fileInput("importData",
- #                                 label="Upload der Bettenmeldedaten",         accept = c(
- #                                   "xls",
- #                                   "xlsx"),
- #                                 multiple = FALSE),
- #                       # daten runterladen
- #                       downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
- #                       mainPanel(
- #                         dataTableOutput("uploadedBettenmeldedaten"))
- #                     )
- #            ),
- #            
+             tabPanel("Datenimport",
+                      
+                      # Show a plot of the generated distribution
+                      sidebarPanel(
+                        # daten einlesen
+                        fileInput("importData",
+                                  label="Upload der Bettenmeldedaten",         accept = c(
+                                    "xls",
+                                    "xlsx"),
+                                  multiple = FALSE),
+                        # daten runterladen
+                        downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
+                        mainPanel(
+                          dataTableOutput("uploadedBettenmeldedaten"))
+                      )
+             ),
+             
              tabPanel("Impressum",
                       
                       # Show a plot of the generated distribution
@@ -325,26 +322,28 @@ server <- function(input, output, session) {
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
     if(input$BundeslandSelected =="---"){
     }else {
+      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
       vals$Flag  <- "Bundesland"
       # browser()
       regionSelected = 2
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
       r0_no_erfasstDf(r0_no_erfasstDf)
       # set menu of Landkreis to "---"
-      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+      
     }
   })
   
   observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
     if(input$LandkreiseSelected =="---"){
     }else {
+      updateSelectInput(session, "BundeslandSelected",  selected = "---")
       #browser()
       vals$Flag  <- "Landkreis"
       regionSelected = 3
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
       r0_no_erfasstDf(r0_no_erfasstDf)
       # browser()
-      updateSelectInput(session, "BundeslandSelected",  selected = "---")
+      
     }
   })
   
@@ -354,15 +353,16 @@ server <- function(input, output, session) {
     n0_erfasst_nom_min_max <- r0_no_erfasstDf()[[2]]
     R0_conf_nom_min_max <- r0_no_erfasstDf()[[3]]
     startDate <- r0_no_erfasstDf()[[4]]
-    #browser()
+    # browser()
     rechenDf_nom <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_nom, R0 =R0_conf_nom_min_max$R0_nom)
     df_nom <-  Rechenkern(rechenDf_nom,input, startDate)
     
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
-    konfidenz_je_tag <- mean(c(0.023, 0.029)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
+    konfidenz_je_tag <- mean(c(0.023, 0.029/2)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
     #browser()
     KonfidenzVektor <- function(v, Tag, konfidenz, konfidenz_je_tag, letzter_Tag, time_lag){
+      #browser()
       tmp <- log10(v)
       i0 <- which(Tag == letzter_Tag)
       for (k in (i0+1):(i0+time_lag)){
@@ -375,9 +375,8 @@ server <- function(input, output, session) {
       }
       10^tmp
     }
-      
     
-
+    # browser()
     df_nom$ErfassteInfizierteBerechnet_min <- KonfidenzVektor(df_nom$ErfassteInfizierteBerechnet, df_nom$Tag, 0, -konfidenz_je_tag, letzter_Tag, 0)
     df_nom$ErfassteInfizierteBerechnet_max <- KonfidenzVektor(df_nom$ErfassteInfizierteBerechnet, df_nom$Tag,0, +konfidenz_je_tag, letzter_Tag, 0)
     
@@ -391,8 +390,18 @@ server <- function(input, output, session) {
     df_nom$IntensivBerechnet_min <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
     df_nom$IntensivBerechnet_max <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
     
+    
+    #rechenDf_min <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_min, R0 =R0_conf_nom_min_max$R0_min)
+    #df_min <-  Rechenkern(rechenDf_min,input)
+    
+    #rechenDf_max <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_max, R0 =R0_conf_nom_min_max$R0_max)
+    #df_max <-  Rechenkern(rechenDf_max,input)
+    
+    #df <- left_join(df_nom, df_min, by = "Tag", suffix = c("", "_min"))
+    #df <- left_join(df, df_max, by = "Tag", suffix = c("", "_max"))
+    #  browser()
     df <- df_nom %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
-                        Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
+                            Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
   }) 
   #browser()
   color1 = 'blue'
@@ -442,10 +451,9 @@ server <- function(input, output, session) {
     colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_max"] <- "Berechnete_Infizierte_max"
     tmp$ErfassteInfizierte <- as.integer(tmp$Erfasste_Infizierte)
     tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$Berechnete_Infizierte)
-  
+    
     
     # browser()
-   #  tmp  %>% mutate_at(vars( is.numeric), log)
     
     p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = Berechnete_Infizierte)) +   
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon), 
@@ -476,8 +484,7 @@ server <- function(input, output, session) {
       p
       
     }
-    p <- ggplotly(p, tooltip = c("Berechnete_Infizierte", "Erfasste_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle", 
-                                 "Berechnete_Todesfaelle_min", "Berechnete_Todesfaelle_max"))
+    p <- ggplotly(p, tooltip = c("Berechnete_Infizierte", "Erfasste_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle"))
     p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     #p <- p %>% layout(legend = list(orientation = 'h'))
     p
@@ -604,7 +611,7 @@ server <- function(input, output, session) {
     
     p <- ggplot(tmp, aes(color = "Rt ohne Maßnahmen")) + geom_line(aes(x=Tag, y = Taegliche_Reproduktionsrate), linetype = 2) +
       #geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Reduzierte_Reproduktionsrate_min, ymax = Reduzierte_Reproduktionsrate_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
-geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Rt aktuell"))  +
+      geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Rt aktuell"))  +
       scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Tägliche Reproduktionsrate Rt, CI 95%", sep ="")  , x = "Datum", y = "Wert",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Rt ohne Maßnahmen' = color1,
@@ -619,56 +626,6 @@ geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Rt aktuell"))  +
   })  
   
   
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-
- 
- # Save extra values in state$values when we bookmark
- onBookmark(function(state) {
-  #  browser()
-   state$values$currentSum <- vals$Flag
-
- })
- 
- 
- onBookmarked(function(url) {
-   showBookmarkUrlModal(url) # Default function
-   updateQueryString(url) # Update Adresse im Browser
- })
- 
- # Read values from state$values when we restore
- onRestore(function(state) {
-   vals$Flag <- state$values$currentSum
-
-     if(input$BundeslandSelected =="---"){
-     }else {
-       vals$Flag  <- "Bundesland"
-       # browser()
-       regionSelected = 2
-       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
-       r0_no_erfasstDf(r0_no_erfasstDf)
-       # set menu of Landkreis to "---"
-       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
-     }
- 
-     if(input$LandkreiseSelected =="---"){
-     }else {
-       #browser()
-       vals$Flag  <- "Landkreis"
-       regionSelected = 3
-       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
-       r0_no_erfasstDf(r0_no_erfasstDf)
-       # browser()
-       updateSelectInput(session, "BundeslandSelected",  selected = "---")
-     }
- 
- })
- 
- }
-=======
-=======
->>>>>>> e86f27b068c4263b172662be8b35a6b0e2bfc87d
   
   
   
@@ -712,11 +669,6 @@ geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Rt aktuell"))  +
   })
   
 }
-<<<<<<< HEAD
->>>>>>> e86f27b068c4263b172662be8b35a6b0e2bfc87d
-=======
->>>>>>> e86f27b068c4263b172662be8b35a6b0e2bfc87d
 
 shinyApp(ui, server, enableBookmarking = "server")
-
 
