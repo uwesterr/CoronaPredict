@@ -121,6 +121,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   dfRoNoOpt <- dfRoNo
   lmModel <-  lm(log10(SumAnzahl) ~ MeldeDate, data = df)
   index <-  0
+  # browser()
   for (i in seq(.9,1.2, by = 0.01)) {
     index <- index + 1
     lmModelLoop <- lmModel
@@ -132,14 +133,14 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     dfRoNoOpt$R0<- 10^R0
     
     dfRechenKern <-  Rechenkern(dfRoNoOpt, input, startDate)
-    dfRechenKern <- dfRechenKern %>% filter(Tag >= min(df$MeldeDate) & Tag <= max(df$MeldeDate))
+    dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
     rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
     
     resultDf <- rbind(resultDf, data.frame(R0 = R0, RoLin = 10^R0, n0_erfasst = n0_erfasst, coefficient = i,  rms = rms))
     
     
   }
-  # browser()
+   browser()
   resultDf <- resultDf %>% arrange(rms) %>% head(1)
   n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
   R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())

@@ -295,26 +295,28 @@ server <- function(input, output, session) {
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
     if(input$BundeslandSelected =="---"){
     }else {
+      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
       vals$Flag  <- "Bundesland"
       # browser()
       regionSelected = 2
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
       r0_no_erfasstDf(r0_no_erfasstDf)
       # set menu of Landkreis to "---"
-      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+     
     }
   })
   
   observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
     if(input$LandkreiseSelected =="---"){
     }else {
+      updateSelectInput(session, "BundeslandSelected",  selected = "---")
       #browser()
       vals$Flag  <- "Landkreis"
       regionSelected = 3
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
       r0_no_erfasstDf(r0_no_erfasstDf)
       # browser()
-      updateSelectInput(session, "BundeslandSelected",  selected = "---")
+      
     }
   })
   
