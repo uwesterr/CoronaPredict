@@ -82,9 +82,8 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   #  TG: eigentlich sollte lm jetzt gar nicht ausgefuehrt werden sondern z.B. ersatzwert ausgegeben werden
   # browser()
   # used only data until endDate
-  nesteddf <- df %>% filter(MeldeDate <=  endDate)  
   #browser()
-  
+  df_org <- df %>% mutate( Ygesamt = Einwohner)
   if (endDate > startDate) {
     df <- df %>% filter(MeldeDate >= startDate)
     df <- df %>% filter(MeldeDate <= endDate)
@@ -122,7 +121,8 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   lmModel <-  lm(log10(SumAnzahl) ~ MeldeDate, data = df)
   index <-  0
   # browser()
-  for (i in seq(.9,1.2, by = 0.01)) {
+  rmsValue =1e7
+  for (i in seq(1.2,0.9, by = -0.01)) {
     index <- index + 1
     lmModelLoop <- lmModel
     lmModelLoop[["coefficients"]][["MeldeDate"]] <- lmModel[["coefficients"]][["MeldeDate"]]*i
@@ -135,9 +135,13 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     dfRechenKern <-  Rechenkern(dfRoNoOpt, input, startDate)
     dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
     rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
-    
+
     resultDf <- rbind(resultDf, data.frame(R0 = R0, RoLin = 10^R0, n0_erfasst = n0_erfasst, coefficient = i,  rms = rms))
-    
+    if (rms< rmsValue) {
+      rmsValue <- rms
+    } else {
+      break
+    }
     
   }
    browser()
@@ -145,7 +149,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
   R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
   
-  return(list(dfRoNo, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
+  return(list(df_org, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
 }
 
 createDfBundLandKreis <- function() {
