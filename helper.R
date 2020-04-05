@@ -144,7 +144,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     }
     
   }
-   browser()
+  # browser()
   resultDf <- resultDf %>% arrange(rms) %>% head(1)
   n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
   R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
