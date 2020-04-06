@@ -277,7 +277,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   calcDf <- tibble(Tag                               = startDate,
                    TaeglichReproduktionsRateRt       = Rt,
                    AktuellInfizierteBerechnet        = n0_erfasst,
-                   RestanteilStartwert               = NA,
+                  # RestanteilStartwert               = NA,
                    NeuInfizierteBerechnet            = NA,
                    ErfassteInfizierteBerechnet       = AktuellInfizierteBerechnet,
                    GesamtAktuellInfizierteBerechnet  = 0, #AktuellInfizierteBerechnet*faktor_n_inf,
@@ -306,7 +306,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   calcInit <- data.frame(Tag = seq(startDate- offsetDay, startDate, by = 1))  %>% 
     mutate(indexBack = as.numeric(-(Tag - startDate)),
            TaeglichReproduktionsRateRt       = Rt,
-           RestanteilStartwert               = NA,
+#           RestanteilStartwert               = NA,
            NeuInfizierteBerechnet            = NA,
            GesamtInfizierteBerechnet         = 0,
            GesamtAktuellInfizierteBerechnet  = 0,
@@ -343,12 +343,12 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     Rt-(tailCalcDf$ErfassteInfizierteBerechnet*(Rt-1))/Y_inf_limit
   }
   
-  calcRestanteilStartwert <- function(tailCalcDf, n0_erfasst, ta, startDate, date) {
-    
-    max(0,n0_erfasst*(ta - as.numeric(date - startDate))/ta)
-    0  # not needed anymore ?????
-  }
-  
+# calcRestanteilStartwert <- function(tailCalcDf, n0_erfasst, ta, startDate, date) {
+#   
+#   max(0,n0_erfasst*(ta - as.numeric(date - startDate))/ta)
+
+# }
+# 
   
   calcGesamtInfizierteBerechnet <- function(calcDf){
     
@@ -377,7 +377,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
       Tag                               = tailCalcDf$Tag+1,
       TaeglichReproduktionsRateRt       = calcTaeglichReproduktionsRateRt(Rt, tailCalcDf, Y_inf_limit),
       AktuellInfizierteBerechnet        = n0_erfasst,
-      RestanteilStartwert               = calcRestanteilStartwert(tailCalcDf, n0_erfasst, ta, startDate, date),
+      #RestanteilStartwert               = calcRestanteilStartwert(tailCalcDf, n0_erfasst, ta, startDate, date),
       NeuInfizierteBerechnet            = NA,
       ErfassteInfizierteBerechnet       = NA,
       GesamtAktuellInfizierteBerechnet  = 0,
@@ -414,7 +414,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   #    Infiziert
   ende_inf <- ti+ta
   calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = ifelse(ID==1,n0_erfasst,
-                                                                  rollapply(NeuInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) + RestanteilStartwert-NeuInfizierteBerechnet))
+                                                                  rollapply(NeuInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) -NeuInfizierteBerechnet))
   # In Intensiv
   # Diese Formel sollte noch einmal ueberprueft werden
   beginn_intensiv <- dt_inf_kh + dt_kh_int
