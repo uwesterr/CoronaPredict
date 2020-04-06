@@ -72,32 +72,27 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   tmp <- df %>% filter(SumAnzahl >=  mindest_anzahl_faelle_start)
   startDate <- max(startDate, min(tmp$MeldeDate))
   tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
-  while ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate<max(df$MeldeDate))) {
+ 
+  df_org <- df %>% mutate( Ygesamt = Einwohner)
+  
+   while ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate<max(df$MeldeDate))) {
     endDate <- endDate +1
     tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
   }
   if ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate>=max(df$MeldeDate))) {
+    
+    # Ersatzwerte
+    #n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate
+    n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = 165*min(df_org$Einwohner)/83000000)
+    R0_conf_nom_min_max <- data.frame(R0_nom= 1.32)
+    startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()
+    #browser()
+    
     showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. Hierdurch ist aber auch keine valide Zukunftsschätzung möglich.",  footer = modalButton("Ok")))
-  }
-  #  TG: eigentlich sollte lm jetzt gar nicht ausgefuehrt werden sondern z.B. ersatzwert ausgegeben werden
-  # browser()
-  # used only data until endDate
-  #browser()
-  df_org <- df %>% mutate( Ygesamt = Einwohner)
-  if (endDate > startDate) {
-    df <- df %>% filter(MeldeDate >= startDate)
-    df <- df %>% filter(MeldeDate <= endDate)
-  } else {
-    df <- df %>% filter(MeldeDate >= startDate)
-    df <- df %>% filter(MeldeDate <= startDate+10)
-  }
-  
-  # Define function to calculate regression
-  expoModel <- function(df, startDate, endDate) {
-    
-    #TG: Regression zwischen Startdatum bzw. erstem Meldedatum und erster Massnahme. Annahme: bis dahin exponentieller Verlauf
-    #    Wenn Start-Date > erste Massnahme ist: Ausnahme --> 10 Tage nach Start
-    
+  } else 
+  {
+    # Ausreichende Fallzahlen. Lineare Regression und Optimierung
+    # used only data until endDate
     
     if (endDate > startDate) {
       df <- df %>% filter(MeldeDate >= startDate)
@@ -107,47 +102,40 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
       df <- df %>% filter(MeldeDate <= startDate+10)
     }
     
-    #TG: Rt ist jetzt nicht mehr so einfach zu ermitteln, da keine einfache exponentielle Funktion mehr
+    # Calculate regression and optimize daily reproduction rate Rt
+    resultDf<- data.frame()
+    dfRoNo <- df %>% mutate( Ygesamt = Einwohner)
+    dfRoNoOpt <- dfRoNo
+    lmModel <-  lm(log10(SumAnzahl) ~ MeldeDate, data = df)
     
-    #lm(log10(SumAnzahl) ~ MeldeDate, data = df)
-    
-    lmModel <- lm(log10(SumAnzahl) ~ MeldeDate, data = df)
-    
-  } 
-  
-  resultDf<- data.frame()
-  dfRoNo <- df %>% mutate( Ygesamt = Einwohner)
-  dfRoNoOpt <- dfRoNo
-  lmModel <-  lm(log10(SumAnzahl) ~ MeldeDate, data = df)
-  index <-  0
-  # browser()
-  rmsValue =1e7
-  for (i in seq(1.2,0.9, by = -0.01)) {
-    index <- index + 1
-    lmModelLoop <- lmModel
-    lmModelLoop[["coefficients"]][["MeldeDate"]] <- lmModel[["coefficients"]][["MeldeDate"]]*i
-    R0 <- lmModelLoop[["coefficients"]][["MeldeDate"]]
-    n0_erfasst <- lmModelLoop %>% predict(data.frame(MeldeDate =startDate))
-    
-    dfRoNoOpt$n0_erfasst <- n0_erfasst
-    dfRoNoOpt$R0<- 10^R0
-    
-    dfRechenKern <-  Rechenkern(dfRoNoOpt, input, startDate)
-    dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
-    rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
-
-    resultDf <- rbind(resultDf, data.frame(R0 = R0, RoLin = 10^R0, n0_erfasst = n0_erfasst, coefficient = i,  rms = rms))
-    if (rms< rmsValue) {
-      rmsValue <- rms
-    } else {
-      break
+    index <-  0
+    # browser()
+    rmsValue =1e7
+    for (i in seq(1.0,1.2, by = 0.01)) {
+      index <- index + 1
+      lmModelLoop <- lmModel
+      lmModelLoop[["coefficients"]][["MeldeDate"]] <- lmModel[["coefficients"]][["MeldeDate"]]*i
+      R0 <- lmModelLoop[["coefficients"]][["MeldeDate"]]
+      n0_erfasst <- lmModelLoop %>% predict(data.frame(MeldeDate =startDate))
+      
+      dfRoNoOpt$n0_erfasst <- n0_erfasst
+      dfRoNoOpt$R0<- 10^R0
+      
+      dfRechenKern <-  Rechenkern(dfRoNoOpt, input, startDate)
+      dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
+      rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
+      
+      resultDf <- rbind(resultDf, data.frame(R0 = R0, RoLin = 10^R0, n0_erfasst = n0_erfasst, coefficient = i,  rms = rms))
+      if (rms< rmsValue) {
+        rmsValue <- rms
+      } else {
+        break
+      }
     }
-    
-  }
-  # browser()
-  resultDf <- resultDf %>% arrange(rms) %>% head(1)
-  n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
-  R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
+    resultDf <- resultDf %>% arrange(rms) %>% head(1)
+    n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
+    R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
+  }  
   
   return(list(df_org, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
 }

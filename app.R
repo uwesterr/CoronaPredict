@@ -21,7 +21,7 @@ if (!("modelr" %in% rownames(installed.packages()))) install.packages("modelr")
 if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 if (!("rlang" %in% rownames(installed.packages()))) install.packages("rlang")
 if (!("shinyalert" %in% rownames(installed.packages()))) install.packages("shinyalert")
-if (!("shinyWidgets" %in% rownames(installed.packages()))) install.packages("shinyalert")
+if (!("shinyWidgets" %in% rownames(installed.packages()))) install.packages("shinyWidgets")
 
 library(shinyWidgets)
 library(shinyalert)
@@ -89,13 +89,13 @@ ui <- function(request) {
                                            column(6,
                                                   dateInput("reduzierung_datum1", label = "1. Massnahme Datum, Rt [%]", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
                                            column(6,
-                                                  sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 50)))),
+                                                  sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 45)))),
                                        wellPanel(
                                          fluidRow(
                                            column(6,
                                                   dateInput("reduzierung_datum2", label = "2. Massnahme Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
                                            column(6,
-                                                  sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 50)))),
+                                                  sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 30)))),
                                        wellPanel(
                                          fluidRow(
                                            column(6,
@@ -111,12 +111,12 @@ ui <- function(request) {
                                                 wellPanel(
                                                   numericInput("ges_inf_rate", label = "Durchseuchung [%]", value = 70),
                                                   numericInput("ti", label = "Inkubationszeit [d]", value = 2),
-                                                  numericInput("tod_rate", label = "Sterblichkeit [%]", value = 2., step = 0.1))),
+                                                  numericInput("tod_rate", label = "Sterblichkeit [%]", value = 1.5, step = 0.1))),
                                          column(6,
                                                 wellPanel(
                                                   numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15),
                                                   numericInput("ta", label = "Infektiosität [d]", value = 6),
-                                                  numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 8)))),
+                                                  numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 4)))),
                                        
                                        #                                      h3("Krankenhausaufenthalt"), 
                                        #                                      fluidRow(
