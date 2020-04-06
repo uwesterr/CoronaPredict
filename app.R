@@ -21,7 +21,9 @@ if (!("modelr" %in% rownames(installed.packages()))) install.packages("modelr")
 if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 if (!("rlang" %in% rownames(installed.packages()))) install.packages("rlang")
 if (!("shinyalert" %in% rownames(installed.packages()))) install.packages("shinyalert")
+if (!("shinyWidgets" %in% rownames(installed.packages()))) install.packages("shinyalert")
 
+library(shinyWidgets)
 library(shinyalert)
 library(writexl)
 library(rlang)
@@ -280,6 +282,7 @@ ui <- function(request) {
   )
   
 }
+
 server <- function(input, output, session) {
   
   ######  down and upload of data
