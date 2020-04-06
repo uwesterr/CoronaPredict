@@ -135,7 +135,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     dfRechenKern <-  Rechenkern(dfRoNoOpt, input, startDate)
     dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
     rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
-    
+
     resultDf <- rbind(resultDf, data.frame(R0 = R0, RoLin = 10^R0, n0_erfasst = n0_erfasst, coefficient = i,  rms = rms))
     if (rms< rmsValue) {
       rmsValue <- rms

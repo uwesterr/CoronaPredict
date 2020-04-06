@@ -44,6 +44,7 @@ historyDfBund <- outpput[[1]]
 historyDfBundesLand <- outpput[[2]]
 historyDfLandkreis <- outpput[[3]]
 
+
 ui <- function(request) {
   
   
@@ -671,4 +672,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server, enableBookmarking = "server")
-
