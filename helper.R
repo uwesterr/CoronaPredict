@@ -70,11 +70,12 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   mindest_faelle <- 12
   mindest_anzahl_faelle_start <- 10
   tmp <- df %>% filter(SumAnzahl >=  mindest_anzahl_faelle_start)
-  startDate <- max(startDate, min(tmp$MeldeDate))
+  startDate <- max(startDate, min(tmp$MeldeDate))  
+  
   tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
  
   df_org <- df %>% mutate( Ygesamt = Einwohner)
-  
+  #browser()
    while ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate<max(df$MeldeDate))) {
     endDate <- endDate +1
     tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
@@ -121,7 +122,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
       dfRoNoOpt$n0_erfasst <- n0_erfasst
       dfRoNoOpt$R0<- 10^R0
       
-      dfRechenKern <-  Rechenkern(dfRoNoOpt, input, startDate)
+      dfRechenKern <-  isolate(Rechenkern(dfRoNoOpt, input, startDate))
       dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
       rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
       
@@ -300,7 +301,8 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   
   ende_inf <- ti + ta  
   start_inf = ti 
-  offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when no case was there 
+  # find day on which the first was case would have been reported with given Rt 
+  offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
   calcInit <- data.frame(Tag = seq(startDate- offsetDay, startDate, by = 1))  %>% 
     mutate(indexBack = as.numeric(-(Tag - startDate)),
            TaeglichReproduktionsRateRt       = Rt,
@@ -318,8 +320,6 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
            MaxKhBerechnet                    = 0,
            MaxIntBerechnet                   = 0)
  
-  # find day on which the first was case would have been reported with given Rt 
-  
   for (i in 1:nrow(calcInit)) {
     calcInit$ReduzierteRt[i] =  calcReduzierung(calcInit[i,], reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
     
@@ -334,20 +334,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
                       NeuInfizierteBerechnet = NeuGesamtInfizierteBerechnet/faktor_n_inf)
   
 
-  
-  # browser()
-  
-  
-# initCalcDf <- function(calcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta, n0_erfasst, startDate, faktor_n_inf) {
-#   calcInit$ReduzierteRt <- calcReduzierung(calcInit, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
-#   
-#  # calcDf$NeuGesamtInfizierteBerechnet<- calcNeuGesamtInfizierteBerechnet(calcDf)
-#   calcDf$NeuInfizierteBerechnet <- max(.1,calcDf$NeuGesamtInfizierteBerechnet/faktor_n_inf)
-#   return(calcDf)
-# }
-# initCalcDf <- initCalcDf(calcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta, n0_erfasst, startDate, faktor_n_inf)
-  
-  
+  ########################################################  Loop propagate infections over time ########################
   lengthOfTail <- 1
   calcDf <- calcInit
   
@@ -406,39 +393,15 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
       MaxIntBerechnet                   = 0,
       
     )
-
-    # Reduzierung Rt (max. 3x)
+# browser()
     updatecalcDf$ReduzierteRt <- calcReduzierung(updatecalcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
     updatecalcDf$GesamtInfizierteBerechnet <-  round(calcGesamtInfizierteBerechnet(tailCalcDf),digits = 0)
-    # updatecalcDf$NeuGesamtInfizierteBerechnet<- round(calcNeuGesamtInfizierteBerechnet(tailCalcDf), digits = 0)
-    
-    
-    
-    # build NeuGesamtInfizierteBerechnet for dates before startdate, because if we add up NeuGesamtInfizierteBerechnet to calculate 
-    # GesamtAktuellInfizierteBerechnet we need for the beginning data from the past
-
-    
-  # browser()
-    # calc x so das summe über ti bis ende_inf = StartGesamtAktuellInfizierteBerechnet
-#   expHist <- seq(start_inf, ende_inf)
-#   sumRt = sum((tailCalcDf$TaeglichReproduktionsRateRt-1)^expHist)
-#   basisValue <- StartGesamtAktuellInfizierteBerechnet/sumRt
-#   
-#   NeuGesamtInfizierteBerechnetHistoryDf <- data.frame(Tag = seq(startDate- ende_inf, startDate, by = 1)) %>% mutate(indexBack = as.numeric(-(Tag - startDate))-1) %>% 
-#     mutate(NeuGesamtInfizierteBerechnet = basisValue*(StartReduzierteRt-1)^(indexBack+1))
-#   
-#   NeuGesamtInfizierteBerechnetDf <-  rbind(NeuGesamtInfizierteBerechnetHistoryDf %>%  select(Tag, NeuGesamtInfizierteBerechnet ), calcDf %>% select(Tag, NeuGesamtInfizierteBerechnet ) %>% 
-#     filter(Tag != startDate) )
-#   
-    
+ 
     updatecalcDf$GesamtAktuellInfizierteBerechnet <- calcDf %>% filter((Tag <= updatecalcDf$Tag - ti) & (Tag > updatecalcDf$Tag - ende_inf )) %>% 
       summarise(sum = sum(NeuGesamtInfizierteBerechnet)) %>% as.numeric()
-    
-    
+ 
     updatecalcDf$NeuGesamtInfizierteBerechnet<- round(calcNeuGesamtInfizierteBerechnet(updatecalcDf), digits = 0)
-    
-     #browser()
-    
+
     updatecalcDf$NeuInfizierteBerechnet <- round(max(.1,updatecalcDf$NeuGesamtInfizierteBerechnet/faktor_n_inf), digits = 0)
     updatecalcDf$ErfassteInfizierteBerechnet<- round(calcErfassteInfizierteBerechnet(tailCalcDf), digits = 0)
     
@@ -446,7 +409,6 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     calcDf <- bind_rows(calcDf,updatecalcDf)
     
   }
-  # browser()
   calcDf$ID <- seq.int(nrow(calcDf))
   
   #    Infiziert
@@ -472,7 +434,6 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   
   
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
-  # browser()
   return(df)
   
 }
