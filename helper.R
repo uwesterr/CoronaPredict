@@ -108,34 +108,40 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     dfRoNoOpt <- dfRoNo
     lmModel <-  lm(log10(SumAnzahl) ~ MeldeDate, data = df)
     
-    index <-  0
-    # browser()
-    rmsValue =1e7
-    for (i in seq(1.0,1.2, by = 0.01)) {
-      index <- index + 1
-      lmModelLoop <- lmModel
-      lmModelLoop[["coefficients"]][["MeldeDate"]] <- lmModel[["coefficients"]][["MeldeDate"]]*i
-      R0 <- lmModelLoop[["coefficients"]][["MeldeDate"]]
-      n0_erfasst <- lmModelLoop %>% predict(data.frame(MeldeDate =startDate))
-      
-      dfRoNoOpt$n0_erfasst <- n0_erfasst
-      dfRoNoOpt$R0<- 10^R0
-      
-      dfRechenKern <-  isolate(Rechenkern(dfRoNoOpt, input, startDate))
-      dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
-      rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
-      
-      resultDf <- rbind(resultDf, data.frame(R0 = R0, RoLin = 10^R0, n0_erfasst = n0_erfasst, coefficient = i,  rms = rms))
-      if (rms< rmsValue) {
-        rmsValue <- rms
-      } else {
-        break
+    # gives first reasonable fit
+    R0_start <- lmModel[["coefficients"]][["MeldeDate"]]
+    n0_erfasst_start <- lmModel %>% predict(data.frame(MeldeDate =startDate))
+    n0_erfasst_start <- 10^n0_erfasst_start
+    #browser()
+    
+    # lousy trick to improve fit, which is not good due to the discrepancy between the assumed function (no^rt*tage) and the real 
+    # implemented complex function. Should be replaced by a real optimizer. 
+    # with e.g. a simple levenberg-marquardt optimizer, it should be possible to get a better representation in a reasonable amount of time as the 
+    # start parameters are already quit good. 
+    
+    for (i in seq(1.0,1.2, by = 0.02)) {
+      for (k in seq(0.9,1.1, by = 0.1)) {
+        
+        R0=R0_start*i
+        dfRoNoOpt$R0<- 10^(R0)
+        
+        n0_erfasst <- n0_erfasst_start*k
+        dfRoNoOpt$n0_erfasst <- n0_erfasst
+        
+        #browser()
+        
+        dfRechenKern <-  isolate(Rechenkern(dfRoNoOpt, input, startDate))
+        dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
+        rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
+        
+        resultDf <- rbind(resultDf, data.frame(R0 = R0, RoLin = 10^R0, n0_erfasst = n0_erfasst, coefficient = i,  rms = rms))
       }
     }
-  #  browser()
+    #browser()
     resultDf <- resultDf %>% arrange(rms) %>% head(1)
     n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
     R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
+    #browser()
   }  
   
   return(list(df_org, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
