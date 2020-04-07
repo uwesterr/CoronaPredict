@@ -89,7 +89,7 @@ ui <- function(request) {
                                            column(6,
                                                   dateInput("reduzierung_datum1", label = "1. Massnahme Datum, Rt [%]", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
                                            column(6,
-                                                  sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 45)))),
+                                                  sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 25)))),
                                        wellPanel(
                                          fluidRow(
                                            column(6,
