@@ -4,7 +4,7 @@
 
 #based on covid19germany
 
-# An R package to load, visualise and analyse daily updated data on the COVID-19 outbreak in Germany. This package exists to simplify data analysis and was developed in the context of the #WirvsVirus hackathon. https://github.com/nevrome/covid19germany 
+# An R package to load, visualize and analyze daily updated data on the COVID-19 outbreak in Germany. This package exists to simplify data analysis and was developed in the context of the #WirvsVirus hackathon. https://github.com/nevrome/covid19germany 
 
 
 # r environment -----------------------------------------------------------
@@ -22,7 +22,10 @@ if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 if (!("rlang" %in% rownames(installed.packages()))) install.packages("rlang")
 if (!("shinyalert" %in% rownames(installed.packages()))) install.packages("shinyalert")
 if (!("shinyWidgets" %in% rownames(installed.packages()))) install.packages("shinyWidgets")
+if (!("minpack.lm" %in% rownames(installed.packages()))) install.packages("minpack.lm")
+library()
 
+library(minpack.lm)
 library(shinyWidgets)
 library(shinyalert)
 library(writexl)
@@ -89,7 +92,7 @@ ui <- function(request) {
                                            column(6,
                                                   dateInput("reduzierung_datum1", label = "1. Massnahme Datum, Rt [%]", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
                                            column(6,
-                                                  sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 45)))),
+                                                  sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 25)))),
                                        wellPanel(
                                          fluidRow(
                                            column(6,

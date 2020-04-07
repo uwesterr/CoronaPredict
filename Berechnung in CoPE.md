@@ -13,13 +13,36 @@ $$SumAnzahl=10^{R\_t*MeldeDate}$$
 
 
 ```r
-  # Define function to calculate regression
-  expoModel <- function(df) {
+startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
+  endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))  %>% unique() 
+  #browser()
+  # Gewährleiste, dass genügend Fälle in der Zeit bis zur Reduzierung liegen:
+  mindest_faelle <- 12
+  mindest_anzahl_faelle_start <- 10
+  tmp <- df %>% filter(SumAnzahl >=  mindest_anzahl_faelle_start)
+  startDate <- max(startDate, min(tmp$MeldeDate))
+  tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
+ 
+  df_org <- df %>% mutate( Ygesamt = Einwohner)
+  
+   while ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate<max(df$MeldeDate))) {
+    endDate <- endDate +1
+    tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
+  }
+  if ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate>=max(df$MeldeDate))) {
     
-    #TG: Regression zwischen Startdatum bzw. erstem Meldedatum und erster Massnahme. Annahme: bis dahin exponentieller Verlauf
-    #    Wenn Start-Date > erste Massnahme ist: Ausnahme --> 10 Tage nach Start
-    endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))
-    startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) 
+    # Ersatzwerte
+    #n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate
+    n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = 165*min(df_org$Einwohner)/83000000)
+    R0_conf_nom_min_max <- data.frame(R0_nom= 1.32)
+    startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()
+    #browser()
+    
+    showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. Hierdurch ist aber auch keine valide Zukunftsschätzung möglich.",  footer = modalButton("Ok")))
+  } else 
+  {
+    # Ausreichende Fallzahlen. Lineare Regression und Optimierung
+    # used only data until endDate
     
     if (endDate > startDate) {
       df <- df %>% filter(MeldeDate >= startDate)
@@ -29,34 +52,80 @@ $$SumAnzahl=10^{R\_t*MeldeDate}$$
       df <- df %>% filter(MeldeDate <= startDate+10)
     }
     
-    #TG durch oben ersetzt: df <- df %>% filter(MeldeDate >= FirstMelde)
+    # Calculate regression and optimize daily reproduction rate Rt
+    resultDf<- data.frame()
+    dfRoNo <- df %>% mutate( Ygesamt = Einwohner)
+    dfRoNoOpt <- dfRoNo
+    lmModel <-  lm(log10(SumAnzahl) ~ MeldeDate, data = df)
     
-    lm(log10(SumAnzahl) ~ MeldeDate, data = df)
-  }
+    index <-  0
+    # browser()
+    rmsValue =1e7
+    for (i in seq(1.0,1.2, by = 0.01)) {
+      index <- index + 1
+      lmModelLoop <- lmModel
+      lmModelLoop[["coefficients"]][["MeldeDate"]] <- lmModel[["coefficients"]][["MeldeDate"]]*i
+      R0 <- lmModelLoop[["coefficients"]][["MeldeDate"]]
+      n0_erfasst <- lmModelLoop %>% predict(data.frame(MeldeDate =startDate))
+      
+      dfRoNoOpt$n0_erfasst <- n0_erfasst
+      dfRoNoOpt$R0<- 10^R0
+      
+      dfRechenKern <-  Rechenkern(dfRoNoOpt, input, startDate)
+      dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
+      rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
+      
+      resultDf <- rbind(resultDf, data.frame(R0 = R0, RoLin = 10^R0, n0_erfasst = n0_erfasst, coefficient = i,  rms = rms))
+      if (rms< rmsValue) {
+        rmsValue <- rms
+      } else {
+        break
+      }
+    }
+    resultDf <- resultDf %>% arrange(rms) %>% head(1)
+    n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
+    R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
+  }  
+  
+  return(list(df_org, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
+}
+
+createDfBundLandKreis <- function() {
+  
+  historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
+  
+  historyDf <- historyData[["features"]][["properties"]]
+  historyDf$MeldeDate <- as.Date(historyDf$Meldedatum)
   
   
-  predictLm <- function( model, data){
-    #browser()
-    #TG ersetzt durch unten: startDate <- data$FirstMelde %>% unique()
-    #TG ersetzt durch unten: endDate <- as.Date('2020-03-16')  
-    
-    #TG: Wie in expoModel, wieso 2x ? habe ich noch nicht richtig verstanden
-    startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
-    endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))  %>% unique() 
-    
-    if (endDate <= startDate) {
-      endDate <- startDate+10
-    } 
-    
-    data <- data.frame(MeldeDate = seq(startDate, endDate,by =1))
-    add_predictions(data, model)
-    
-  }
-  nesteddfModel <- nesteddf %>% 
-    mutate(model = map(data, expoModel),
-           predictionsRegressionPeriode  = map2(model,data, predictLm),
-           predictions  = map2(data, model, add_predictions), # https://r4ds.had.co.nz/many-models.html
-           tidiedFit = map(model,tidy)) 
+  ## read population file from thonmas
+  bundesLandPopulation <- read_excel("bundesland_landkreis_200326_2.xlsx", "bundesland", col_names = c("Bundesland", "EinwohnerBundesland"))
+  landKreisPopulation <- read_excel("bundesland_landkreis_200326_2.xlsx", "landkreis", col_names = c("Landkreis", "EinwohnerLandkreis"))
+  # browser()
+  BundFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% summarise(FirstMelde = min(MeldeDate))
+  historyDfBund <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, list(sum), na.rm = TRUE) %>% 
+    mutate(sumAnzahlFallBund = cumsum(AnzahlFall), sumToteBund = cumsum(AnzahlTodesfall),
+           BundIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% mutate(EinwohnerBund = bundesLandPopulation %>% summarise(sum = sum(EinwohnerBundesland)) %>% unlist) 
+  historyDfBund$FirstMelde <- BundFirstMeldung %>% unlist %>% as.Date()
+  
+  
+  
+  BundesLandFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% group_by(Bundesland) %>% summarise(FirstMelde = min(MeldeDate))
+  historyDfBundesLand  <- historyDf %>% dplyr::ungroup() %>% group_by(Bundesland, MeldeDate)  %>% summarise_if(is.numeric, sum, na.rm = TRUE)  %>% 
+    mutate(sumAnzahlFallBundesland = cumsum(AnzahlFall), sumToteBundesland = cumsum(AnzahlTodesfall),
+           sumAnzahlFallBundesland = ifelse(sumAnzahlFallBundesland <1, 0.1,sumAnzahlFallBundesland),
+           LandIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(BundesLandFirstMeldung) %>% left_join(bundesLandPopulation)
+  
+  
+  
+  
+  LandkreisFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% group_by(Landkreis) %>% summarise(FirstMelde = min(MeldeDate))
+  historyDfLandkreis <- historyDf  %>% dplyr::group_by(Bundesland,Landkreis, MeldeDate)%>% dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)  %>%
+    mutate(sumAnzahlFallLandkreis = cumsum(AnzahlFall), sumToteLandkreis = cumsum(AnzahlTodesfall),
+           sumAnzahlFallLandkreis = ifelse(sumAnzahlFallLandkreis <1, 0.1,sumAnzahlFallLandkreis),
+           KreisIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(LandkreisFirstMeldung) %>%  left_join(landKreisPopulation)
+  
+  return(list(historyDfBund, historyDfBundesLand, historyDfLandkreis))
     
 ``` 
 
@@ -313,6 +382,138 @@ $$IntensivBerechnet = kh\_normal * kh\_intensiv\sum_{dt\_inf\_kh + dt\_kh\_int}^
 Der Code entspricht:
  
 $$KhBerechnet = \sum_{beginn\_kh}^{ende\_kh}{NeuInfizierteBerechnet} + RestanteilStartwert-NeuInfizierteBerechnet - IntensivBerechnet$$
+
+
+# Calculated variables explained
+
+## TaeglichReproduktionsRateRt
+Reproduction rate without any counter measures of day T0
+
+$$Rt_i = Rt_{i-1} -\frac{ErfassteInfizierteBerechnet*(Rt_{i-1}-1)}{Y\_inf\_limit}$$ 
+
+## ReduzierteRt
+Is TaeglichReproduktionsRateRt corrected by the Reduzierende Massnahmen
+
+```r
+rt_i <- rt_i-WirksamkeitReduktion * (rt_i-1) * red_rt1
+```
+
+## GesamtInfizierteBerechnet
+
+Summe Gesamt infizierten of day T0-1
+calcDf$GesamtInfizierteBerechnet+calcDf$NeuGesamtInfizierteBerechnet
+
+$$GesamtInfizierteBerechnet_i = GesamtInfizierteBerechnet_{i-1} + NeuGesamtInfizierteBerechnet_{i-1}$$
+
+## GesamtAktuellInfizierteBerechnet
+Sum of all people **who can infect others** which they can do ti days after being infected for ta days
+
+$$ GesamtAktuellInfizierteBerechnet_i  = \sum_{i=-ti}^{i=-(ti+ta)}{NeuGesamtInfizierteBerechnet}$$
+
+## NeuGesamtInfizierteBerechnet
+All people who are newly infected at day T0
+
+$$NeuGesamtInfizierteBerechnet_i = (ReduzierteRt_i-1)* GesamtAktuellInfizierteBerechnet_i$$
+
+
+## NeuInfizierteBerechnet
+Newly positivly tested people
+
+$$NeuInfizierteBerechnet_i = \frac{NeuGesamtInfizierteBerechnet_i}{faktor\_n\_inf} =
+\frac{NeuGesamtInfizierteBerechnet_i}{Dunkelziffer}$$
+
+
+
+## ErfassteInfizierteBerechnet
+
+All people ever tested postive 
+
+$$ErfassteInfizierteBerechnet_i = ErfassteInfizierteBerechnet_{i-1} + NeuInfizierteBerechnet_{i-1}$$
+
+## AktuellInfizierteBerechnet
+
+
+$$AktuellInfizierteBerechnet_i = \frac{GesamtAktuellInfizierteBerechnet_i}{faktor\_n\_inf}$$
+
+## RKI variables explained
+The RKI data are gathered with a JSON api request
+
+```r
+  historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
+  
+  historyDf <- historyData[["features"]][["properties"]]
+``` 
+  
+
+## Variables which are self explaing
+
+"IdBundesland"    "Bundesland"      "Landkreis" "IdLandkreis" 
+## Altersgruppe
+The age of people coded as 
+ "A15-A34"   "A35-A59"   "A60-A79"   "A80+"      "A00-A04"   "A05-A14"   "unbekannt"
+ 
+ ## Geschlecht
+ Gender coded as  "M"         "W"         "unbekannt"
+ 
+
+## AnzahlFall
+
+Cases reported on entity on given day **Meldedatum**
+
+## AnzahlTodesfall
+
+Deaths reported on entity on given day **Meldedatum**
+
+## Meldedatum
+Date of reported data coded like "2020-03-21T00:00:00.000Z"
+
+## Datenstand
+
+Date when data were generated on server e.g. 07.04.2020, 00:00 Uhr	
+## NeuerFall TBD
+
+The values seen are 0  1 -1
+
+## NeuerTodesfall
+TBD
+
+# Variables derived from RKI values
+Those variables are derived form the RKI values
+
+## sumAnzahlFallxxx
+Data is grouped and then for each entity xxx and Meldedatum the sum of Anzahlfall is calculated.
+Entity  xxx can be:
+
+- Bund
+- Bundesland
+- Landkreis
+
+
+$$sumAnzahlFallxxx= \sum AnzahlFall$$
+
+## sumTotexxx
+Data is grouped and then for each entity xxx and Meldedatum the sum of AnzahlTodesfall is calculated.
+Entity  xxx can be:
+
+- Bund
+- Bundesland
+- Landkreis
+
+$$sumTotexxx= \sum AnzahlTodesfall$$
+
+## Einwohnerxxx
+
+Data is read in from excel file "bundesland_landkreis_200326_2.xlsx"
+Entity  xxx can be:
+
+- Bundesland
+- Landkreis
+
+For the whole country the sum of EinwohnerBundesland is build
+
+$$EinwohnerBund =  \sum EinwohnerBundesland$$
+ 
+
 
 
 
