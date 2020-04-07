@@ -22,10 +22,9 @@ if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 if (!("rlang" %in% rownames(installed.packages()))) install.packages("rlang")
 if (!("shinyalert" %in% rownames(installed.packages()))) install.packages("shinyalert")
 if (!("shinyWidgets" %in% rownames(installed.packages()))) install.packages("shinyWidgets")
-if (!("minpack.lm" %in% rownames(installed.packages()))) install.packages("minpack.lm")
-library()
+#if (!("minpack.lm" %in% rownames(installed.packages()))) install.packages("minpack.lm")
 
-library(minpack.lm)
+#library(minpack.lm)
 library(shinyWidgets)
 library(shinyalert)
 library(writexl)
@@ -90,7 +89,7 @@ ui <- function(request) {
                                        wellPanel(
                                          fluidRow(
                                            column(6,
-                                                  dateInput("reduzierung_datum1", label = "1. Massnahme Datum, Rt [%]", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                                  dateInput("reduzierung_datum1", label = "1. Massnahme Datum", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
                                            column(6,
                                                   sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 25)))),
                                        wellPanel(
@@ -189,7 +188,7 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.13", color = "blue"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.14", color = "blue"),
                                        tags$head(tags$style('h2 {color:blue;}')),
                                        tags$head(tags$style('h3 {color:blue;}')),
                                        
@@ -245,23 +244,23 @@ ui <- function(request) {
                       )
              ),
              
-             tabPanel("Datenimport",
-                      
-                      # Show a plot of the generated distribution
-                      sidebarPanel(
-                        # daten einlesen
-                        fileInput("importData",
-                                  label="Upload der Bettenmeldedaten",         accept = c(
-                                    "xls",
-                                    "xlsx"),
-                                  multiple = FALSE),
-                        # daten runterladen
-                        downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
-                        mainPanel(
-                          dataTableOutput("uploadedBettenmeldedaten"))
-                      )
-             ),
-             
+#            tabPanel("Datenimport",
+#                     
+#                     # Show a plot of the generated distribution
+#                     sidebarPanel(
+#                       # daten einlesen
+#                       fileInput("importData",
+#                                 label="Upload der Bettenmeldedaten",         accept = c(
+#                                   "xls",
+#                                   "xlsx"),
+#                                 multiple = FALSE),
+#                       # daten runterladen
+#                       downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
+#                       mainPanel(
+#                         dataTableOutput("uploadedBettenmeldedaten"))
+#                     )
+#            ),
+#            
              tabPanel("Impressum",
                       
                       # Show a plot of the generated distribution
