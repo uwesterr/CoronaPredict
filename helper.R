@@ -133,6 +133,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
         break
       }
     }
+  #  browser()
     resultDf <- resultDf %>% arrange(rms) %>% head(1)
     n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
     R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
@@ -397,7 +398,12 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     updatecalcDf$ReduzierteRt <- calcReduzierung(updatecalcDf, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
     updatecalcDf$GesamtInfizierteBerechnet <-  round(calcGesamtInfizierteBerechnet(tailCalcDf),digits = 0)
  
-    updatecalcDf$GesamtAktuellInfizierteBerechnet <- calcDf %>% filter((Tag <= updatecalcDf$Tag - ti) & (Tag > updatecalcDf$Tag - ende_inf )) %>% 
+    
+#    GesamtAktuellInfizierteBerechnet = rollapply(GesamtInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) -
+#      rollapply(GesamtInfizierteBerechnet, start_inf, sum,align = "right", fill = NA, partial =TRUE),
+#    
+    # US 2020.04.07: since the history is looked at in calcDf wich is one day in the past, the look back needs to be one day less into history
+    updatecalcDf$GesamtAktuellInfizierteBerechnet <- calcDf %>% filter((Tag <= updatecalcDf$Tag - ti+1) & (Tag > updatecalcDf$Tag - ende_inf+1 )) %>% 
       summarise(sum = sum(NeuGesamtInfizierteBerechnet)) %>% as.numeric()
  
     updatecalcDf$NeuGesamtInfizierteBerechnet<- round(calcNeuGesamtInfizierteBerechnet(updatecalcDf), digits = 0)
@@ -413,8 +419,13 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   
   #    Infiziert
   ende_inf <- ti+ta
-  calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = ifelse(ID==1,n0_erfasst,
-                                                                  rollapply(NeuInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) -NeuInfizierteBerechnet))
+  
+# US 07.04.2020: following line was replaced since now the progression of the data is done for Gesamt values
+# calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = ifelse(ID==1,n0_erfasst,
+#                                                                  rollapply(NeuInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) -NeuInfizierteBerechnet))
+  calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = GesamtAktuellInfizierteBerechnet/faktor_n_inf)
+  
+  
   # In Intensiv
   # Diese Formel sollte noch einmal ueberprueft werden
   beginn_intensiv <- dt_inf_kh + dt_kh_int
@@ -432,7 +443,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   
   calcDf <- calcDf %>% mutate(NeueToteBerechnet = round(tod_rate* lag(NeuInfizierteBerechnet, td_tod, default = 0),digits=0)) %>% mutate(ToteBerechnet = cumsum(NeueToteBerechnet))
   
-  
+  #browser()
   df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate"))
   return(df)
   
