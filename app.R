@@ -40,13 +40,19 @@ library(plotly)
 library(readxl)
 library(scales)
 
-source(file = "helper.R")
+
+
+source(file = "src/Rechenkern.R")
+source(file = "src/createLandkreisR0_no_erfasstDf.R")
+source(file = "src/createDfBundLandKreis.R")
+
+
 outpput <-  createDfBundLandKreis()
 historyDfBund <- outpput[[1]]
 historyDfBundesLand <- outpput[[2]]
 historyDfLandkreis <- outpput[[3]]
 
-
+# source(file = "src/ui.R")
 ui <- function(request) {
   
   
@@ -162,7 +168,7 @@ ui <- function(request) {
                                               wellPanel(
                                                 tags$a(
                                                   href="https://www.st2c.de", 
-                                                  tags$img(src = "Folie9.png",
+                                                  tags$img(src = "logoSt2c.png",
                                                            width = "100px", height = "100px"),
                                                 ))),                                      
                                        
@@ -242,7 +248,7 @@ ui <- function(request) {
                       )
              ),
              
-
+             
              
              tabPanel("Impressum",
                       
