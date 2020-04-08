@@ -242,10 +242,11 @@ In dieser Schleife werden die Werte für den Vorhersagezeitraum berechnet
 Before we can use the loop we need to generate data for the past so that the `GesamtAktuellInfizierteBerechnet` can be calculated
 
 ```r
-  offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
-  calcInit <- data.frame(Tag = seq(startDate- offsetDay, startDate, by = 1))  %>% 
+ Rt_start <- Rt
+ offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
+  calcInit <- data.frame(Tag = seq(startDate- offsetDay, startDate, by = 1)) %>% 
     mutate(indexBack = as.numeric(-(Tag - startDate)),
-           TaeglichReproduktionsRateRt       = Rt,
+           TaeglichReproduktionsRateRt       = Rt_start + (Rt_start-1)*indexBack/Y_inf_limit,
            #           RestanteilStartwert               = NA,
            NeuInfizierteBerechnet            = NA,
            GesamtInfizierteBerechnet         = 0,
@@ -272,6 +273,7 @@ Before we can use the loop we need to generate data for the past so that the `Ge
                                     rollapply(GesamtInfizierteBerechnet, start_inf, sum,align = "right", fill = NA, partial =TRUE),
                                   NeuGesamtInfizierteBerechnet = (ReduzierteRt-1)*GesamtAktuellInfizierteBerechnet,
                                   NeuInfizierteBerechnet = NeuGesamtInfizierteBerechnet/faktor_n_inf)
+  
 ```
 
 And then the first row of the loop can be calculated
@@ -303,6 +305,18 @@ And then the first row of the loop can be calculated
     )
 
 ```
+
+#### TaeglichReproduktionsRateRt
+Reproduction rate without any counter measures of day T0
+
+$$Rt_i = Rt_{i-1} -\frac{ErfassteInfizierteBerechnet*(Rt_{i-1}-1)}{Y\_inf\_limit}$$
+
+```r 
+calcTaeglichReproduktionsRateRt(Rt, tailCalcDf, Y_inf_limit)
+ calcTaeglichReproduktionsRateRt <- function(Rt, calcDf, Y_inf_limit) {
+    Rt-(tailCalcDf$ErfassteInfizierteBerechnet*(Rt-1))/Y_inf_limit
+```    
+
 
 #### Update `ReduzierteRt`
 
