@@ -1,4 +1,5 @@
 
+
 # Files to supply functions to other programs
 
 library(jsonlite)
@@ -25,6 +26,7 @@ library(shinyalert)
 #  R0_conf_nom_min_max <- tibble(R0_nom = R0_nom, R0_min = R0_min_max[[2]], R0_max = R0_min_max[[4]] )
 #  return(list(n0_erfasst_nom_min_max, R0_conf_nom_min_max))
 #}
+
 
 
 createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, vals, input,session){
@@ -131,14 +133,14 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
       dfRechenKern <-  isolate(Rechenkern(dfRoNoOpt, input, startDate))
       dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
       rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))  %>% as.numeric()
-
+      
     }
     
-   # browser()
+    # browser()
     resultDf <- tibble(expand.grid(i,k)) %>% set_names(c("i", "k")) %>% 
       mutate(R0 = R0_start*i, RoLin = 10^R0, n0_erfasst = n0_erfasst_start*k,
              rms =map2_dbl(i,k,RechenkernLoop))
- 
+    
     resultDf <- resultDf %>% arrange(rms) %>% head(1)
     n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
     R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
@@ -149,6 +151,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   
   return(list(df_org, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
 }
+
 
 createDfBundLandKreis <- function() {
   
