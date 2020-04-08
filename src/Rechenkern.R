@@ -116,16 +116,16 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   
   
   # Init the aktuell infizierte mit den nicht vorhandenen werten vor startdatum
-  
-  
-  
+
   ende_inf <- ti + ta  
   start_inf = ti 
+  Rt_start <- Rt
   # find day on which the first was case would have been reported with given Rt 
   offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
-  calcInit <- data.frame(Tag = seq(startDate- offsetDay, startDate, by = 1))  %>% 
+  Rt_start <- Rt
+  calcInit <- data.frame(Tag = seq(startDate- offsetDay, startDate, by = 1)) %>% 
     mutate(indexBack = as.numeric(-(Tag - startDate)),
-           TaeglichReproduktionsRateRt       = Rt,
+           TaeglichReproduktionsRateRt       = Rt_start + (Rt_start-1)*indexBack/Y_inf_limit,
            #           RestanteilStartwert               = NA,
            NeuInfizierteBerechnet            = NA,
            GesamtInfizierteBerechnet         = 0,
