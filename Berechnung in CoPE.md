@@ -89,6 +89,22 @@ startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique
   
   return(list(df_org, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
 }
+    
+``` 
+
+Die Regression berechnet 
+
+- n: Anzahl erfasster Infizierter am Beginn  startDate [n0_erfasst]
+- Rt: Reproduktionsrate pro Tag [R0]
+
+Die Werte sind in `tidiedFit` abgelegt.
+
+Diese Werte werden an die Funktion `Rechenkern <- function(r0_no_erfasstDf, input)` übergeben
+
+## Einlesen der RKI date
+Die RKI daten werden von dem Server "https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson" eingelesen
+
+```r
 
 createDfBundLandKreis <- function() {
   
@@ -126,23 +142,14 @@ createDfBundLandKreis <- function() {
            KreisIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(LandkreisFirstMeldung) %>%  left_join(landKreisPopulation)
   
   return(list(historyDfBund, historyDfBundesLand, historyDfLandkreis))
-    
-``` 
 
-Die Regression berechnet 
-
-- n: Anzahl erfasster Infizierter am Beginn  startDate [n0_erfasst]
-- Rt: Reproduktionsrate pro Tag [R0]
-
-Die Werte sind in `tidiedFit` abgelegt.
-
-Diese Werte werden an die Funktion `Rechenkern <- function(r0_no_erfasstDf, input)` übergeben
+```
 
 ## Berechnung der Vorhersagewerte
-In der Funktion `Rechenkern <- function(r0_no_erfasstDf, input)` werden die Vorhersagewerte für den Zeitraum 
+In der Funktion `Rechenkern <- functionr0_no_erfasstDf, input, startDate)` werden die Vorhersagewerte für den Zeitraum 
 
 ```r 
-  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d"))
+  startDate 
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))
 ```  
 
@@ -161,12 +168,13 @@ n0_erfasst <- 	r0_no_erfasstDf$n0_erfasst %>% unique() # Anzahl erfasster Infizi
 Zuerst wird die erste Zeile des dataframes berechnet
 
 ```r
-  calcDf <- tibble(Tag                     = startDate,
+  calcDf <- tibble(Tag                               = startDate,
                    TaeglichReproduktionsRateRt       = Rt,
                    AktuellInfizierteBerechnet        = n0_erfasst,
-                   RestanteilStartwert               = NA,
+                   # RestanteilStartwert               = NA,
                    NeuInfizierteBerechnet            = NA,
                    ErfassteInfizierteBerechnet       = AktuellInfizierteBerechnet,
+                   GesamtAktuellInfizierteBerechnet  = 0, #AktuellInfizierteBerechnet*faktor_n_inf,
                    GesamtInfizierteBerechnet         = AktuellInfizierteBerechnet*faktor_n_inf,
                    NeuGesamtInfizierteBerechnet      = NA,
                    KhBerechnet                       = NA,
@@ -231,21 +239,58 @@ calcNeuGesamtInfizierteBerechnet(calcDf)
 ### Schleife zur Berechnung der Werte für den Vorhersagezeitraum
 In dieser Schleife werden die Werte für den Vorhersagezeitraum berechnet
 
+Before we can use the loop we need to generate data for the past so that the `GesamtAktuellInfizierteBerechnet` can be calculated
+
+```r
+  offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
+  calcInit <- data.frame(Tag = seq(startDate- offsetDay, startDate, by = 1))  %>% 
+    mutate(indexBack = as.numeric(-(Tag - startDate)),
+           TaeglichReproduktionsRateRt       = Rt,
+           #           RestanteilStartwert               = NA,
+           NeuInfizierteBerechnet            = NA,
+           GesamtInfizierteBerechnet         = 0,
+           GesamtAktuellInfizierteBerechnet  = 0,
+           NeuGesamtInfizierteBerechnet      = NA,
+           KhBerechnet                       = NA,
+           IntensivBerechnet                 = 0,
+           NeueToteBerechnet                 = 0,
+           ToteBerechnet                     = 0,
+           ReduktionAbDatum                  = 0,
+           ReduzierteRt                      = 0,
+           MaxKhBerechnet                    = 0,
+           MaxIntBerechnet                   = 0)
+  
+  for (i in 1:nrow(calcInit)) {
+    calcInit$ReduzierteRt[i] =  calcReduzierung(calcInit[i,], reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
+    
+  }
+  
+  calcInit$ReduzierteRt <- calcReduzierung(calcInit, reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
+  calcInit <- calcInit %>% mutate(GesamtInfizierteBerechnet = n0_erfasst*faktor_n_inf/ReduzierteRt^indexBack,
+                                  ErfassteInfizierteBerechnet = GesamtInfizierteBerechnet / faktor_n_inf,
+                                  GesamtAktuellInfizierteBerechnet = rollapply(GesamtInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) -
+                                    rollapply(GesamtInfizierteBerechnet, start_inf, sum,align = "right", fill = NA, partial =TRUE),
+                                  NeuGesamtInfizierteBerechnet = (ReduzierteRt-1)*GesamtAktuellInfizierteBerechnet,
+                                  NeuInfizierteBerechnet = NeuGesamtInfizierteBerechnet/faktor_n_inf)
+```
+
+And then the first row of the loop can be calculated
+
 ```r 
-  startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) # Datum Beginn
-  endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")) # Datum Ende
- for (i in seq(startDate, endDate,by = 1)) {
+  for (i in seq(startDate, endDate,by = 1)) {
+    index <- index + 1
     tailCalcDf <- tail(calcDf,lengthOfTail)
     date <- tailCalcDf$Tag +1
     updatecalcDf <- tibble(
       Tag                               = tailCalcDf$Tag+1,
-      TaeglichReproduktionsRateRt       = calcTaeglichReproduktionsRateRt(Rt, tailCalcDf, Y_inf_limit), # Rt-(tailCalcDf$ErfassteInfizierteBerechnet*(Rt-1))/Y_inf_limit
+      TaeglichReproduktionsRateRt       = calcTaeglichReproduktionsRateRt(Rt, tailCalcDf, Y_inf_limit),
       AktuellInfizierteBerechnet        = n0_erfasst,
-      RestanteilStartwert               = calcRestanteilStartwert(tailCalcDf, n0_erfasst, ta, startDate, date), #max(0,n0_erfasst*(ta - as.numeric(date - startDate) )/ta)
+      #RestanteilStartwert               = calcRestanteilStartwert(tailCalcDf, n0_erfasst, ta, startDate, date),
       NeuInfizierteBerechnet            = NA,
       ErfassteInfizierteBerechnet       = NA,
+      GesamtAktuellInfizierteBerechnet  = 0,
       GesamtInfizierteBerechnet         = NA,
-      NeuGesamtInfizierteBerechnet      = NA,
+      NeuGesamtInfizierteBerechnet      = 0,
       KhBerechnet                       = NA,
       IntensivBerechnet                 = 0,
       NeueToteBerechnet                 = 0,
@@ -296,26 +341,47 @@ updatecalcDf$ReduzierteRt <- calcReduzierung(updatecalcDf
 
 #### Update `GesamtInfizierteBerechnet`
 
+$$GesamtInfizierteBerechnet_i = GesamtInfizierteBerechnet_{i-1} + NeuGesamtInfizierteBerechnet_{i-1}$$
+
+
 ```r
 updatecalcDf$GesamtInfizierteBerechnet <-  round(calcGesamtInfizierteBerechnet(tailCalcDf), digits = 0)
 calcDf$GesamtInfizierteBerechnet+calcDf$NeuGesamtInfizierteBerechnet
 ```
 
-#### Update `NeuGesamtInfizierteBerechnet
+#### Update `GesamtAktuellInfizierteBerechnet`
+$$ GesamtAktuellInfizierteBerechnet_i  = \sum_{i=-ti}^{i=-(ti+ta)}{NeuGesamtInfizierteBerechnet}$$
+
+```r
+  updatecalcDf$GesamtAktuellInfizierteBerechnet <- calcDf %>% filter((Tag <= updatecalcDf$Tag - ti+1) & (Tag > updatecalcDf$Tag - ende_inf+1 )) %>% 
+      summarise(sum = sum(NeuGesamtInfizierteBerechnet)) %>% as.numeric()
+```      
+
+#### Update `NeuGesamtInfizierteBerechnet`
+
+$$NeuGesamtInfizierteBerechnet_i = (ReduzierteRt_i-1)* GesamtAktuellInfizierteBerechnet_i$$
 
 ```r
 updatecalcDf$NeuGesamtInfizierteBerechnet<- round(calcNeuGesamtInfizierteBerechnet(updatecalcDf), digits = 0)
- max(0.1,(calcDf$ReduzierteRt-1)*calcDf$GesamtInfizierteBerechnet)
+max(1,(calcDf$ReduzierteRt-1)*calcDf$GesamtAktuellInfizierteBerechnet))
 ```
 
-#### Update `NeuInfizierteBerechnet
+#### Update `NeuInfizierteBerechnet`
 
+$$NeuInfizierteBerechnet_i = \frac{NeuGesamtInfizierteBerechnet_i}{faktor\_n\_inf} =
+\frac{NeuGesamtInfizierteBerechnet_i}{Dunkelziffer}$$
+
+```r
 updatecalcDf$NeuInfizierteBerechnet <- round(max(.1,updatecalcDf$NeuGesamtInfizierteBerechnet/faktor_n_inf), digits = 0)
+```
 
-#### Update ErfassteInfizierteBerechnet
+#### Update `ErfassteInfizierteBerechnet`
+
+$$ErfassteInfizierteBerechnet_i = ErfassteInfizierteBerechnet_{i-1} + NeuInfizierteBerechnet_{i-1}$$ 
 
 ```r
  updatecalcDf$ErfassteInfizierteBerechnet<- round(calcErfassteInfizierteBerechnet(tailCalcDf), digits = 0) 
+  tailCalcDf$NeuInfizierteBerechnet   + tailCalcDf$ErfassteInfizierteBerechnet
 ```
    
 #### Combine update line with already stored values
@@ -339,14 +405,8 @@ Die berechneten Infiziertenzahlen werden genutzt um verschiedene weitere Vorhers
 #### Berechnen von `AktuellInfizierteBerechnet`
 
 ```
-  ende_inf <- ti+ta
-  calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = ifelse(ID==1,n0_erfasst,
-                                                                  rollapply(NeuInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) + RestanteilStartwert-NeuInfizierteBerechnet))
+calcDf <- calcDf %>% mutate(AktuellInfizierteBerechnet = GesamtAktuellInfizierteBerechnet/faktor_n_inf)
 ``` 
-
-Der Code entspricht:
- 
-$$AktuellInfizierteBerechnet = \sum_{i}^{i-ende\_inf}{NeuInfizierteBerechnet} + RestanteilStartwert-NeuInfizierteBerechnet$$
 
 
 #### Berechnen von `IntensivBerechnet`
