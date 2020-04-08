@@ -28,7 +28,6 @@ library(shinyalert)
 #}
 
 
-
 createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, vals, input,session){
   #browser()
   if (vals$Flag  == "Bundesland") {
@@ -72,7 +71,6 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   mindest_anzahl_faelle_start <- 10
   tmp <- df %>% filter(SumAnzahl >=  mindest_anzahl_faelle_start)
   startDate <- max(startDate, min(tmp$MeldeDate))  
-  
   tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
   
   df_org <- df %>% mutate( Ygesamt = Einwohner)
@@ -121,37 +119,33 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     # with e.g. a simple levenberg-marquardt optimizer, it should be possible to get a better representation in a reasonable amount of time as the 
     # start parameters are already quit good. 
     
-    
-    i <-  seq(1.0,1.2, by = 0.02)
-    k <-   seq(0.9,1.1, by = 0.1)
-    RechenkernLoop <- function(i,k){
-      R0=R0_start*i
-      dfRoNoOpt$R0<- 10^(R0)
-      
-      n0_erfasst <- n0_erfasst_start*k
-      dfRoNoOpt$n0_erfasst <- n0_erfasst
-      dfRechenKern <-  isolate(Rechenkern(dfRoNoOpt, input, startDate))
-      dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
-      rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))  %>% as.numeric()
-      
+    for (i in seq(1.0,1.2, by = 0.02)) {
+      for (k in seq(0.9,1.1, by = 0.1)) {
+        
+        R0=R0_start*i
+        dfRoNoOpt$R0<- 10^(R0)
+        
+        n0_erfasst <- n0_erfasst_start*k
+        dfRoNoOpt$n0_erfasst <- n0_erfasst
+        
+        #browser()
+        
+        dfRechenKern <-  isolate(Rechenkern(dfRoNoOpt, input, startDate))
+        dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
+        rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
+        
+        resultDf <- rbind(resultDf, data.frame(R0 = R0, RoLin = 10^R0, n0_erfasst = n0_erfasst, coefficient = i,  rms = rms))
+      }
     }
-    
-    # browser()
-    resultDf <- tibble(expand.grid(i,k)) %>% set_names(c("i", "k")) %>% 
-      mutate(R0 = R0_start*i, RoLin = 10^R0, n0_erfasst = n0_erfasst_start*k,
-             rms =map2_dbl(i,k,RechenkernLoop))
-    
+    #browser()
     resultDf <- resultDf %>% arrange(rms) %>% head(1)
     n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
     R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
     #browser()
   }  
   
-  
-  
   return(list(df_org, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
 }
-
 
 createDfBundLandKreis <- function() {
   

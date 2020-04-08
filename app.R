@@ -186,7 +186,7 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.14", color = "blue"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.15", color = "blue"),
                                        tags$head(tags$style('h2 {color:blue;}')),
                                        tags$head(tags$style('h3 {color:blue;}')),
                                        
@@ -242,23 +242,8 @@ ui <- function(request) {
                       )
              ),
              
-             #            tabPanel("Datenimport",
-             #                     
-             #                     # Show a plot of the generated distribution
-             #                     sidebarPanel(
-             #                       # daten einlesen
-             #                       fileInput("importData",
-             #                                 label="Upload der Bettenmeldedaten",         accept = c(
-             #                                   "xls",
-             #                                   "xlsx"),
-             #                                 multiple = FALSE),
-             #                       # daten runterladen
-             #                       downloadButton("downloadData", "Runterladen von Bettenmeldungen Vorlage"),
-             #                       mainPanel(
-             #                         dataTableOutput("uploadedBettenmeldedaten"))
-             #                     )
-             #            ),
-             #            
+
+             
              tabPanel("Impressum",
                       
                       # Show a plot of the generated distribution
@@ -660,6 +645,7 @@ server <- function(input, output, session) {
     }
     
     if(input$LandkreiseSelected =="---"){
+      
     }else {
       #browser()
       vals$Flag  <- "Landkreis"
