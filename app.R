@@ -306,7 +306,6 @@ server <- function(input, output, session) {
     
     a <-  read_excel(inFile$datapath)
     a$Tag <- a$Tag %>% as.Date( format="%Y-%m-%d")
-    # browser()
     a
   })
   
@@ -321,7 +320,6 @@ server <- function(input, output, session) {
     }else {
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
       vals$Flag  <- "Bundesland"
-      # browser()
       regionSelected = 2
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
       r0_no_erfasstDf(r0_no_erfasstDf)
@@ -334,32 +332,26 @@ server <- function(input, output, session) {
     if(input$LandkreiseSelected =="---"){
     }else {
       updateSelectInput(session, "BundeslandSelected",  selected = "---")
-      #browser()
       vals$Flag  <- "Landkreis"
       regionSelected = 3
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
       r0_no_erfasstDf(r0_no_erfasstDf)
-      # browser()
-      
+
     }
   })
   
   rkiAndPredictData <- reactive({
-    #browser()
     dfRoNo <- r0_no_erfasstDf()[[1]]
     n0_erfasst_nom_min_max <- r0_no_erfasstDf()[[2]]
     R0_conf_nom_min_max <- r0_no_erfasstDf()[[3]]
     startDate <- r0_no_erfasstDf()[[4]]
-    # browser()
     rechenDf_nom <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_nom, R0 =R0_conf_nom_min_max$R0_nom)
     df_nom <-  Rechenkern(rechenDf_nom,input, startDate)
     
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
     konfidenz_je_tag <- mean(c(0.023, 0.029/2)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
-    #browser()
     KonfidenzVektor <- function(v, Tag, konfidenz, konfidenz_je_tag, letzter_Tag, time_lag){
-      #browser()
       tmp <- log10(v)
       i0 <- which(Tag == letzter_Tag)
       for (k in (i0+1):(i0+time_lag)){
@@ -373,7 +365,6 @@ server <- function(input, output, session) {
       10^tmp
     }
     
-    # browser()
     df_nom$ErfassteInfizierteBerechnet_min <- KonfidenzVektor(df_nom$ErfassteInfizierteBerechnet, df_nom$Tag, 0, -konfidenz_je_tag, letzter_Tag, 0)
     df_nom$ErfassteInfizierteBerechnet_max <- KonfidenzVektor(df_nom$ErfassteInfizierteBerechnet, df_nom$Tag,0, +konfidenz_je_tag, letzter_Tag, 0)
     
@@ -387,20 +378,10 @@ server <- function(input, output, session) {
     df_nom$IntensivBerechnet_min <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
     df_nom$IntensivBerechnet_max <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
     
-    
-    #rechenDf_min <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_min, R0 =R0_conf_nom_min_max$R0_min)
-    #df_min <-  Rechenkern(rechenDf_min,input)
-    
-    #rechenDf_max <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_max, R0 =R0_conf_nom_min_max$R0_max)
-    #df_max <-  Rechenkern(rechenDf_max,input)
-    
-    #df <- left_join(df_nom, df_min, by = "Tag", suffix = c("", "_min"))
-    #df <- left_join(df, df_max, by = "Tag", suffix = c("", "_max"))
-    #  browser()
+ 
     df <- df_nom %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                             Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
   }) 
-  #browser()
   color1 = 'blue'
   color2 = 'green'
   color3 = '#6ab84d'
@@ -431,7 +412,6 @@ server <- function(input, output, session) {
     
     
     tmp <- rkiAndPredictData()
-    # browser()
     colnames(tmp)[colnames(tmp) == "SumAnzahl"] <- "Erfasste_Infizierte"
     colnames(tmp)[colnames(tmp) == "sumTote"] <- "Erfasste_Todesfaelle"
     colnames(tmp)[colnames(tmp) == "ToteBerechnet"] <- "Berechnete_Todesfaelle"
@@ -449,8 +429,6 @@ server <- function(input, output, session) {
     tmp$ErfassteInfizierte <- as.integer(tmp$Erfasste_Infizierte)
     tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$Berechnete_Infizierte)
     
-    
-    # browser()
     
     p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = Berechnete_Infizierte)) +   
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon), 
@@ -487,22 +465,17 @@ server <- function(input, output, session) {
     p
     
   })
-  #browser()
   output$Verlauf <- renderPlotly({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
-    #  browser()
     tmp <- rkiAndPredictData()
     colnames(tmp)[colnames(tmp) == "AnzahlTodesfall"] <- "NeueToteErfasst"
     tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
     p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) +  geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
       geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
-      #geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = NeuInfizierteBerechnet_min, ymax = NeuInfizierteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
-      #geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = NeueToteBerechnet_min, ymax = NeueToteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color4) + 
-      #geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = AktuellInfizierteBerechnet_min, ymax = AktuellInfizierteBerechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color1) + 
-      
+ 
       geom_point(aes(x=Tag,y= AnzahlFall, color = "Neu Infizierte erfasst")) +
       geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y=NeueToteErfasst, color = "Neue Todesfälle erfasst")) +
       geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
@@ -538,7 +511,6 @@ server <- function(input, output, session) {
   }) 
   
   output$Krankenhaus <- renderPlotly({
-    # browser()
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
     tmp <- rkiAndPredictData()
@@ -644,7 +616,6 @@ server <- function(input, output, session) {
     if(input$BundeslandSelected =="---"){
     }else {
       vals$Flag  <- "Bundesland"
-      # browser()
       regionSelected = 2
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
       r0_no_erfasstDf(r0_no_erfasstDf)
@@ -655,12 +626,10 @@ server <- function(input, output, session) {
     if(input$LandkreiseSelected =="---"){
       
     }else {
-      #browser()
       vals$Flag  <- "Landkreis"
       regionSelected = 3
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
       r0_no_erfasstDf(r0_no_erfasstDf)
-      # browser()
       updateSelectInput(session, "BundeslandSelected",  selected = "---")
     }
     

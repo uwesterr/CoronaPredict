@@ -1,7 +1,7 @@
 # function to calculate R0 and n0_erfasst
 
-createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, vals, input,session){
-  #browser()
+createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, vals, input,session,optimizeFunction = optimizerLoopingR0N0, ...  ){
+  
   if (vals$Flag  == "Bundesland") {
     if(input$BundeslandSelected == "---"){input$BundeslandSelected == "Deutschland"}
     if(input$BundeslandSelected == "Deutschland"){
@@ -20,7 +20,6 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     df <- df %>% rename("whichRegion" = "Landkreis")
     regionSelected <- input$LandkreiseSelected
   }
-  # browser()
   if(regionSelected =="---"){
     filterVar = "Bund"
     historyDfBund$Bund = "Deutschland"
@@ -37,7 +36,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   
   startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
   endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))  %>% unique() 
-  #browser()
+
   # Gewährleiste, dass genügend Fälle in der Zeit bis zur Reduzierung liegen:
   mindest_faelle <- 12
   mindest_anzahl_faelle_start <- 10
@@ -46,7 +45,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
   tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
   
   df_org <- df %>% mutate( Ygesamt = Einwohner)
-  #browser()
+
   while ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate<max(df$MeldeDate))) {
     endDate <- endDate +1
     tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
@@ -58,7 +57,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     n0Opt <- data_frame(n0_erfasst_nom = 165*min(df_org$Einwohner)/83000000)
     R0Opt <- data.frame(R0_nom= 1.32)
     startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()
-    #browser()
+
     
     showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. Hierdurch ist aber auch keine valide Zukunftsschätzung möglich.",  footer = modalButton("Ok")))
   } else 
@@ -84,7 +83,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     R0_start <- lmModel[["coefficients"]][["MeldeDate"]]
     n0_erfasst_start <- lmModel %>% predict(data.frame(MeldeDate =startDate))
     n0_erfasst_start <- 10^n0_erfasst_start
-    res <- optimizerLoopingR0N0(R0_start, dfRoNoOpt, n0_erfasst_start, input, startDate, df, resultDf)
+    res <- optimizeFunction(R0_start, dfRoNoOpt, n0_erfasst_start, input, startDate, df, resultDf, ...)
     
     n0Opt <- res$n0Opt
     R0Opt <- res$R0Opt
