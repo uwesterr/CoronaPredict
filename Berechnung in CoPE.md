@@ -609,6 +609,49 @@ For the whole country the sum of EinwohnerBundesland is build
 $$EinwohnerBund =  \sum EinwohnerBundesland$$
  
 
+# Validation script
+
+The validation script shall help to compare different models based on a metric.
+
+$$ metric = \sqrt{ \sum v* \frac{ \left[ log(SumAnzahl) - \log(model)\right]^2}{n-1}} $$
+
+with 
+
+```model <- modell((modellfunction, parameter,df) ```
+
+## Rate fit
+Check how good the fit 
+
+```r
+for (landkreis in unique(df$landkreise)){
+bewertung_landkreis[landkreis] <- bewertung(metrik,modell, landkreis)
+# Im wichtigsten Fall also 
+(sum(v(log(SumAnzahl) - log(ErfassteInfizierteBerechnet))^2)/(n-1))^0.5,
+#bzw. auch ohne v (also Fall v=1)*
+}
+```
+createLandkreisR0_no_erfasstDf can now be called with parameters for the optimizer
+
+```r
+createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, 
+regionSelected, vals, input,session, optsPara = list("iStep" =0.2, "kStep" = 0.1))
+```
+
+
+## Rate prediction 
+
+How well does the modell predict 
+
+`modell <- modell(modellfunktion, parameter, df, n)`
+
+```r
+for (landkreis in unique(df$landkreise)){
+vorhersage_landkreis[landkreis] <- bewertung(metrik,modell, landkreis, n)
+# Bewertungsfunktion wird nur auf die letzten n Tage angewendet
+}
+```
+
+
 
 
 
