@@ -13,19 +13,19 @@ $$SumAnzahl=10^{R\_t*MeldeDate}$$
 
 
 ```r
-startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
+ startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()                      
   endDate <- as.Date(strptime(input$reduzierung_datum1, format="%Y-%m-%d"))  %>% unique() 
   #browser()
   # Gewährleiste, dass genügend Fälle in der Zeit bis zur Reduzierung liegen:
   mindest_faelle <- 12
   mindest_anzahl_faelle_start <- 10
   tmp <- df %>% filter(SumAnzahl >=  mindest_anzahl_faelle_start)
-  startDate <- max(startDate, min(tmp$MeldeDate))
+  startDate <- max(startDate, min(tmp$MeldeDate))  
   tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
- 
-  df_org <- df %>% mutate( Ygesamt = Einwohner)
   
-   while ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate<max(df$MeldeDate))) {
+  df_org <- df %>% mutate( Ygesamt = Einwohner)
+  #browser()
+  while ((length(unique(tmp$MeldeDate))<mindest_faelle) & (endDate<max(df$MeldeDate))) {
     endDate <- endDate +1
     tmp <- df %>% filter(MeldeDate <=  endDate & AnzahlFall >0 )
   }
@@ -33,8 +33,8 @@ startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique
     
     # Ersatzwerte
     #n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate
-    n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = 165*min(df_org$Einwohner)/83000000)
-    R0_conf_nom_min_max <- data.frame(R0_nom= 1.32)
+    n0Opt <- data_frame(n0_erfasst_nom = 165*min(df_org$Einwohner)/83000000)
+    R0Opt <- data.frame(R0_nom= 1.32)
     startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()
     #browser()
     
@@ -58,39 +58,60 @@ startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique
     dfRoNoOpt <- dfRoNo
     lmModel <-  lm(log10(SumAnzahl) ~ MeldeDate, data = df)
     
-    index <-  0
-    # browser()
-    rmsValue =1e7
-    for (i in seq(1.0,1.2, by = 0.01)) {
-      index <- index + 1
-      lmModelLoop <- lmModel
-      lmModelLoop[["coefficients"]][["MeldeDate"]] <- lmModel[["coefficients"]][["MeldeDate"]]*i
-      R0 <- lmModelLoop[["coefficients"]][["MeldeDate"]]
-      n0_erfasst <- lmModelLoop %>% predict(data.frame(MeldeDate =startDate))
+    # gives first reasonable fit
+    R0_start <- lmModel[["coefficients"]][["MeldeDate"]]
+    n0_erfasst_start <- lmModel %>% predict(data.frame(MeldeDate =startDate))
+    n0_erfasst_start <- 10^n0_erfasst_start
+    res <- optimizerLoopingR0N0(R0_start, dfRoNoOpt, n0_erfasst_start, input, startDate, df, resultDf)
+    
+    n0Opt <- res$n0Opt
+    R0Opt <- res$R0Opt
+
+  }  
+
+  return(list(df_org, n0Opt, R0Opt, startDate))
+    
+``` 
+
+## The optimizer 
+The optimizer is invoked by  `optimizerLoopingR0N0(R0_start, dfRoNoOpt, n0_erfasst_start, input, startDate, df, resultDf)`
+
+A iterative approach for the optimizer is given below
+
+```r
+# optimizer as imnplemented by thomas april 2020
+
+optimizerLoopingR0N0 <- function(R0_start, dfRoNoOpt, n0_erfasst_start, input, startDate, df, resultDf) {
+  
+  # lShould be replaced by a real optimizer. 
+  # with e.g. a simple levenberg-marquardt optimizer
+  
+  for (i in seq(1.0,1.2, by = 0.02)) {
+    for (k in seq(0.9,1.1, by = 0.1)) {
       
+      R0=R0_start*i
+      dfRoNoOpt$R0<- 10^(R0)
+      
+      n0_erfasst <- n0_erfasst_start*k
       dfRoNoOpt$n0_erfasst <- n0_erfasst
-      dfRoNoOpt$R0<- 10^R0
       
-      dfRechenKern <-  Rechenkern(dfRoNoOpt, input, startDate)
+      #browser()
+      
+      dfRechenKern <-  isolate(Rechenkern(dfRoNoOpt, input, startDate))
       dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
       rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
       
       resultDf <- rbind(resultDf, data.frame(R0 = R0, RoLin = 10^R0, n0_erfasst = n0_erfasst, coefficient = i,  rms = rms))
-      if (rms< rmsValue) {
-        rmsValue <- rms
-      } else {
-        break
-      }
     }
-    resultDf <- resultDf %>% arrange(rms) %>% head(1)
-    n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
-    R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
-  }  
-  
-  return(list(df_org, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
+  }
+  #browser()
+  resultDf <- resultDf %>% arrange(rms) %>% head(1)
+  n0Opt <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
+  R0Opt <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
+  return(list("n0Opt" = n0Opt, "R0Opt" = R0Opt))
 }
-    
-``` 
+```
+
 
 Die Regression berechnet 
 
