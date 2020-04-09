@@ -45,6 +45,8 @@ library(scales)
 source(file = "src/Rechenkern.R")
 source(file = "src/createLandkreisR0_no_erfasstDf.R")
 source(file = "src/createDfBundLandKreis.R")
+source(file = "src/optimizerLoopingR0N0.R")
+
 
 
 outpput <-  createDfBundLandKreis()

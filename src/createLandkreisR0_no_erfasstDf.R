@@ -55,8 +55,8 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     
     # Ersatzwerte
     #n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate
-    n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = 165*min(df_org$Einwohner)/83000000)
-    R0_conf_nom_min_max <- data.frame(R0_nom= 1.32)
+    n0Opt <- data_frame(n0_erfasst_nom = 165*min(df_org$Einwohner)/83000000)
+    R0Opt <- data.frame(R0_nom= 1.32)
     startDate <- as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")) %>% unique()
     #browser()
     
@@ -84,37 +84,14 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
     R0_start <- lmModel[["coefficients"]][["MeldeDate"]]
     n0_erfasst_start <- lmModel %>% predict(data.frame(MeldeDate =startDate))
     n0_erfasst_start <- 10^n0_erfasst_start
-    #browser()
+    res <- optimizerLoopingR0N0(R0_start, dfRoNoOpt, n0_erfasst_start, input, startDate, df, resultDf)
     
-    # lousy trick to improve fit, which is not good due to the discrepancy between the assumed function (no^rt*tage) and the real 
-    # implemented complex function. Should be replaced by a real optimizer. 
-    # with e.g. a simple levenberg-marquardt optimizer, it should be possible to get a better representation in a reasonable amount of time as the 
-    # start parameters are already quit good. 
-    
-    for (i in seq(1.0,1.2, by = 0.02)) {
-      for (k in seq(0.9,1.1, by = 0.1)) {
-        
-        R0=R0_start*i
-        dfRoNoOpt$R0<- 10^(R0)
-        
-        n0_erfasst <- n0_erfasst_start*k
-        dfRoNoOpt$n0_erfasst <- n0_erfasst
-        
-        #browser()
-        
-        dfRechenKern <-  isolate(Rechenkern(dfRoNoOpt, input, startDate))
-        dfRechenKern <- dfRechenKern %>% filter(Tag  %in% df$MeldeDate)
-        rms <- sqrt(mean((dfRechenKern$ErfassteInfizierteBerechnet-df$SumAnzahl)^2))
-        
-        resultDf <- rbind(resultDf, data.frame(R0 = R0, RoLin = 10^R0, n0_erfasst = n0_erfasst, coefficient = i,  rms = rms))
-      }
-    }
-    #browser()
-    resultDf <- resultDf %>% arrange(rms) %>% head(1)
-    n0_erfasst_nom_min_max <- data_frame(n0_erfasst_nom = resultDf$n0_erfasst %>% as.numeric())
-    R0_conf_nom_min_max <- data.frame(R0_nom= resultDf$RoLin  %>% as.numeric())
-    #browser()
+    n0Opt <- res$n0Opt
+    R0Opt <- res$R0Opt
+
   }  
+
+  return(list(df_org, n0Opt, R0Opt, startDate))
   
-  return(list(df_org, n0_erfasst_nom_min_max, R0_conf_nom_min_max, startDate))
+  
 }
