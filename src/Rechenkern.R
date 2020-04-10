@@ -1,7 +1,6 @@
 # Files calculated the predicted values 
 
 Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
-  
   # Betroffene
   # US 31.03.2020: use only one value, before the whole column was used this lead to a init CalcDf with many rows instead of one which could screw up the rollapply later on
   Ygesamt	<- r0_no_erfasstDf$Einwohner %>% unique() # Gesamtmenge
@@ -101,7 +100,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   
   # find day on which the first was case would have been reported with given Rt 
   offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
-  #browser()
+  # browser()
   calcDf <- tibble(Tag = seq(startDate-offsetDay, endDate, by = 1),
                    TaeglichReproduktionsRateRt       = Rt,
                    AktuellInfizierteBerechnet        = n0_erfasst,
@@ -130,8 +129,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   start_inf = ti 
   Rt_start <- Rt
   # find day on which the first was case would have been reported with given Rt 
-  offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
-  
+
   for (day in seq(startDate- offsetDay, startDate, by = 1)) {
     
     day = as.Date(day)
@@ -190,7 +188,8 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     calcDf$Tag[indexDay] <- dayOfCalculation
     calcDf$TaeglichReproduktionsRateRt[indexDay] <- calcTaeglichReproduktionsRateRt(Rt, calcDf[indexDay-1,], Y_inf_limit)
     # browser()
-    calcDf$ReduzierteRt[indexDay]  <- calcReduzierung(calcDf[indexDay,], reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
+    calcDf$ReduzierteRt[indexDay]  <- calcReduzierung(calcDf[indexDay,], reduzierung_datum1, reduzierung_rt1, 
+                                                      reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
     calcDf$GesamtInfizierteBerechnet[indexDay]  <-  round(calcGesamtInfizierteBerechnet(calcDf[indexDay-1,]),digits = 0)
     
     
