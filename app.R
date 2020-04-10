@@ -74,7 +74,7 @@ ui <- function(request) {
                                      sidebarPanel(
                                        wellPanel(
                                          h3("Speichern Einstellungen"),
-                                         bookmarkButton(label = "Generiere Link mit Einstellungen"),footer = modalButton("Ok"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten 
+                                         bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten 
                                                                                                            Werten aufgerufen werden.", "Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
                                        h3("Auswahl Region"),
                                        
