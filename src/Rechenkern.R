@@ -31,12 +31,20 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   td_tod <- 	input$td_tod # Dauer Infektion bis Tod  [tage]
   
   # Auswirkung Massnahmen
-  reduzierung_datum1	<- input$reduzierung_datum1   # Datum 1. Reduzierungsmassnahme
-  reduzierung_rt1     <- input$reduzierung_rt1/100  # Reduzierung1 der Repr.rate/Tag
-  reduzierung_datum2	<- input$reduzierung_datum2   # Datum 2. Reduzierungsmassnahme
-  reduzierung_rt2     <- 	input$reduzierung_rt2/100 # Reduzierung2 der Repr.rate/Tag
-  reduzierung_datum3	<- input$reduzierung_datum3   # Datum 3. Reduzierungsmassnahme
-  reduzierung_rt3     <- input$reduzierung_rt3/100  # Reduzierung3 der Repr.rate/Tag
+    # Datum i. Reduzierungsmassnahme
+    # Reduzierungi der Reproduktionsrate/Tag
+    red_data <- cbind(
+    rbind(  red_datum1	<- input$reduzierung_datum1,   
+            red_datum2	<- input$reduzierung_datum2,   
+            red_datum3	<- input$reduzierung_datum3,   
+            red_datum4	<- input$reduzierung_datum4,   
+            red_datum5	<- input$reduzierung_datum5),
+    rbind(  red_rt1     <- input$reduzierung_rt1/100,  
+            red_rt2     <- input$reduzierung_rt2/100, 
+            red_rt3     <- input$reduzierung_rt3/100,  
+            red_rt4     <- input$reduzierung_rt4/100,  
+            red_rt5     <- input$reduzierung_rt5/100)  
+  )
   
   # Ausgabe
   Y_inf_limit <- Ygesamt*ges_inf_rate/faktor_n_inf
@@ -46,31 +54,18 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   
   # functions
   
-  # TG, 30.3. : Berechnung 3-stufige Reduzierung Rt
-  calcReduzierung <- function(df, red_datum1, red_rt1, red_datum2, red_rt2, red_datum3, red_rt3, ta) {
+  # TG, 10.4. : Berechnung n-stufige Reduzierung Rt
+  calcReduzierung <- function(df, red_data, ta) {
     # US 29.03.2020: avoid error message Warning in if (calcDf$Tag < red_datum) { :the condition has length > 1 and only the first element will be used
     rt_i <- df$TaeglichReproduktionsRateRt
-    # browser()
     df <- df %>% tail(1) 
-    if (df$Tag < red_datum1){
-      WirksamkeitReduktion <- 0 }
-    else {
-      WirksamkeitReduktion <-min(1,(as.numeric(df$Tag - red_datum1)+1)/ta)
-      rt_i <- rt_i-WirksamkeitReduktion * (rt_i-1) * red_rt1
-    }
-    
-    if (df$Tag < red_datum2){
-      WirksamkeitReduktion <- 0 }
-    else {
-      WirksamkeitReduktion <-min(1,(as.numeric(df$Tag - red_datum2)+1)/ta)
-      rt_i <- rt_i-WirksamkeitReduktion * (rt_i-1) * red_rt2
-    }
-    
-    if (df$Tag < red_datum3){
-      WirksamkeitReduktion <- 0 }
-    else {
-      WirksamkeitReduktion <-min(1,(as.numeric(df$Tag - red_datum3)+1)/ta)
-      rt_i <- rt_i-WirksamkeitReduktion * (rt_i-1) * red_rt3
+    for (i in 1:nrow(red_data)) {
+      if (df$Tag < red_data[i,1]){
+        WirksamkeitReduktion <- 0 }
+      else {
+        WirksamkeitReduktion <-min(1,(as.numeric(df$Tag - red_data[i,1])+1)/ta)
+        rt_i <- rt_i-WirksamkeitReduktion * (rt_i-1) * red_data[i,2]
+      }
     }
     rt_i
   }
@@ -139,7 +134,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     calcDf[index,"indexBack"] <- as.numeric(-(day - startDate))
     calcDf[index,"TaeglichReproduktionsRateRt"] <- Rt_start + (Rt_start-1)*calcDf$indexBack[index]/Y_inf_limit
     #browser()
-    calcDf$ReduzierteRt[index] =  calcReduzierung(calcDf[index,], reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
+    calcDf$ReduzierteRt[index] =  calcReduzierung(calcDf[index,], red_data, ta)
   }
   
   calcDf <- calcDf %>% mutate(GesamtInfizierteBerechnet = n0_erfasst*faktor_n_inf/ReduzierteRt^indexBack,
@@ -159,12 +154,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     Rt-(calcDf$ErfassteInfizierteBerechnet*(Rt-1))/Y_inf_limit
   }
   
-  # calcRestanteilStartwert <- function(tailCalcDf, n0_erfasst, ta, startDate, date) {
-  #   
-  #   max(0,n0_erfasst*(ta - as.numeric(date - startDate))/ta)
-  
-  # }
-  # 
+ 
   
   calcGesamtInfizierteBerechnet <- function(calcDf){
     
@@ -190,7 +180,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     calcDf$Tag[indexDay] <- dayOfCalculation
     calcDf$TaeglichReproduktionsRateRt[indexDay] <- calcTaeglichReproduktionsRateRt(Rt, calcDf[indexDay-1,], Y_inf_limit)
     # browser()
-    calcDf$ReduzierteRt[indexDay]  <- calcReduzierung(calcDf[indexDay,], reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
+    calcDf$ReduzierteRt[indexDay]  <- calcReduzierung(calcDf[indexDay,], red_data, ta)
     calcDf$GesamtInfizierteBerechnet[indexDay]  <-  round(calcGesamtInfizierteBerechnet(calcDf[indexDay-1,]),digits = 0)
     
     
