@@ -93,7 +93,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   #startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
   #TG wieder variabel gesetzt, damit Anpassung stimmt
   
- 
+  
   
   startDate <- startDate
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))
@@ -125,7 +125,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   
   
   # Init the aktuell infizierte mit den nicht vorhandenen werten vor startdatum
-
+  
   ende_inf <- ti + ta  
   start_inf = ti 
   Rt_start <- Rt
@@ -133,7 +133,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
   
   for (day in seq(startDate- offsetDay, startDate, by = 1)) {
-
+    
     day = as.Date(day)
     index <- which(calcDf$Tag == day)
     calcDf[index,"indexBack"] <- as.numeric(-(day - startDate))
@@ -141,18 +141,18 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     #browser()
     calcDf$ReduzierteRt[index] =  calcReduzierung(calcDf[index,], reduzierung_datum1, reduzierung_rt1, reduzierung_datum2, reduzierung_rt2, reduzierung_datum3, reduzierung_rt3, ta)
   }
-
-    calcDf <- calcDf %>% mutate(GesamtInfizierteBerechnet = n0_erfasst*faktor_n_inf/ReduzierteRt^indexBack,
-                                  ErfassteInfizierteBerechnet = GesamtInfizierteBerechnet / faktor_n_inf,
-                                  GesamtAktuellInfizierteBerechnet = rollapply(GesamtInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) -
-                                    rollapply(GesamtInfizierteBerechnet, start_inf, sum,align = "right", fill = NA, partial =TRUE),
-                                  NeuGesamtInfizierteBerechnet = (ReduzierteRt-1)*GesamtAktuellInfizierteBerechnet,
-                                  NeuInfizierteBerechnet = NeuGesamtInfizierteBerechnet/faktor_n_inf)
- # browser()
+  
+  calcDf <- calcDf %>% mutate(GesamtInfizierteBerechnet = n0_erfasst*faktor_n_inf/ReduzierteRt^indexBack,
+                              ErfassteInfizierteBerechnet = GesamtInfizierteBerechnet / faktor_n_inf,
+                              GesamtAktuellInfizierteBerechnet = rollapply(GesamtInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) -
+                                rollapply(GesamtInfizierteBerechnet, start_inf, sum,align = "right", fill = NA, partial =TRUE),
+                              NeuGesamtInfizierteBerechnet = (ReduzierteRt-1)*GesamtAktuellInfizierteBerechnet,
+                              NeuInfizierteBerechnet = NeuGesamtInfizierteBerechnet/faktor_n_inf)
+  # browser()
   
   ########################################################  Loop propagate infections over time ########################
- 
-
+  
+  
   
   
   calcTaeglichReproduktionsRateRt <- function(Rt, calcDf, Y_inf_limit) {
@@ -185,7 +185,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   for (dayOfCalculation in seq(startDate+1, endDate,by = 1)) {
     dayOfCalculation = as.Date(dayOfCalculation)
     indexDay <- which(calcDf$Tag == dayOfCalculation)
-
+    
     
     calcDf$Tag[indexDay] <- dayOfCalculation
     calcDf$TaeglichReproduktionsRateRt[indexDay] <- calcTaeglichReproduktionsRateRt(Rt, calcDf[indexDay-1,], Y_inf_limit)
@@ -199,16 +199,16 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     #    
     # US 2020.04.07: since the history is looked at in calcDf wich is one day in the past, the look back needs to be one day less into history
     
-  #    browser()
-      
-      
-#      activeEndDay <- which(calcDf$Tag == dayOfCalculation - ti)
-#      activeStartDay <- which(calcDf$Tag ==  dayOfCalculation - ende_inf+1)
-      
-      activeEndDay <- which(calcDf$Tag == dayOfCalculation - ti+1)
-      activeStartDay <- which(calcDf$Tag ==  dayOfCalculation - ende_inf+2)
-#   calcDf$GesamtAktuellInfizierteBerechnet[indexDay] <- calcDf %>% filter((Tag <= dayOfCalculation - ti+1) & (Tag > dayOfCalculation - ende_inf+1)) %>% 
-#     summarise(sum = sum(NeuGesamtInfizierteBerechnet)) %>% as.numeric()
+    #     browser()
+    #     
+    #     
+    #     activeEndDay <- which(calcDf$Tag == dayOfCalculation - ti)
+    #     activeStartDay <- which(calcDf$Tag ==  dayOfCalculation - ende_inf+1)
+    
+    activeEndDay <- which(calcDf$Tag == dayOfCalculation - ti+1)
+    activeStartDay <- which(calcDf$Tag ==  dayOfCalculation - ende_inf+2)
+    #   calcDf$GesamtAktuellInfizierteBerechnet[indexDay] <- calcDf %>% filter((Tag <= dayOfCalculation - ti+1) & (Tag > dayOfCalculation - ende_inf+1)) %>% 
+    #     summarise(sum = sum(NeuGesamtInfizierteBerechnet)) %>% as.numeric()
     
     
     
@@ -216,7 +216,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     calcDf$NeuGesamtInfizierteBerechnet[indexDay]<- round(calcNeuGesamtInfizierteBerechnet(calcDf[indexDay,]), digits = 0)
     calcDf$NeuInfizierteBerechnet[indexDay]  <- round(max(.1,calcDf$NeuGesamtInfizierteBerechnet[indexDay]/faktor_n_inf), digits = 0)
     calcDf$ErfassteInfizierteBerechnet[indexDay] <- round(calcErfassteInfizierteBerechnet(calcDf[indexDay-1,]), digits = 0)
- 
+    
   }
   # browser()
   calcDf$ID <- seq.int(nrow(calcDf))
