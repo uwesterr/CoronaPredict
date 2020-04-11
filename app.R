@@ -282,40 +282,8 @@ ui <- function(request) {
 
 server <- function(input, output, session) {
   
-  ######  down and upload of data
-  
-  # Downloadable csv of selected dataset ----
-  # https://shiny.rstudio.com/reference/shiny/1.0.3/downloadHandler.html
-  output$downloadData <- downloadHandler(
-    filename = function() {
-      paste("data-", Sys.Date(), ".xlsx", sep="")
-    },
-    content = function(file) {
-      write_xlsx(rkiAndPredictData(), file)
-    }
-  )
-  
-  ####### upload data ----
-  # https://shiny.rstudio.com/reference/shiny/latest/fileInput.html
-  output$uploadedBettenmeldedaten <- renderDataTable({
-    # input$file1 will be NULL initially. After the user selects
-    # and uploads a file, it will be a data frame with 'name',
-    # 'size', 'type', and 'datapath' columns. The 'datapath'
-    # column will contain the local filenames where the data can
-    # be found.
-    inFile <- input$importData
-    
-    if (is.null(inFile))
-      return(NULL)
-    
-    a <-  read_excel(inFile$datapath)
-    a$Tag <- a$Tag %>% as.Date( format="%Y-%m-%d")
-    a
-  })
-  
-  
-  
-  
+
+
   vals <- reactiveValues(Flag = "Bundesland")
   r0_no_erfasstDf <- reactiveVal(0) 
   
@@ -411,25 +379,13 @@ server <- function(input, output, session) {
     
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
-    
-    
-    
-    
+   
     tmp <- rkiAndPredictData()
     colnames(tmp)[colnames(tmp) == "SumAnzahl"] <- "Erfasste_Infizierte"
     colnames(tmp)[colnames(tmp) == "sumTote"] <- "Erfasste_Todesfaelle"
     colnames(tmp)[colnames(tmp) == "ToteBerechnet"] <- "Berechnete_Todesfaelle"
     colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet"] <- "Berechnete_Infizierte"
-    # min
-    colnames(tmp)[colnames(tmp) == "SumAnzahl_min"] <- "Erfasste_Infizierte_min"
-    colnames(tmp)[colnames(tmp) == "sumTote_min"] <- "Erfasste_Todesfaelle_min"
-    colnames(tmp)[colnames(tmp) == "ToteBerechnet_min"] <- "Berechnete_Todesfaelle_min"
-    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_min"] <- "Berechnete_Infizierte_min"
-    # max
-    colnames(tmp)[colnames(tmp) == "SumAnzahl_max"] <- "Erfasste_Infizierte_max"
-    colnames(tmp)[colnames(tmp) == "sumTote_max"] <- "Erfasste_Todesfaelle_max"
-    colnames(tmp)[colnames(tmp) == "ToteBerechnet_max"] <- "Berechnete_Todesfaelle_max"
-    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_max"] <- "Berechnete_Infizierte_max"
+
     tmp$ErfassteInfizierte <- as.integer(tmp$Erfasste_Infizierte)
     tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$Berechnete_Infizierte)
     
@@ -452,10 +408,7 @@ server <- function(input, output, session) {
                                                            'Todesfälle erfasst' = color5)) +
       
       labs(color = 'Daten') + scale_y_continuous(labels = scales::comma)
-    
-    
-    
-    
+  
     if(logy){
       p <- p +  scale_y_log10(label = label_number_si())
       
@@ -571,13 +524,6 @@ server <- function(input, output, session) {
     colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt"] <- "Taegliche_Reproduktionsrate"
     colnames(tmp)[colnames(tmp) == "ReduzierteRt"] <- "Reduzierte_Reproduktionsrate"
     
-    #min
-    #colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt_min"] <- "Taegliche_Reproduktionsrate_min"
-    #colnames(tmp)[colnames(tmp) == "ReduzierteRt_min"] <- "Reduzierte_Reproduktionsrate_min"
-    
-    #max
-    #colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt_max"] <- "Taegliche_Reproduktionsrate_max"
-    #colnames(tmp)[colnames(tmp) == "ReduzierteRt_max"] <- "Reduzierte_Reproduktionsrate_max"
     
     tmp$Taegliche_Reproduktionsrate <- round(tmp$Taegliche_Reproduktionsrate, digits = 3)
     tmp$Reduzierte_Reproduktionsrate <- round(tmp$Reduzierte_Reproduktionsrate, digits = 3)
@@ -597,11 +543,7 @@ server <- function(input, output, session) {
     p
     
   })  
-  
-  
-  
-  
-  
+
   # Save extra values in state$values when we bookmark
   onBookmark(function(state) {
     state$values$currentSum <- vals$Flag
