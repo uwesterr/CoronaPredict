@@ -4,7 +4,7 @@
 
 #based on covid19germany
 
-# An R package to load, visualise and analyse daily updated data on the COVID-19 outbreak in Germany. This package exists to simplify data analysis and was developed in the context of the #WirvsVirus hackathon. https://github.com/nevrome/covid19germany 
+# An R package to load, visualize and analyze daily updated data on the COVID-19 outbreak in Germany. This package exists to simplify data analysis and was developed in the context of the #WirvsVirus hackathon. https://github.com/nevrome/covid19germany 
 
 
 # r environment -----------------------------------------------------------
@@ -593,9 +593,6 @@ server <- function(input, output, session) {
     p
     
   })  
-  
-  
-  
   
   
   # Save extra values in state$values when we bookmark
