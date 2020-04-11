@@ -1,7 +1,11 @@
 # function to calculate R0 and n0_erfasst
 library("tictoc")
+library(microbenchmark)
 source(file = "src/createDfBundLandKreis.R")
 source(file = "src/optimizerLoopingR0N0.R")
+source(file = "src/RechenkernSpeedUp.R")
+source(file = "src/Rechenkern.R")
+
 load("data/inputExample.RData")
 
 outpput <-  createDfBundLandKreis()
@@ -75,13 +79,11 @@ optWrap <- function(df, input) {
 }
 
 
-calcBerechnetValues <- function(R0, n0, startDate){
+calcBerechnetValues <- function(R0, n0, input, startDate){
 
 dfRoNoOpt$R0<- R0
-
 dfRoNoOpt$n0_erfasst <-n0
-# browser()
-dfRechenKern <- isolate(Rechenkern(dfRoNoOpt, input, startDate))
+dfRechenKern <- (Rechenkern(dfRoNoOpt, input, startDate))
 
 return(dfRechenKern) 
 }
@@ -99,21 +101,79 @@ calcMetric <- function(dfRechenKern, data){
   dfTotal <- df %>% rename("whichRegion" = "Bundesland") # %>% as_tibble %>%  mutate(a = optimizerLoopingR0N0 )
   dfTotalNested <-  dfTotal %>% group_by(whichRegion) %>% nest
  tic()
-R0N0Optvalues <-  dfTotalNested %>% mutate(optimizedValues = map(data, optWrap, input))
+#R0N0Optvalues <-  dfTotalNested %>% mutate(optimizedValues = map(data, optWrap, input))
  
-save(R0N0Optvalues, file = "a.RData")
-# load("a.RData")
+#save(R0N0Optvalues, file = "R0N0Optvalues.RData")
+ load("a.RData")
  toc()
- MetricDf <- a %>% mutate(n0Opt = (optimizedValues[[1]][["n0Opt"]]) %>% as.numeric(),
+ MetricDf <- R0N0Optvalues %>% mutate(n0Opt = (optimizedValues[[1]][["n0Opt"]]) %>% as.numeric(),
                    R0Opt = (optimizedValues[[1]][["R0Opt"]]) %>% as.numeric(),
-                   dfRechenKern = map2(R0Opt, n0Opt, calcBerechnetValues, startDate),
+                   dfRechenKern = map2(R0Opt, n0Opt, calcBerechnetValues, input, startDate),
                    metric = map2_dbl(dfRechenKern, data, calcMetric))
  
- MetricDf %>%  ggplot(aes(whichRegion, metric, color = whichRegion)) + geom_point() + theme(legend.position = "none") +
-   coord_flip() + labs(title = expression("R^2 der Regression"), y = "R^2", x = "")
+ MetricDf %>% ungroup() %>% mutate(whichRegion= fct_reorder(whichRegion,metric))  %>%  
+   ggplot(aes(whichRegion, metric, color = whichRegion)) + geom_point() + theme(legend.position = "none") +
+   coord_flip() + labs(title = expression("Metric"), y = "Metric", x = "")
                        
-    
+  
  
+################## optimizer #################
+ library(GA)
  
-            
+ calcPredictionsForOptimization = function(reduzierung_rt1, reduzierung_rt2, reduzierung_rt3, R0Opt, n0Opt, startDate) 
+ {
+   input$reduzierung_rt1 = reduzierung_rt1
+   input$reduzierung_rt2 = reduzierung_rt2
+   input$reduzierung_rt3 = reduzierung_rt3
+  # browser()
+   res <- calcBerechnetValues(R0Opt, n0Opt, input, startDate)
+   metric <- calcMetric(res, MetricDf$data[[2]])
+   cat("metric: ", metric)
+return(-metric) # minus because GA maximizes
+ } 
  
+ tic()
+ GA <- ga(type = "real-valued", 
+          fitness =  function(x) calcPredictionsForOptimization(x[1], x[2], x[3], MetricDf$R0Opt[[1]],  MetricDf$n0Opt[[1]], startDate),
+        
+          lower = c(20, 30,-20 ), upper = c(40, 50, 20), 
+          popSize = 10, maxiter = 30, run = 5)
+ toc()
+ # n0_erfasst_start = n0_erfasst_start)
+ summary(GA)
+ plot(GA)
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+#   
+# dfRoNoOpt$R0<- 1.3
+# 
+# dfRoNoOpt$n0_erfasst <-200
+#
+# source(file = "src/RechenkernSpeedUp.R")
+#
+# dfRechenKernSpeed <- isolate(Rechenkern(dfRoNoOpt, input, startDate)) 
+# source(file = "src/Rechenkern.R")
+# dfRechenKern <- isolate(Rechenkern(dfRoNoOpt, input, startDate))
+#
+#
+# all.equal( dfRechenKernSpeed, dfRechenKern)
+# source(file = "src/RechenkernSpeedUp.R")
+# microbenchmark( 
+#   
+# 
+#   dfRechenKernSpeed <- isolate(Rechenkern(dfRoNoOpt, input, startDate))
+#   , times = 10)
+# 
+# source(file = "src/Rechenkern.R")
+# microbenchmark( 
+#   
+#
+#   dfRechenKern <- isolate(Rechenkern(dfRoNoOpt, input, startDate))
+#   , times = 10)
+#            
+# #
