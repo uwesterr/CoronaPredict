@@ -147,10 +147,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   # browser()
   
   ########################################################  Loop propagate infections over time ########################
-  
-  
-  
-  
+ 
   calcTaeglichReproduktionsRateRt <- function(Rt, calcDf, Y_inf_limit) {
     Rt-(calcDf$ErfassteInfizierteBerechnet*(Rt-1))/Y_inf_limit
   }
@@ -184,17 +181,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     calcDf$ReduzierteRt[indexDay]  <- calcReduzierung(calcDf[indexDay,], red_data, ta)
     calcDf$GesamtInfizierteBerechnet[indexDay]  <-  round(calcGesamtInfizierteBerechnet(calcDf[indexDay-1,]),digits = 0)
     
-    
-    #    GesamtAktuellInfizierteBerechnet = rollapply(GesamtInfizierteBerechnet, ende_inf, sum,align = "right", fill = NA, partial =TRUE) -
-    #      rollapply(GesamtInfizierteBerechnet, start_inf, sum,align = "right", fill = NA, partial =TRUE),
-    #    
-    # US 2020.04.07: since the history is looked at in calcDf wich is one day in the past, the look back needs to be one day less into history
-    
-    #     browser()
-    #     
-    #     
-    #     activeEndDay <- which(calcDf$Tag == dayOfCalculation - ti)
-    #     activeStartDay <- which(calcDf$Tag ==  dayOfCalculation - ende_inf+1)
+
     
     activeEndDay <- which(calcDf$Tag == dayOfCalculation - ti+1)
     activeStartDay <- which(calcDf$Tag ==  dayOfCalculation - ende_inf+2)
