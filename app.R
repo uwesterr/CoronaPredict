@@ -4,7 +4,7 @@
 
 #based on covid19germany
 
-# An R package to load, visualize and analyze daily updated data on the COVID-19 outbreak in Germany. This package exists to simplify data analysis and was developed in the context of the #WirvsVirus hackathon. https://github.com/nevrome/covid19germany 
+# An R package to load, visualise and analyse daily updated data on the COVID-19 outbreak in Germany. This package exists to simplify data analysis and was developed in the context of the #WirvsVirus hackathon. https://github.com/nevrome/covid19germany 
 
 
 # r environment -----------------------------------------------------------
@@ -94,53 +94,52 @@ ui <- function(request) {
                                        h3("Reduzierende Massnahmen"), 
                                        wellPanel(
                                          fluidRow(
-                                           column(6,
-                                                  dateInput("reduzierung_datum1", label = "1. Massnahme Datum", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                           column(6,
+                                           column(4,
+                                                  dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(8,
                                                   sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 25)))),
                                        wellPanel(
                                          fluidRow(
-                                           column(6,
-                                                  dateInput("reduzierung_datum2", label = "2. Massnahme Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                           column(6,
+                                           column(4,
+                                                  dateInput("reduzierung_datum2", label = "Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(8,
                                                   sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 30)))),
                                        wellPanel(
                                          fluidRow(
-                                           column(6,
-                                                  dateInput("reduzierung_datum3", label = "3. Massnahme Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                           column(6,
-                                                  sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
-                                       
+                                           column(4,
+                                                  dateInput("reduzierung_datum3", label = "Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(8,
+                                                  sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 40)))),
+                                       wellPanel(
+                                         fluidRow(
+                                           column(4,
+                                                  dateInput("reduzierung_datum4", label = "Datum", value = "2020-04-20", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(8,
+                                                  sliderInput("reduzierung_rt4",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
+                                       wellPanel(
+                                         fluidRow(
+                                           column(4,
+                                                  dateInput("reduzierung_datum5", label = "Datum", value = "2020-05-15", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                           column(8,
+                                                  sliderInput("reduzierung_rt5",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
                                        
                                        
                                        h3("Expertenparameter Infektionsverlauf"),  
                                        fluidRow(
                                          column(6,
                                                 wellPanel(
-                                                  numericInput("ges_inf_rate", label = "Durchseuchung [%]", value = 70),
-                                                  numericInput("ti", label = "Inkubationszeit [d]", value = 2),
-                                                  numericInput("tod_rate", label = "Sterblichkeit [%]", value = 1.5, step = 0.1))),
+                                                  numericInput("ges_inf_rate", label = "Durchseuchung [%]", value = 70, min=1, max=100, step=1),
+                                                  numericInput("ti", label = "Inkubationszeit [d]", value = 2, min=1, max=20, step=1),
+                                                  numericInput("tod_rate", label = "Sterblichkeit [%]", value = 2, min=0, max=100, step = 0.1))),
                                          column(6,
                                                 wellPanel(
-                                                  numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15),
-                                                  numericInput("ta", label = "Infektiosität [d]", value = 6),
-                                                  numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 4)))),
-                                       
-                                       #                                      h3("Krankenhausaufenthalt"), 
-                                       #                                      fluidRow(
-                                       #                                        column(6,
-                                       #                                               wellPanel(
-                                       #                                                 numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5, step = 0.1),
-                                       #                                                 numericInput("t_kh", label = "Dauer", value = 14),
-                                       #                                                 numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8))),
-                                       #                                        column(6,
-                                       #                                               wellPanel(
-                                       #                                                 numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25),
-                                       #                                                 numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10),
-                                       #                                                 numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1)))) ,                                        
-                                       #                                      
+                                                  numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15, min=1, max=100, step=1),
+                                                  numericInput("ta", label = "Infektiosität [d]", value = 6, min=1, max=20, step=1),
+                                                  numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 4, min=1, max=20, step=1)))),
+                                     
+                                     
                                        h3("Einstellen der Darstellung") ,
-                                       column(6,   
+                                       column(7,   
                                               wellPanel(
                                                 dateRangeInput(inputId = "dateInput",
                                                                label = "Datum",
@@ -152,45 +151,50 @@ ui <- function(request) {
                                                                startview = "month",
                                                                weekstart = 1
                                                 ))),
-                                       column(6,
+                                       column(5,
                                               wellPanel(
                                                 radioButtons(inputId = "logyInput",
-                                                             label = "Darstellung y-Achse",
+                                                             label = "Y-Achse",
                                                              choices = c("linear", "logarithmisch"),
                                                              selected =  "logarithmisch")
                                               )),
-                                       column(6,
-                                              wellPanel(
+                                       column(8,
+                                              #wellPanel(
                                                 tags$a(
                                                   href="https://admos.de/de/", 
                                                   tags$img(src = "logo-admos.png",
-                                                           width = "200px", height = "100px"),
-                                                ))),
-                                       column(6,
-                                              wellPanel(
+                                                           width = "220px", height = "71px"),
+                                                #)
+                                                )),
+                                       column(4,
+                                              #wellPanel(
                                                 tags$a(
                                                   href="https://www.st2c.de", 
                                                   tags$img(src = "logoSt2c.png",
                                                            width = "100px", height = "100px"),
-                                                ))),                                      
+                                                #)
+                                              )),                                      
                                        
                                        
                                        #tags$p(class="header", checked=NA,
                                        #
                                        
                                        # adding the new div tag to the sidebar
-                                       tags$div(class="header", checked=NA,
-                                                list(
-                                                  tags$p(
-                                                    tags$a(href="https://github.com/uwesterr/CoronaPredict", "GitHub")),
-                                                  
-                                                  
-                                                  
-                                                  HTML(paste("Data accessed on",
-                                                             Sys.time(),
-                                                             tags$a(href="https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson",
-                                                                    "from RKI"))))
-                                       )
+                                       tags$div(
+                                              HTML(paste("Source code available on",
+                                                   tags$a(href="https://github.com/uwesterr/CoronaPredict", "GitHub"))),
+                                              br(),
+                                              HTML(paste("Data accessed on",
+                                                   Sys.time(),
+                                                   tags$a(href="https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson",
+                                                   "from RKI")))
+                                       ),
+                                       
+                                       #dummy to show lowest elements
+                                       column(6,
+                                              br(),br(),br(),br(),br()
+                                              ),
+                                       
                                      ), # end sidebar panel
                                      mainPanel(
                                        
@@ -595,6 +599,9 @@ server <- function(input, output, session) {
   })  
   
   
+  
+  
+  
   # Save extra values in state$values when we bookmark
   onBookmark(function(state) {
     state$values$currentSum <- vals$Flag
@@ -635,3 +642,4 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server, enableBookmarking = "server")
+
