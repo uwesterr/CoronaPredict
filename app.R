@@ -385,7 +385,18 @@ server <- function(input, output, session) {
     colnames(tmp)[colnames(tmp) == "sumTote"] <- "Erfasste_Todesfaelle"
     colnames(tmp)[colnames(tmp) == "ToteBerechnet"] <- "Berechnete_Todesfaelle"
     colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet"] <- "Berechnete_Infizierte"
-
+    # min
+    colnames(tmp)[colnames(tmp) == "SumAnzahl_min"] <- "Erfasste_Infizierte_min"
+    colnames(tmp)[colnames(tmp) == "sumTote_min"] <- "Erfasste_Todesfaelle_min"
+    colnames(tmp)[colnames(tmp) == "ToteBerechnet_min"] <- "Berechnete_Todesfaelle_min"
+    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_min"] <- "Berechnete_Infizierte_min"
+    # max
+    colnames(tmp)[colnames(tmp) == "SumAnzahl_max"] <- "Erfasste_Infizierte_max"
+    colnames(tmp)[colnames(tmp) == "sumTote_max"] <- "Erfasste_Todesfaelle_max"
+    colnames(tmp)[colnames(tmp) == "ToteBerechnet_max"] <- "Berechnete_Todesfaelle_max"
+    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_max"] <- "Berechnete_Infizierte_max"
+    tmp$ErfassteInfizierte <- as.integer(tmp$Erfasste_Infizierte)
+    tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$Berechnete_Infizierte)
     tmp$ErfassteInfizierte <- as.integer(tmp$Erfasste_Infizierte)
     tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$Berechnete_Infizierte)
     
