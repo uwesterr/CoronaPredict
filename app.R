@@ -22,7 +22,11 @@ if (!("DT" %in% rownames(installed.packages()))) install.packages("DT")
 if (!("rlang" %in% rownames(installed.packages()))) install.packages("rlang")
 if (!("shinyalert" %in% rownames(installed.packages()))) install.packages("shinyalert")
 if (!("shinyWidgets" %in% rownames(installed.packages()))) install.packages("shinyWidgets")
+if (!("staTools" %in% rownames(installed.packages()))) install.packages("staTools")
+if (!("GA" %in% rownames(installed.packages()))) install.packages("GA")
 
+library(GA)
+library(staTools)
 library(shinyWidgets)
 library(shinyalert)
 library(writexl)
@@ -46,6 +50,8 @@ source(file = "src/Rechenkern.R")
 source(file = "src/createLandkreisR0_no_erfasstDf.R")
 source(file = "src/createDfBundLandKreis.R")
 source(file = "src/optimizerLoopingR0N0.R")
+source(file = "src/helperForCovid19.R")
+
 
 
 
@@ -92,6 +98,14 @@ ui <- function(request) {
                                        
                                        
                                        h3("Reduzierende Massnahmen"), 
+                                       wellPanel(
+                                       fluidRow(
+                                         column(5,
+                                       
+                                       actionButton("optimizeReduzierendeBtn", "Ermittlung Startwert für Reduzierung Rt")), 
+                                       column(7,
+                                       helpText("Starwerte für die Reduzierung Rt für einen guten Fit werden ermittelt")
+                                       ))),
                                        wellPanel(
                                          fluidRow(
                                            column(4,
@@ -274,7 +288,6 @@ ui <- function(request) {
                         #  includeText("AdmosDatenschutz.txt")
                       )
                       
-                      
              )
   )
   
@@ -287,28 +300,64 @@ server <- function(input, output, session) {
   vals <- reactiveValues(Flag = "Bundesland")
   r0_no_erfasstDf <- reactiveVal(0) 
   
+
+  
+  observeEvent(input$optimizeReduzierendeBtn, {
+    showModal(modalDialog(title = "Optimierung läuft"))
+
+    if(vals$Flag  == "Bundesland"){
+    regionSelected = 2
+    } else {
+      regionSelected = 3
+    }
+    dfRoNo <- r0_no_erfasstDf()[[1]]
+    n0_erfasst_nom_min_max <- r0_no_erfasstDf()[[2]]
+    R0_conf_nom_min_max <- r0_no_erfasstDf()[[3]]
+    startDate <- r0_no_erfasstDf()[[4]]
+    rechenDf_nom <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_nom, R0 =R0_conf_nom_min_max$R0_nom)
+    GA <- ga(type = "real-valued", 
+             fitness =  function(x) calcPredictionsForOptimization(x[1], x[2], x[3], R0_conf_nom_min_max,  n0_erfasst_nom_min_max, startDate, rechenDf_nom, input),
+             
+             lower = c(20, 30,-20 ), upper = c(40, 50, 20), 
+             popSize = 10, maxiter = 30, run = 5)
+   # browser()
+    updateSliderInput(session, "reduzierung_rt1", value = GA@solution[[1]])
+    updateSliderInput(session, "reduzierung_rt2", value = GA@solution[[2]])
+    updateSliderInput(session, "reduzierung_rt3", value = GA@solution[[3]])
+    removeModal()
+
+ 
+    })
+  
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
+
     if(input$BundeslandSelected =="---"){
     }else {
+      showModal(modalDialog(title = "Daten werden berechnet"))
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
       vals$Flag  <- "Bundesland"
       regionSelected = 2
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
       r0_no_erfasstDf(r0_no_erfasstDf)
       # set menu of Landkreis to "---"
+      removeModal()
       
     }
   })
   
   observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
+    
     if(input$LandkreiseSelected =="---"){
     }else {
+      showModal(modalDialog(title = "Daten werden berechnet"))
+      
       updateSelectInput(session, "BundeslandSelected",  selected = "---")
       vals$Flag  <- "Landkreis"
       regionSelected = 3
       r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
       r0_no_erfasstDf(r0_no_erfasstDf)
-
+      removeModal()
+      
     }
   })
   
