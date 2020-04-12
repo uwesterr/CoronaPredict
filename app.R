@@ -224,7 +224,9 @@ ui <- function(request) {
                                              cellWidths =  c("50%", "50%"),
                                              cellHeight = "120%",
                                              cellArgs = list(style = "padding: 6px"), 
-                                             plotlyOutput(outputId ="Kumuliert"), plotlyOutput(outputId ="Verlauf"))
+                                             addSpinner(plotlyOutput(outputId ="Kumuliert"), spin = "circle", color = "#E41A1C"),
+                                             addSpinner(plotlyOutput(outputId ="Verlauf"), spin = "circle", color = "#E41A1C"))
+#addSpinner(plotOutput("plot1"), spin = "circle", color = "#E41A1C"),                                           
                                          )
                                        ),
                                        
@@ -252,7 +254,9 @@ ui <- function(request) {
                                              style = "border: 1px solid silver;",
                                              cellWidths =  c("50%", "50%"),
                                              cellHeight = "120%",
-                                             plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
+                                             addSpinner(plotlyOutput(outputId ="Krankenhaus"), spin = "circle", color = "#E41A1C"),
+                                             addSpinner(plotlyOutput(outputId ="Reproduktionsrate"), spin = "circle", color = "#E41A1C"))                                             
+                                            # plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
                                          ),
                                          
                                        )       
@@ -317,7 +321,7 @@ server <- function(input, output, session) {
     rechenDf_nom <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_nom, R0 =R0_conf_nom_min_max$R0_nom)
     GA <- ga(type = "real-valued", 
              fitness =  function(x) calcPredictionsForOptimization(x[1], x[2], x[3], R0_conf_nom_min_max,  n0_erfasst_nom_min_max, startDate, rechenDf_nom, input),
-             
+             seed = 2020,
              lower = c(20, 30,-20 ), upper = c(40, 50, 20), 
              popSize = 10, maxiter = 30, run = 5)
    # browser()
@@ -325,8 +329,6 @@ server <- function(input, output, session) {
     updateSliderInput(session, "reduzierung_rt2", value = GA@solution[[2]])
     updateSliderInput(session, "reduzierung_rt3", value = GA@solution[[3]])
     removeModal()
-
- 
     })
   
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
