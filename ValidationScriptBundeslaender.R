@@ -89,7 +89,6 @@ calcBerechnetValues <- function(R0, n0, input, startDate){
   
   dfRoNoOpt$R0<- R0
   dfRoNoOpt$n0_erfasst <-n0
-  r0_no_erfasstDf$Einwohner <- 
   dfRechenKern <- (Rechenkern(dfRoNoOpt, input, startDate))
   
   return(dfRechenKern) 
