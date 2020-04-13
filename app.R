@@ -322,7 +322,7 @@ server <- function(input, output, session) {
     GA <- ga(type = "real-valued", 
              fitness =  function(x) calcPredictionsForOptimization(x[1], x[2], x[3], R0_conf_nom_min_max,  n0_erfasst_nom_min_max, startDate, rechenDf_nom, input),
              seed = 2020,
-             lower = c(20, 30,-20 ), upper = c(40, 50, 20), 
+             lower = c(0, 0,-100 ), upper = c(100, 100, 100), 
              popSize = 10, maxiter = 30, run = 5)
    # browser()
     updateSliderInput(session, "reduzierung_rt1", value = GA@solution[[1]])
