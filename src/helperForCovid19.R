@@ -15,10 +15,9 @@ calcPredictionsForOptimization = function(reduzierung_rt1, reduzierung_rt2, redu
 } 
 
 calcMetric <- function(dfRechenKern, data){
-  res <- left_join(data, dfRechenKern %>% select(c(Tag, ErfassteInfizierteBerechnet)), by = c("MeldeDate" = "Tag")) %>% filter(!is.na(ErfassteInfizierteBerechnet))
-  #   (sum(log10(res$SumAnzahl) 
-  #        - log10(res$ErfassteInfizierteBerechnet) )^2)/(nrow(data)-1)^0.5
-  
- # metric <- MPE(log10(res$SumAnzahl), log10(res$ErfassteInfizierteBerechnet))
+  res <- left_join(data, dfRechenKern %>% select(c(Tag, ErfassteInfizierteBerechnet)), by = c("MeldeDate" = "Tag")) %>% filter(!is.na(ErfassteInfizierteBerechnet)) %>% 
+  rename_at(vars(contains("sumAnzahlFall")), ~ "SumAnzahl" ) %>% 
+    rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) %>% 
+    rename_at(vars(contains("sumTote")), ~ "sumTote" )
   metric <- (sum(log10(res$SumAnzahl)   - log10(res$ErfassteInfizierteBerechnet) )^2)/(nrow(data)-1)^0.5
 }
