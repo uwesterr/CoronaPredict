@@ -2,7 +2,7 @@
 # Files calculated the predicted values 
 
 Rechenkern <- function(RkiDataWithR0N0, input) {
-  #browser()
+ # browser()
   # Betroffene
   # US 31.03.2020: use only one value, before the whole column was used this lead to a init CalcDf with many rows instead of one which could screw up the rollapply later on
   Ygesamt	<- RkiDataWithR0N0$Einwohner %>% unique() # Gesamtmenge
@@ -166,7 +166,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   #startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
   #TG wieder variabel gesetzt, damit Anpassung stimmt
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")) # Datum Ende
-  #  browser() 
+  # browser() 
   for (dayOfCalculation in seq(RegStartDate+1, endDate,by = 1)) {
     dayOfCalculation = as.Date(dayOfCalculation)
     indexDay <- which(calcDf$Tag == dayOfCalculation)
@@ -222,7 +222,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   calcDf <- calcDf %>% mutate(NeueToteBerechnet = round(tod_rate* lag(NeuInfizierteBerechnet, td_tod, default = 0),digits=0)) %>% 
     mutate(ToteBerechnet = cumsum(NeueToteBerechnet)) %>% filter(Tag >= RegStartDate)
   
-  #browser()
+  # browser()
   df <- left_join(calcDf,RkiDataWithR0N0, by =c("Tag" = "MeldeDate")) %>% 
     select(Tag, TaeglichReproduktionsRateRt, ReduzierteRt, AktuellInfizierteBerechnet, NeuInfizierteBerechnet, ErfassteInfizierteBerechnet, 
            GesamtAktuellInfizierteBerechnet, GesamtInfizierteBerechnet, NeuGesamtInfizierteBerechnet, everything())

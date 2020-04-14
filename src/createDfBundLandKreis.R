@@ -54,7 +54,7 @@ createDfBundLandKreis <- function() {
      rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) 
   
   RkiDataWithSumsNested <- bind_rows(historyDfBund, historyDfBundesLand, historyDfLandkreis) %>% group_by(whichRegion) %>% nest() %>% 
-    add_column("R0Opt"= -1e7, "n0Opt" = -1e7, "RegStartDate" = as.Date('1966-05-10'), "groupedBy" ="") %>% mutate( 
+    add_column("R0Start"= -1e7, "R0Opt"= -1e7, "n0Start" = -1e7, "n0Opt" = -1e7, "RegStartDate" = as.Date('1966-05-10'), "groupedBy" ="", "predictedValues" = "NULL") %>% mutate( 
                groupedBy = ifelse(whichRegion == "Deutschland", "Deutschland", 
                                   ifelse(whichRegion %in% historyDf$Bundesland, "Bundesland",
                                          ifelse(whichRegion %in% historyDf$Landkreis, "Landkreis",""))))

@@ -1,7 +1,7 @@
 # function to calculate R0 and n0_erfasst
 
 createLandkreisR0_no_erfasstDf <- function(RkiDataWithSumsNested, regionSelected, vals, input,session,optimizeFunction = optimizerLoopingR0N0, ...  ){
-  
+  # browser()
   if (vals$Flag  == "Bundesland") {
     if(input$BundeslandSelected == "---"){input$BundeslandSelected == "Deutschland"}
     if(input$BundeslandSelected == "Deutschland"){
@@ -79,14 +79,18 @@ createLandkreisR0_no_erfasstDf <- function(RkiDataWithSumsNested, regionSelected
     # gives first reasonable fit
     R0_start <- lmModel[["coefficients"]][["MeldeDate"]]
     n0_erfasst_start <- lmModel %>% predict(data.frame(MeldeDate =startDate))
-    n0_erfasst_start <- 10^n0_erfasst_start
-    # browser()
-    
-    indexEntitiy <- which(RkiDataWithSumsNested$whichRegion == regionSelected)
-    RkiDataWithSumsNested$R0Opt[indexEntitiy] <- 10^R0_start
-    RkiDataWithSumsNested$n0Opt[indexEntitiy] <- n0_erfasst_start
-    RkiDataWithSumsNested$RegStartDate[indexEntitiy] <- startDate
-    # res <- optimizeFunction(R0_start, dfRoNoOpt, n0_erfasst_start, input, startDate, df, resultDf, ...)
+
+     indexEntitiy <- which(RkiDataWithSumsNested$whichRegion == regionSelected)
+     RkiDataWithSumsNested$R0Start[indexEntitiy] <- 10^R0_start
+     RkiDataWithSumsNested$n0Start[indexEntitiy] <- 10^n0_erfasst_start
+     RkiDataWithSumsNested$RegStartDate[indexEntitiy] <- startDate
+     RkiDataWithR0N0 <- RkiDataWithSumsNested %>%  filter(whichRegion == regionSelected) %>% unnest()
+     
+     res <- optimizeFunction(RkiDataWithR0N0, input, ...)
+     #browser()
+    RkiDataWithSumsNested$R0Opt[indexEntitiy] <- res$R0Opt
+    RkiDataWithSumsNested$n0Opt[indexEntitiy] <- res$n0Opt
+
    
   }  
  #  browser()

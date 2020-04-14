@@ -24,7 +24,9 @@ if (!("shinyalert" %in% rownames(installed.packages()))) install.packages("shiny
 if (!("shinyWidgets" %in% rownames(installed.packages()))) install.packages("shinyWidgets")
 if (!("staTools" %in% rownames(installed.packages()))) install.packages("staTools")
 if (!("GA" %in% rownames(installed.packages()))) install.packages("GA")
+if (!("tictoc" %in% rownames(installed.packages()))) install.packages("tictoc")
 
+library(tictoc)
 library(GA)
 library(staTools)
 library(shinyWidgets)
@@ -345,8 +347,9 @@ server <- function(input, output, session) {
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
-      r0_no_erfasstDf(r0_no_erfasstDf)
+     # browser()
+      RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
+      r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
       removeModal()
       
@@ -362,23 +365,20 @@ server <- function(input, output, session) {
       updateSelectInput(session, "BundeslandSelected",  selected = "---")
       vals$Flag  <- "Landkreis"
       regionSelected = 3
-      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
-      r0_no_erfasstDf(r0_no_erfasstDf)
+      # browser()
+      RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$LandkreiseSelected)
+      r0_no_erfasstDf(RkiDataWithSumsNested)
       removeModal()
       
     }
   })
   
   rkiAndPredictData <- reactive({
-    # browser()
-    #    dfRoNo <- r0_no_erfasstDf()[[1]]
-    #    n0_erfasst_nom_min_max <- r0_no_erfasstDf()[[2]]
-    #    R0_conf_nom_min_max <- r0_no_erfasstDf()[[3]]
-    #    startDate <- r0_no_erfasstDf()[[4]]
-    RkiDataWithR0N0 <- r0_no_erfasstDf()$RkiDataWithSumsNested %>%  filter(whichRegion == r0_no_erfasstDf()$regionSelected) %>% unnest()
-    #    rechenDf_nom <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_nom, R0 =R0_conf_nom_min_max$R0_nom)
+   #  browser()
+
+    RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest()
     df_nom <-  Rechenkern(RkiDataWithR0N0, input)
-    
+   #  browser()
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
     konfidenz_je_tag <- mean(c(0.023, 0.029/2)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
@@ -633,8 +633,8 @@ server <- function(input, output, session) {
     }else {
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
-      r0_no_erfasstDf(r0_no_erfasstDf)
+      RkiDataWithSumsNested  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
+      r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
     }
@@ -644,8 +644,8 @@ server <- function(input, output, session) {
     }else {
       vals$Flag  <- "Landkreis"
       regionSelected = 3
-      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
-      r0_no_erfasstDf(r0_no_erfasstDf)
+      RkiDataWithSumsNested  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
+      r0_no_erfasstDf(RkiDataWithSumsNested)
       updateSelectInput(session, "BundeslandSelected",  selected = "---")
     }
     
