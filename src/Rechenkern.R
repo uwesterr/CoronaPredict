@@ -31,9 +31,9 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   td_tod <- 	input$td_tod # Dauer Infektion bis Tod  [tage]
   
   # Auswirkung Massnahmen
-    # Datum i. Reduzierungsmassnahme
-    # Reduzierungi der Reproduktionsrate/Tag
-    red_data <- cbind(
+  # Datum i. Reduzierungsmassnahme
+  # Reduzierungi der Reproduktionsrate/Tag
+  red_data <- cbind(
     rbind(  red_datum1	<- input$reduzierung_datum1,   
             red_datum2	<- input$reduzierung_datum2,   
             red_datum3	<- input$reduzierung_datum3,   
@@ -93,7 +93,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   startDate <- startDate
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))
   
- # browser()
+  # browser()
   # find day on which the first was case would have been reported with given Rt 
   offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
   #browser()
@@ -146,12 +146,12 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   # browser()
   
   ########################################################  Loop propagate infections over time ########################
- 
+  
   calcTaeglichReproduktionsRateRt <- function(Rt, calcDf, Y_inf_limit) {
     Rt-(calcDf$ErfassteInfizierteBerechnet*(Rt-1))/Y_inf_limit
   }
   
- 
+  
   
   calcGesamtInfizierteBerechnet <- function(calcDf){
     
@@ -180,7 +180,7 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
     calcDf$ReduzierteRt[indexDay]  <- calcReduzierung(calcDf[indexDay,], red_data, ta)
     calcDf$GesamtInfizierteBerechnet[indexDay]  <-  round(calcGesamtInfizierteBerechnet(calcDf[indexDay-1,]),digits = 0)
     
-
+    
     
     activeEndDay <- which(calcDf$Tag == dayOfCalculation - ti+1)
     activeStartDay <- which(calcDf$Tag ==  dayOfCalculation - ende_inf+2)
@@ -225,8 +225,9 @@ Rechenkern <- function(r0_no_erfasstDf, input, startDate) {
   calcDf <- calcDf %>% mutate(NeueToteBerechnet = round(tod_rate* lag(NeuInfizierteBerechnet, td_tod, default = 0),digits=0)) %>% mutate(ToteBerechnet = cumsum(NeueToteBerechnet))
   
   #browser()
-  df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate")) %>% select(Tag, TaeglichReproduktionsRateRt, ReduzierteRt, AktuellInfizierteBerechnet, NeuInfizierteBerechnet, ErfassteInfizierteBerechnet, 
-                                                                                 GesamtAktuellInfizierteBerechnet, GesamtInfizierteBerechnet, NeuGesamtInfizierteBerechnet, everything())
+  df <- left_join(calcDf,r0_no_erfasstDf, by =c("Tag" = "MeldeDate")) %>% 
+    select(Tag, TaeglichReproduktionsRateRt, ReduzierteRt, AktuellInfizierteBerechnet, NeuInfizierteBerechnet, ErfassteInfizierteBerechnet, 
+           GesamtAktuellInfizierteBerechnet, GesamtInfizierteBerechnet, NeuGesamtInfizierteBerechnet, everything())
   return(df)
   
 }
