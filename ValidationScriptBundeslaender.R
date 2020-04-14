@@ -13,17 +13,17 @@ alreadyCalculated <- 1
 
 load("data/inputExample.RData")
 input <- isolate(reactiveValuesToList(inputExample))
-if(alreadyCalculated){
-  
-}else{
+
   outpput <-  createDfBundLandKreis()
   historyDfBund <- outpput[[1]]
   historyDfBundesLand <- outpput[[2]]
   historyDfLandkreis <- outpput[[3]]
   optimizeFunction <- optimizerLoopingR0N0
-}
+
 
 optWrap <- function(df, input) {
+  # function to calculate optimizsation for R0 and n0
+  
   df <- df %>% rename_at(vars(contains("sumAnzahlFall")), ~ "SumAnzahl" ) %>% 
     rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) %>% 
     rename_at(vars(contains("sumTote")), ~ "sumTote" )
@@ -89,7 +89,7 @@ optWrap <- function(df, input) {
 
 
 calcBerechnetValues <- function(R0, n0, dfRoNoOpt, input, startDate){
-  browser()
+# function to calculate predicted values used during R0 and n0 optimizsation
   dfRoNoOpt$R0 <-  R0
   dfRoNoOpt$n0_erfasst <- n0
   dfRoNoOpt <- dfRoNoOpt %>% rename_at(vars(contains("sumAnzahlFall")), ~ "SumAnzahl" ) %>% 
@@ -205,7 +205,17 @@ compareOptimizerUnnestDf  %>% ggplot(aes(MeldeDate, sumAnzahlFallBundesland, col
 
 
 ############################ optimze reduzierung R0, n0  ############################
-
+calcReduziertOptPredictions <- function(R0, n0, dfRoNoOpt, input, startDate){
+  # browser()
+  dfRoNoOpt$R0 <-  R0
+  dfRoNoOpt$n0_erfasst <- n0
+  dfRoNoOpt <- dfRoNoOpt %>% rename_at(vars(contains("sumAnzahlFall")), ~ "SumAnzahl" ) %>% 
+    rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) %>% 
+    rename_at(vars(contains("sumTote")), ~ "sumTote" )
+  dfRechenKern <- (Rechenkern(dfRoNoOpt, input$input, startDate))
+  
+  return(dfRechenKern) 
+}    
 
 load("data/inputExample.RData")
 input <- isolate(reactiveValuesToList(inputExample))
@@ -213,10 +223,11 @@ source(file = "src/helperForCovid19.R")
 source(file = "src/optimizerGeneticAlgorithmRedR0No.R")
 source(file = "src/Rechenkern.R")
 MetricGeneticAlgorithmRmsDf$input <- list(input)
-MetricGeneticAlgorithmRmsReduzierungsOptimiertDf <- MetricGeneticAlgorithmRmsDf %>% filter(whichRegion %in% c( "Sachsen"))  %>%
-  mutate(optReduzierung = pmap(list(R0Opt, n0Opt, data, input, startDate),optimizerGeneticAlgorithmRedR0No))
+MetricGeneticAlgorithmRmsReduzierungsOptimiertDf <- MetricGeneticAlgorithmRmsDf   %>% head(2) %>% 
+  mutate(optReduzierung = pmap(list(R0Opt, n0Opt, data, startDate, input),optimizerGeneticAlgorithmRedR0No))
 
-MetricGeneticAlgorithmMpeDf <- MetricGeneticAlgorithmRmsReduzierungsOptimiertDf %>% 
+
+MetricGeneticAlgorithmRmsReduzierungsOptimiertDf <- MetricGeneticAlgorithmRmsReduzierungsOptimiertDf %>% 
   mutate(n0Opt = (optimizedValues[[1]][["n0Opt"]]) %>% as.numeric(),
          R0Opt = (optimizedValues[[1]][["R0Opt"]]) %>% as.numeric(),
          startDate = (optimizedValues[[1]][["startDate"]]),
@@ -226,47 +237,33 @@ MetricGeneticAlgorithmMpeDf <- MetricGeneticAlgorithmRmsReduzierungsOptimiertDf 
          metric = map2_dbl(dfRechenKern, data, calcMetric),
          OptimizerFunction = "optimizerReduzierung")
          
-         
-calcReduziertOptPredictions <- function(R0, n0, dfRoNoOpt, input, startDate){
- # browser()
-  dfRoNoOpt$R0 <-  R0
-  dfRoNoOpt$n0_erfasst <- n0
-  dfRoNoOpt <- dfRoNoOpt %>% rename_at(vars(contains("sumAnzahlFall")), ~ "SumAnzahl" ) %>% 
-    rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) %>% 
-    rename_at(vars(contains("sumTote")), ~ "sumTote" )
-  dfRechenKern <- (Rechenkern(dfRoNoOpt, input$input, startDate))
+save(MetricGeneticAlgorithmRmsReduzierungsOptimiertDf, file = "data/MetricGeneticAlgorithmRmsReduzierungsOptimiertDf.RData")
+
+   
+
+#######################  plot comparison ##########################
+
+
   
-  return(dfRechenKern) 
-}       
+compareOptimizerDf <- rbind(MetricGeneticAlgorithmMpeDf, MetricGeneticAlgorithmRmsDf, 
+                            MetricDfLoopingR0N0, MetricGeneticAlgorithmRmsReduzierungsOptimiertDf)
+compareOptimizerUnnestDf <-  compareOptimizerDf %>% unnest(data) %>%  unnest(dfRechenKern, sep = "_")
 
-#######################  set optimizer function  ##########################
-source(file = "src/optimizerGeneticAlgorithmRedR0No.R")
-optimizeFunction <- optimizerGeneticAlgorithmRedR0No
-tic()
-optimizerGeneticAlgorithmRedR0NoRmsDf <-  dfTotalNested %>% mutate(optimizedValues = map(data, optWrap, input))
-save(optimizerGeneticAlgorithmRedR0NoRmsDf, file = "optimizerGeneticAlgorithmRedR0NoRmsDf.RData")
-toc()  
-MetricoptimizerGeneticAlgorithmRedR0NoRmsDf <- optimizerGeneticAlgorithmRedR0NoRmsDf %>% mutate(
-  n0Opt = (optimizedValues[[1]][["n0Opt"]]) %>% as.numeric(),
-  R0Opt = (optimizedValues[[1]][["R0Opt"]]) %>% as.numeric(),
-  reduzierung_rt1 = (optimizedValues[[1]][["reduzierung_rt1"]]) %>% as.numeric(),
-  reduzierung_rt2 = (optimizedValues[[1]][["reduzierung_rt2"]]) %>% as.numeric(),
-  reduzierung_rt3 = (optimizedValues[[1]][["reduzierung_rt3"]]) %>% as.numeric(),
-  startDate = (optimizedValues[[1]][["startDate"]]),
-  Einwohner = data[[1]][["EinwohnerBundesland"]] %>% max(),
-  dfRechenKern = pmap(list(R0Opt, n0Opt, data), calcBerechnetValues, input, startDate),
-  metric = map2_dbl(dfRechenKern, data, calcMetric),
-  SumAnzahlFall = data[[1]][["AnzahlFall"]] %>% sum,
-  OptimizerFunction = "optimizerGeneticAlgorithm")
+redDate1 <- MetricGeneticAlgorithmRmsReduzierungsOptimiertDf$input[[1]][[1]][["reduzierung_datum1"]]
+redDate2 <- MetricGeneticAlgorithmRmsReduzierungsOptimiertDf$input[[1]][[1]][["reduzierung_datum2"]]
+redDate3 <- MetricGeneticAlgorithmRmsReduzierungsOptimiertDf$input[[1]][[1]][["reduzierung_datum3"]]
+maxMeldeDate <- max(compareOptimizerUnnestDf$MeldeDate)
 
-save(MetricoptimizerGeneticAlgorithmRedR0NoRmsDf, file = "data/MetricoptimizerGeneticAlgorithmRedR0NoRmsDf.RData")
-
-compareOptimizerDf <- rbind(MetricGeneticAlgorithmMpeDf, MetricGeneticAlgorithmRmsDf, MetricDfLoopingR0N0,
-                            MetricoptimizerGeneticAlgorithmRedR0NoRmsDf)
-
-compareOptimizerUnnestDf  %>% ggplot(aes(MeldeDate, sumAnzahlFallBundesland, color = OptimizerFunction)) + geom_line() + 
-  geom_point(aes(Tag, ErfassteInfizierteBerechnet))  +
-  facet_wrap(vars(whichRegion), scales="free") +  scale_y_log10(label = label_number_si())
-
+compareOptimizerUnnestDf  %>% filter(Tag >= startDate & MeldeDate >= startDate &
+                                    Tag <= maxMeldeDate) %>% ggplot(aes(MeldeDate, sumAnzahlFallBundesland, color = OptimizerFunction)) + geom_point() + 
+  geom_line(aes(Tag, ErfassteInfizierteBerechnet))  +
+  facet_wrap(vars(whichRegion), scales="free") +  scale_y_log10(label = label_number_si()) + 
+  geom_vline(xintercept = redDate1, color = "green") + 
+  geom_vline(xintercept = redDate2, color = "blue") +  
+  geom_vline(xintercept = redDate3, color = "red") +
+  annotate("text", x = redDate1, y = 300, label = "Reduzierungsmaßnahme 1", angle=90) 
+ #geom_text(aes(x=redDate1, label="Reduzierungsmaßnahme 1", y=20), 
+  #          colour="blue", angle=90, vjust = 1.2, text=element_text(size=11))
+  
 
 

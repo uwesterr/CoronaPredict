@@ -1,10 +1,11 @@
-# optimizer using genetic algorithm to optimize reduzierungsmaßnahmen und R0 n0
-library(GA)
 
-optimizerGeneticAlgorithmRedR0No <- function(R0_start, n0_erfasst_start, dfRoNoOpt, input, startDate) {
+
+optimizerGeneticAlgorithmRedR0No <- function(R0_start, n0_erfasst_start, dfRoNoOpt, startDate, input) {
+  # optimizer using genetic algorithm to optimize reduzierungsmaßnahmen und R0 n0
+  # dfRoNoOpt should be dataframe starting with reduzierung_datum1
+  dfRoNoOpt <- dfRoNoOpt%>% filter(MeldeDate >= input$reduzierung_datum1)
   
-  
-  calcPredictionsForGaOptimization = function(reduzierung_rt1, reduzierung_rt2, reduzierung_rt3, R0_start, n0_erfasst_start, startDate) {
+  calcPredictionsForGaOptimization = function(reduzierung_rt1, reduzierung_rt2, reduzierung_rt3, R0_start, n0_erfasst_start, startDate, dfRoNoOpt, input) {
     
   #      
     dfRoNoOpt$R0<- R0_start
@@ -19,7 +20,6 @@ optimizerGeneticAlgorithmRedR0No <- function(R0_start, n0_erfasst_start, dfRoNoO
     inputForOptimization$reduzierung_rt3 <- reduzierung_rt3
     inputForOptimization$dateInput[2] = dfRoNoOpt$MeldeDate %>% max() # set endDate to date of last MeldeDate
     dfRechenKern <-  isolate(Rechenkern(dfRoNoOpt, inputForOptimization, startDate))
-     #browser()
     dfRechenKern <- dfRechenKern %>% filter(Tag  %in% dfRoNoOpt$MeldeDate)
     dfRoNoOpt <- dfRoNoOpt %>% filter(MeldeDate  %in% dfRechenKern$Tag)
     dfRechenKern$ErfassteInfizierteBerechnet %>% sum()
@@ -29,15 +29,12 @@ optimizerGeneticAlgorithmRedR0No <- function(R0_start, n0_erfasst_start, dfRoNoO
     return(-res)
   } 
   
- # browser()
-  tic()
   suggestions <- c( 0, 0, -20)
   GA <- ga(type = "real-valued", 
-           fitness =  function(x) calcPredictionsForGaOptimization(x[1], x[2], x[3], R0_start,  n0_erfasst_start, startDate),
+           fitness =  function(x) calcPredictionsForGaOptimization(x[1], x[2], x[3], R0_start,  n0_erfasst_start, startDate, dfRoNoOpt, input),
            suggestions =suggestions,
            lower = c(0, 0, -40), upper = c(60, 60, 30), 
            popSize = 10, maxiter = 30, run = 5, seed = 2020)
-  toc()
 
   input$reduzierung_rt1 <- GA@solution[[1]]
   input$reduzierung_rt2 <- GA@solution[[2]]
