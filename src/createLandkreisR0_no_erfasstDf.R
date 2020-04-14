@@ -90,7 +90,7 @@ createLandkreisR0_no_erfasstDf <- function(df, historyDfBund, regionSelected, va
 
   }  
 
-  return(list(df_org, n0Opt, R0Opt, startDate))
+  return(list(df_org, n0Opt, R0Opt, startDate, "resultOfOptimization" = res))
   
   
 }
