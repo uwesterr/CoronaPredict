@@ -374,9 +374,15 @@ server <- function(input, output, session) {
   })
   
   rkiAndPredictData <- reactive({
-   #  browser()
-
+  #  browser()
+    if (r0_no_erfasstDf()$NotEnoughDataFlag) {
+      showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", 
+                            "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. 
+                            Hierdurch ist aber auch keine valide Zukunftsschätzung möglich.",  footer = modalButton("Ok")))
+      
+    }
     RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest()
+  
     df_nom <-  Rechenkern(RkiDataWithR0N0, input)
    #  browser()
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))

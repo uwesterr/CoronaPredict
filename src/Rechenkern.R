@@ -93,10 +93,16 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   
   RegStartDate <- RkiDataWithR0N0$RegStartDate %>% unique()
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d"))
-  
- #  browser()
+  ende_inf <- ti + ta  
+  start_inf = ti 
+  Rt_start <- Rt
+  # browser()
   # find day on which the first was case would have been reported with given Rt 
   offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
+  if(offsetDay< ende_inf+2){
+  #  browser()
+    offsetDay = ende_inf+2
+  }
   #browser()
   calcDf <- tibble(Tag = seq(RegStartDate-offsetDay, endDate, by = 1),
                    TaeglichReproduktionsRateRt       = Rt,
@@ -122,9 +128,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   
   # Init the aktuell infizierte mit den nicht vorhandenen werten vor startdatum
   
-  ende_inf <- ti + ta  
-  start_inf = ti 
-  Rt_start <- Rt
+
 
   for (day in seq(RegStartDate- offsetDay, RegStartDate, by = 1)) {
     
@@ -166,6 +170,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   #startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
   #TG wieder variabel gesetzt, damit Anpassung stimmt
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")) # Datum Ende
+  browser()
   # browser() 
   for (dayOfCalculation in seq(RegStartDate+1, endDate,by = 1)) {
     dayOfCalculation = as.Date(dayOfCalculation)
@@ -186,7 +191,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
     #     summarise(sum = sum(NeuGesamtInfizierteBerechnet)) %>% as.numeric()
     
     
-    
+   
     calcDf$GesamtAktuellInfizierteBerechnet[indexDay] <- calcDf$NeuGesamtInfizierteBerechnet[activeStartDay:activeEndDay] %>% sum
     calcDf$NeuGesamtInfizierteBerechnet[indexDay]<- round(calcNeuGesamtInfizierteBerechnet(calcDf[indexDay,]), digits = 0)
     calcDf$NeuInfizierteBerechnet[indexDay]  <- round(max(.1,calcDf$NeuGesamtInfizierteBerechnet[indexDay]/faktor_n_inf), digits = 0)
