@@ -46,6 +46,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
             red_rt4     <- input$reduzierung_rt4/100,  
             red_rt5     <- input$reduzierung_rt5/100)  
   )
+
   
   # Ausgabe
   Y_inf_limit <- Ygesamt*ges_inf_rate/faktor_n_inf
@@ -101,7 +102,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
   if(offsetDay< ende_inf+2){
   #  browser()
-    offsetDay = ende_inf+2
+    offsetDay = ende_inf+2 # to avoid error message when low SumAnzahlFall
   }
   #browser()
   calcDf <- tibble(Tag = seq(RegStartDate-offsetDay, endDate, by = 1),
@@ -170,8 +171,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   #startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
   #TG wieder variabel gesetzt, damit Anpassung stimmt
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")) # Datum Ende
-  browser()
-  # browser() 
+
   for (dayOfCalculation in seq(RegStartDate+1, endDate,by = 1)) {
     dayOfCalculation = as.Date(dayOfCalculation)
     indexDay <- which(calcDf$Tag == dayOfCalculation)

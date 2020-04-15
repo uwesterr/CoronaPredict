@@ -56,9 +56,9 @@ source(file = "src/helperForCovid19.R")
 
 
 
-if(file.exists("data/createDfBundLandKreisOutput.RData")){
+if(file.exists("data/RkiReduzierungOptFrame.RData")){
   
-  load("data/createDfBundLandKreisOutput.RData")
+  load("data/RkiReduzierungOptFrame.RData")
   
 } else{
   
@@ -347,8 +347,12 @@ server <- function(input, output, session) {
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-     # browser()
+     #browser()
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
+    
+      updateSliderInput(session, "reduzierung_rt1", value = RkiDataWithSumsNested$reduzierung_rt1)
+      updateSliderInput(session, "reduzierung_rt2", value = RkiDataWithSumsNested$reduzierung_rt2)
+      updateSliderInput(session, "reduzierung_rt3", value = RkiDataWithSumsNested$reduzierung_rt3)
       r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
       removeModal()
@@ -367,6 +371,9 @@ server <- function(input, output, session) {
       regionSelected = 3
       # browser()
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$LandkreiseSelected)
+      updateSliderInput(session, "reduzierung_rt1", value = RkiDataWithSumsNested$reduzierung_rt1)
+      updateSliderInput(session, "reduzierung_rt2", value = RkiDataWithSumsNested$reduzierung_rt2)
+      updateSliderInput(session, "reduzierung_rt3", value = RkiDataWithSumsNested$reduzierung_rt3)
       r0_no_erfasstDf(RkiDataWithSumsNested)
       removeModal()
       
@@ -381,10 +388,9 @@ server <- function(input, output, session) {
                             Hierdurch ist aber auch keine valide Zukunftsschätzung möglich.",  footer = modalButton("Ok")))
       
     }
-    RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest()
+    RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest(data)
   
     df_nom <-  Rechenkern(RkiDataWithR0N0, input)
-   #  browser()
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
     konfidenz_je_tag <- mean(c(0.023, 0.029/2)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
