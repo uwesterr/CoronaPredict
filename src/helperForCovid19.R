@@ -111,19 +111,29 @@ optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, input) {
      for(i in 1 : length(optPara)){
        allPara[[i]] <- denormPara[[i]]
      }
+     
+   
     inputForOptimization <- input# to make setting reduzierung_rtx easy and fast
-    inputForOptimization$reduzierung_rt1 <- allPara[["reduzierung_rt1"]]
-    inputForOptimization$reduzierung_rt2 <- allPara[["reduzierung_rt2"]]
-    inputForOptimization$reduzierung_rt3 <- allPara[["reduzierung_rt3"]]
+    inputVarNames <- names(allPara)
+    for (inputVarName in   inputVarNames ) {
+      inputForOptimization[[inputVarName]]<- allPara[[inputVarName]]
+    }
+   # browser()
+
     
     inputForOptimization$dateInput[2] = RkiDataWithR0N0$MeldeDate %>% max() # set endDate to date of last MeldeDate
     
-  # browser()
+ 
     dfRechenKern <-   Rechenkern(RkiDataWithR0N0, inputForOptimization)
     dfRechenKern <- dfRechenKern %>% filter(Tag  %in% RkiDataWithR0N0$MeldeDate)
     RkiDataWithR0N0 <- RkiDataWithR0N0 %>% filter(MeldeDate  %in% dfRechenKern$Tag)
     # res <- MPE(dfRechenKern$ErfassteInfizierteBerechnet,RkiDataWithR0N0$SumAnzahl)
-    res <- (sum(log10(RkiDataWithR0N0$SumAnzahl)   - log10(dfRechenKern$ErfassteInfizierteBerechnet) )^2)/(nrow(dfRechenKern)-1)^0.5
+   # browser()
+    res <- (
+      (sum(
+      (log10(RkiDataWithR0N0$SumAnzahl)   - log10(dfRechenKern$ErfassteInfizierteBerechnet))^2)
+      )/(nrow(dfRechenKern)-1)
+      )^0.5
 
     # cat("res is :", res , "redu1 = ", reduzierung_rt1, "\n")
     # res <- sqrt(mean((log10(dfRechenKern$ErfassteInfizierteBerechnet)-log10(RkiDataWithR0N0$SumAnzahl))^2))
@@ -142,9 +152,10 @@ optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, input) {
             fitness = calcPredictionsForGaOptimization,
             lower = minOpt,
             upper = maxOpt,
-            popSize = 10, maxiter = 10,
+            popSize = 10, maxiter = 30,
             seed = 2020,
-            allPara = allPara, parameter_tibble = parameter_tibble, input = input
+            allPara = allPara, parameter_tibble = parameter_tibble, input = input,
+            keepBest = FALSE
   )
   denormPara <- denormalizePara(GA@solution, parameter_tibble, para)
   
@@ -154,10 +165,10 @@ optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, input) {
   GA@solution[i] <- denormPara[[i]]
   }
   print(GA@solution)
+  cat("denormPara", unlist(denormPara), "\n")  
+ # browser()
   
-  browser()
-  
-  #cat("denormPara", unlist(denormPara), "\n")
+
   
 #  ############## non normalized optimization
 #  suggestions <- c( 0, 0, -20)
