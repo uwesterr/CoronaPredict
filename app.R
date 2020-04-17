@@ -25,7 +25,10 @@ if (!("shinyWidgets" %in% rownames(installed.packages()))) install.packages("shi
 if (!("staTools" %in% rownames(installed.packages()))) install.packages("staTools")
 if (!("GA" %in% rownames(installed.packages()))) install.packages("GA")
 if (!("tictoc" %in% rownames(installed.packages()))) install.packages("tictoc")
+if (!("httr" %in% rownames(installed.packages()))) install.packages("httr")
 
+
+library(httr)
 library(tictoc)
 library(GA)
 library(staTools)
@@ -49,9 +52,9 @@ library(scales)
 
 
 source(file = "src/Rechenkern.R")
-source(file = "src/createLandkreisR0_no_erfasstDf.R")
-source(file = "src/createDfBundLandKreis.R")
-source(file = "src/optimizerLoopingR0N0.R")
+#source(file = "src/createLandkreisR0_no_erfasstDf.R")
+#source(file = "src/createDfBundLandKreis.R")
+# source(file = "src/optimizerLoopingR0N0.R")
 source(file = "src/helperForCovid19.R")
 
 
