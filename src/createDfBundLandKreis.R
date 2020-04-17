@@ -14,19 +14,18 @@ library(DT)
 library(shinyalert)
 
 
-
-
 createDfBundLandKreis <- function() {
-  
+ 
   historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
-  
+
+
   historyDf <- historyData[["features"]][["properties"]]
   historyDf$MeldeDate <- as.Date(historyDf$Meldedatum)
   
   
   ## read population file from thonmas
-  bundesLandPopulation <- read_excel("data/bundesland_landkreis_200326_2.xlsx", "bundesland", col_names = c("Bundesland", "EinwohnerBundesland"))
-  landKreisPopulation <- read_excel("data/bundesland_landkreis_200326_2.xlsx", "landkreis", col_names = c("Landkreis", "EinwohnerLandkreis"))
+  bundesLandPopulation <- read_excel("../data/bundesland_landkreis_200326_2.xlsx", "bundesland", col_names = c("Bundesland", "EinwohnerBundesland"))
+  landKreisPopulation <- read_excel("../data/bundesland_landkreis_200326_2.xlsx", "landkreis", col_names = c("Landkreis", "EinwohnerLandkreis"))
   # browser()
   BundFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% summarise(FirstMelde = min(MeldeDate))
   historyDfBund <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, list(sum), na.rm = TRUE) %>% 
@@ -63,7 +62,7 @@ createDfBundLandKreis <- function() {
 }
 
 
-
+createDfBundLandKreis()
 
 
 
