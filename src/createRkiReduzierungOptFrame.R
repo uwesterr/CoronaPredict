@@ -11,22 +11,30 @@ createRkiRegOptFrame <- function(RkiDataWithSumsNested, regionSelected, input ){
 }
 
 
-
+setwd("~/CloudProjectsUnderWork/ProjectsUnderWork/PredCo/CoronaPredict/src")
 source(file = "Rechenkern.R")
 # source(file = "createLandkreisR0_no_erfasstDf.R")
-source(file = "createDfBundLandKreis.R")
-source(file = "optimizerLoopingR0N0.R")
+ source(file = "createDfBundLandKreis.R")
+# source(file = "optimizerLoopingR0N0.R")
 source(file = "helperForCovid19.R")
 load("../data/inputExample.RData")
 input <- isolate(reactiveValuesToList(inputExample))
  load("../data/createDfBundLandKreisOutput.RData")
+ load("../data/landkreiseBadenWuerttemberg.RData")
  RkiDataWithSumsNested$inputOrig <- list(input)
  RkiDataWithSumsNested <- RkiDataWithSumsNested %>% 
    as_tibble() %>% 
-   select(!contains("redu")) %>% add_column("reduzierungsOptResult" = list("a"))
+   select(!contains("redu")) %>% add_column("reduzierungsOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
+ index <- 0
  
+ ################## only baden-württemberg  #########
+ RkiDataWithSumsNestedBW <- RkiDataWithSumsNested %>% filter(whichRegion %in% c(landkreiseBadenWuerttemberg, "Baden-Württemberg")) 
+ 
+ #####################################################
  tictoc::tic()
- for (regionSelected in RkiDataWithSumsNested$whichRegion %>% head(20)) {
+ for (regionSelected in RkiDataWithSumsNestedBW$whichRegion) {
+   index <- index +1
+   print(index)
    print(regionSelected)
    tmp <-   createRkiRegOptFrame(RkiDataWithSumsNested, regionSelected, input )
    regionSelectedDf <- tmp[["RkiDataWithSumsNested"]] %>% filter(whichRegion == regionSelected)
@@ -34,20 +42,21 @@ input <- isolate(reactiveValuesToList(inputExample))
    
  }
 
- RkiDataWithSumsNested <- RkiDataWithSumsNested %>% unnest(reduzierungsOptResult)
+# RkiDataWithSumsNested <- RkiDataWithSumsNested %>% unnest(reduzierungsOptResult)
  toc()
-
-# save(RkiDataWithSumsNested, file  = "../data/RkiReduzierungOptFrame.RData")
+#browser()
+save(RkiDataWithSumsNested, file  = "../data/RkiReduzierungOptFrameBW200417.RData")
 
 ############### create compare plots  #######################
 
+ 
+ load("../data/RkiReduzierungOptFrameServer0416.RData")
 plotCreate <- 1
-
+load("../data/RkiReduzierungOptFrameServerMPEItr500417.RData")
 
 
 if(plotCreate){
-  RkiDataWithSumsNested <- RkiDataWithSumsNested %>%    as_tibble() %>% 
-    select(-dfRechenKern) %>% add_column("dfRechenKern" = 0)
+  RkiDataWithSumsNested <- RkiDataWithSumsNested %>%    as_tibble()  %>% add_column("dfRechenKern" = 0)
   
   createRkiRegOptPlots<- function(RkiDataWithSumsNested, regionSelected, input ){
     
@@ -88,8 +97,8 @@ if(plotCreate){
   redDate2 <- input$reduzierung_datum2
   redDate3 <- input$reduzierung_datum3
   maxMeldeDate <- max(dfRechenkernAndRkiUnnest$MeldeDate)
-  
-  dfRechenkernAndRkiUnnest  %>% filter(Tag >= redDate1 & !is_na(SumAnzahl)) %>% ggplot(aes(Tag, SumAnzahl)) + geom_point() + 
+  a <- dfRechenkernAndRkiUnnest %>%  filter(!is.na(SumAnzahl))
+  a %>%  group_by(whichRegion)  %>% filter(Tag >= redDate1 & !is_na(SumAnzahl)) %>% ggplot(aes(Tag, SumAnzahl)) + geom_point() + 
     geom_line(aes(Tag, ErfassteInfizierteBerechnet))  +
     facet_wrap(vars(whichRegion), scales="free") +  scale_y_log10(label = label_number_si()) + 
     geom_vline(xintercept = redDate1, color = "green") + 
@@ -98,3 +107,4 @@ if(plotCreate){
     annotate("text", x = redDate1, y = 300, label = "Reduzierungsmaßnahme 1", angle=90) 
   
 }
+
