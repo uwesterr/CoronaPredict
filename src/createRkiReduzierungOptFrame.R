@@ -14,7 +14,7 @@ createRkiRegOptFrame <- function(RkiDataWithSumsNested, regionSelected, input ){
 setwd("~/CloudProjectsUnderWork/ProjectsUnderWork/PredCo/CoronaPredict/src")
 source(file = "Rechenkern.R")
 # source(file = "createLandkreisR0_no_erfasstDf.R")
- source(file = "createDfBundLandKreis.R")
+# source(file = "createDfBundLandKreis.R")
 # source(file = "optimizerLoopingR0N0.R")
 source(file = "helperForCovid19.R")
 load("../data/inputExample.RData")
