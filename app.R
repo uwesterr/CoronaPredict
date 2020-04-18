@@ -59,13 +59,31 @@ source(file = "src/helperForCovid19.R")
 
 
 
-if(file.exists("data/RkiReduzierungOptFrame.RData")){
+if(file.exists("data/createDfBundLandKreisOutput.RData")){
   
-  load("data/RkiReduzierungOptFrame.RData")
+  load("data/createDfBundLandKreisOutput.RData") 
+  #  loads dataframe RkiData from  file createDfBundLandKreisOutput.RData created by 
+  # cronjob running createDfBundLandKreis.R every day at 0.01am 
+  load("data/R0n0OptimizedStep0.0120200418.RData") 
+  #  loads dataframe RkiDataWithRoNoOpimized from  file R0n0OptimizedStep0.0120200418.RData created by 
+  #  running createRkiRegOptFrame.R on 2020.04.18
+  # join with up to date data from RKI and throwing old data away
+  RkiDataWithRoNoOpimizedUpToDate <- left_join(RkiData,RkiDataWithRoNoOpimized %>% select(-data))
+  RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>% 
+                                      select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, predictedValues)),
+                                    RkiDataWithRoNoOpimized %>% select(-data))
+  # next step is to read in reduzierungs values
+ # load("data/RkiReduzierungOpt.RData")
+  #  loads dataframe RkiDataWithSumsNested from  file RkiReduzierungOpt.RData created by 
+  # cronjob running createRkiReduzierungOptFrame.R every day at 0.01am 
   
+  
+  RkiDataWithSumsNested  <- RkiDataWithRoNoOpimizedUpToDate
+  
+
 } else{
   
-  RkiDataWithSumsNested <-  createDfBundLandKreis() # data are generated and stored so they are ready for next call 
+ showModal("Fehler, Daten fehlen ")
   
 }
 
@@ -99,11 +117,11 @@ ui <- function(request) {
                                            column(6,
                                                   
                                                   selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("---","Deutschland", RkiDataWithSumsNested %>% filter(groupedBy == "Bundesland") %>% 
-                                                                select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "Deutschland", multiple = FALSE,
+                                                                                                                            select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "Deutschland", multiple = FALSE,
                                                               selectize = TRUE, width = NULL, size = NULL)),
                                            column(6,
                                                   selectInput("LandkreiseSelected", "Landkeis", choices = c("---", RkiDataWithSumsNested %>% filter(groupedBy == "Landkreis") %>% 
-                                                               select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "LK Esslingen")
+                                                                                                              select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "LK Esslingen")
                                            ))),
                                        
                                        
@@ -350,9 +368,9 @@ server <- function(input, output, session) {
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-     #browser()
+      #browser()
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
-    
+      
       updateSliderInput(session, "reduzierung_rt1", value = RkiDataWithSumsNested$reduzierung_rt1)
       updateSliderInput(session, "reduzierung_rt2", value = RkiDataWithSumsNested$reduzierung_rt2)
       updateSliderInput(session, "reduzierung_rt3", value = RkiDataWithSumsNested$reduzierung_rt3)
@@ -384,7 +402,7 @@ server <- function(input, output, session) {
   })
   
   rkiAndPredictData <- reactive({
-  #  browser()
+    #  browser()
     if (r0_no_erfasstDf()$NotEnoughDataFlag) {
       showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", 
                             "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. 
@@ -392,7 +410,7 @@ server <- function(input, output, session) {
       
     }
     RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest(data)
-  
+    
     df_nom <-  Rechenkern(RkiDataWithR0N0, input)
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
