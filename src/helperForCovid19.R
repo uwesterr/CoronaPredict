@@ -97,39 +97,15 @@ denormalizePara <- function(optPara, parameter_tibble, para) {
   names(denormPara) <- parameter_tibble$var_name
   denormPara
 }
-
-calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, RkiDataWithR0N0,input) {   
-  # calculate the predictions for the optimzaition loop, i.e. GA algorithm
-  denormPara <- denormalizePara(optPara, parameter_tibble)
-  #  cat("para",unlist(denormPara,"\n"))
-  for(i in 1 : length(optPara)){
-    allPara[[i]] <- denormPara[[i]]
-  }
-  
-  inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
-  inputVarNames <- names(allPara)
-  for (inputVarName in   inputVarNames ) {
-    inputForOptimization[[inputVarName]]<- allPara[[inputVarName]]
-  }
-  
-  inputForOptimization$dateInput[2] = RkiDataWithR0N0$MeldeDate %>% max() # set endDate to date of last MeldeDate
-  dfRechenKern <-   Rechenkern(RkiDataWithR0N0, inputForOptimization)
-
-  dfRechenKern <- dfRechenKern %>% filter(Tag  %in% RkiDataWithR0N0$MeldeDate)
-  RkiDataWithR0N0 <- RkiDataWithR0N0 %>% filter(MeldeDate  %in% dfRechenKern$Tag)
-  # res <- MPE(dfRechenKern$ErfassteInfizierteBerechnet,RkiDataWithR0N0$SumAnzahl)
+createRkiRegOptFrame <- function(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, input ){
   # browser()
-  #    res <- (
-  #      (sum(
-  #      (log10(RkiDataWithR0N0$SumAnzahl)   - log10(dfRechenKern$ErfassteInfizierteBerechnet))^2)
-  #      )/(nrow(dfRechenKern)-1)
-  #      )^0.5
-  #  res <- sqrt(mean((log10(RkiDataWithR0N0$SumAnzahl)-log10(dfRechenKern$ErfassteInfizierteBerechnet))^2))
-  res <- MAPE(log10(RkiDataWithR0N0$SumAnzahl),log10(dfRechenKern$ErfassteInfizierteBerechnet))
-  # cat("res is :", res , "redu1 = ", reduzierung_rt1, "\n")
-  # res <- sqrt(mean((log10(dfRechenKern$ErfassteInfizierteBerechnet)-log10(RkiDataWithR0N0$SumAnzahl))^2))
-  return(-res)
-} 
+  RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>%  filter(whichRegion == regionSelected) %>% unnest(data)
+  res <- optimizerGeneticAlgorithmRedReduction(RkiDataWithR0N0, input)
+  indexEntitiy <- which(RkiDataWithRoNoAndReduzierungOpimized$whichRegion == regionSelected)
+  RkiDataWithRoNoAndReduzierungOpimized$reduzierungsOptResult[indexEntitiy] <-list(res$reduzierungsOptResult )
+  
+  return(list( "RkiDataWithRoNoAndReduzierungOpimized" = RkiDataWithRoNoAndReduzierungOpimized))
+}
 optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, input) {
   # optimizer using genetic algorithm to optimize reduzierungsmaßnahmen und R0 n0
   # dfRoNoOpt should be dataframe starting with reduzierung_datum1
@@ -187,6 +163,39 @@ optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, input) {
   return(list("reduzierungsOptResult" = reduzierungsOptResult))
   
 }
+calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, RkiDataWithR0N0,input) {   
+  # calculate the predictions for the optimzaition loop, i.e. GA algorithm
+  denormPara <- denormalizePara(optPara, parameter_tibble)
+  #  cat("para",unlist(denormPara,"\n"))
+  for(i in 1 : length(optPara)){
+    allPara[[i]] <- denormPara[[i]]
+  }
+  
+  inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
+  inputVarNames <- names(allPara)
+  for (inputVarName in   inputVarNames ) {
+    inputForOptimization[[inputVarName]]<- allPara[[inputVarName]]
+  }
+  
+  inputForOptimization$dateInput[2] = RkiDataWithR0N0$MeldeDate %>% max() # set endDate to date of last MeldeDate
+    dfRechenKern <-   Rechenkern(RkiDataWithR0N0, inputForOptimization)
+
+  dfRechenKern <- dfRechenKern %>% filter(Tag  %in% RkiDataWithR0N0$MeldeDate)
+  RkiDataWithR0N0 <- RkiDataWithR0N0 %>% filter(MeldeDate  %in% dfRechenKern$Tag)
+  # res <- MPE(dfRechenKern$ErfassteInfizierteBerechnet,RkiDataWithR0N0$SumAnzahl)
+  # browser()
+  #    res <- (
+  #      (sum(
+  #      (log10(RkiDataWithR0N0$SumAnzahl)   - log10(dfRechenKern$ErfassteInfizierteBerechnet))^2)
+  #      )/(nrow(dfRechenKern)-1)
+  #      )^0.5
+  #  res <- sqrt(mean((log10(RkiDataWithR0N0$SumAnzahl)-log10(dfRechenKern$ErfassteInfizierteBerechnet))^2))
+  res <- MAPE(log10(RkiDataWithR0N0$SumAnzahl),log10(dfRechenKern$ErfassteInfizierteBerechnet))
+  # cat("res is :", res , "redu1 = ", reduzierung_rt1, "\n")
+  # res <- sqrt(mean((log10(dfRechenKern$ErfassteInfizierteBerechnet)-log10(RkiDataWithR0N0$SumAnzahl))^2))
+  return(-res)
+} 
+
 
 calcReduziertOptPredictions <- function(R0, n0, dfRoNoOpt, input, startDate){
   # browser()
@@ -199,3 +208,6 @@ calcReduziertOptPredictions <- function(R0, n0, dfRoNoOpt, input, startDate){
   
   return(dfRechenKern) 
 }   
+
+
+
