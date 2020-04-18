@@ -14,42 +14,55 @@ library(DT)
 library(shinyalert)
 
 
-
-
 createDfBundLandKreis <- function() {
-  
+ 
   historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
-  
+
+
   historyDf <- historyData[["features"]][["properties"]]
   historyDf$MeldeDate <- as.Date(historyDf$Meldedatum)
   
   
   ## read population file from thonmas
-  bundesLandPopulation <- read_excel("bundesland_landkreis_200326_2.xlsx", "bundesland", col_names = c("Bundesland", "EinwohnerBundesland"))
-  landKreisPopulation <- read_excel("bundesland_landkreis_200326_2.xlsx", "landkreis", col_names = c("Landkreis", "EinwohnerLandkreis"))
+  bundesLandPopulation <- read_excel("../data/bundesland_landkreis_200326_2.xlsx", "bundesland", col_names = c("Bundesland", "EinwohnerBundesland"))
+  landKreisPopulation <- read_excel("../data/bundesland_landkreis_200326_2.xlsx", "landkreis", col_names = c("Landkreis", "EinwohnerLandkreis"))
   # browser()
   BundFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% summarise(FirstMelde = min(MeldeDate))
   historyDfBund <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, list(sum), na.rm = TRUE) %>% 
-    mutate(sumAnzahlFallBund = cumsum(AnzahlFall), sumToteBund = cumsum(AnzahlTodesfall),
-           BundIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% mutate(EinwohnerBund = bundesLandPopulation %>% summarise(sum = sum(EinwohnerBundesland)) %>% unlist) 
+    mutate(Bundesland = "NA", Landkreis = NA, SumAnzahl = cumsum(AnzahlFall), sumTote = cumsum(AnzahlTodesfall), whichRegion = "Deutschland",
+           Index = as.numeric(MeldeDate- min(MeldeDate))) %>% mutate(Einwohner = bundesLandPopulation %>% summarise(sum = sum(EinwohnerBundesland)) %>% unlist) 
   historyDfBund$FirstMelde <- BundFirstMeldung %>% unlist %>% as.Date()
   
   
   
   BundesLandFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% group_by(Bundesland) %>% summarise(FirstMelde = min(MeldeDate))
   historyDfBundesLand  <- historyDf %>% dplyr::ungroup() %>% group_by(Bundesland, MeldeDate)  %>% summarise_if(is.numeric, sum, na.rm = TRUE)  %>% 
-    mutate(sumAnzahlFallBundesland = cumsum(AnzahlFall), sumToteBundesland = cumsum(AnzahlTodesfall),
-           sumAnzahlFallBundesland = ifelse(sumAnzahlFallBundesland <1, 0.1,sumAnzahlFallBundesland),
-           LandIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(BundesLandFirstMeldung) %>% left_join(bundesLandPopulation)
+    mutate(Landkreis = NA, SumAnzahl = cumsum(AnzahlFall), sumTote = cumsum(AnzahlTodesfall),whichRegion = Bundesland,
+           SumAnzahl = ifelse(SumAnzahl <1, 0.1,SumAnzahl),
+           Index = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(BundesLandFirstMeldung) %>% left_join(bundesLandPopulation)  %>% 
+        rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) 
   
   
   
   
   LandkreisFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% group_by(Landkreis) %>% summarise(FirstMelde = min(MeldeDate))
   historyDfLandkreis <- historyDf  %>% dplyr::group_by(Bundesland,Landkreis, MeldeDate)%>% dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)  %>%
-    mutate(sumAnzahlFallLandkreis = cumsum(AnzahlFall), sumToteLandkreis = cumsum(AnzahlTodesfall),
-           sumAnzahlFallLandkreis = ifelse(sumAnzahlFallLandkreis <1, 0.1,sumAnzahlFallLandkreis),
-           KreisIndex = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(LandkreisFirstMeldung) %>%  left_join(landKreisPopulation)
+    mutate(SumAnzahl = cumsum(AnzahlFall), sumTote = cumsum(AnzahlTodesfall), whichRegion = Landkreis,
+           SumAnzahl = ifelse(SumAnzahl <1, 0.1,SumAnzahl),
+           Index = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(LandkreisFirstMeldung) %>%  left_join(landKreisPopulation)  %>% 
+     rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) 
   
-  return(list(historyDfBund, historyDfBundesLand, historyDfLandkreis))
+  RkiDataWithSumsNested <- bind_rows(historyDfBund, historyDfBundesLand, historyDfLandkreis) %>% group_by(whichRegion) %>% nest() %>% 
+    add_column("R0Start"= -1e7, "R0Opt"= -1e7, "n0Start" = -1e7, "n0Opt" = -1e7, "RegStartDate" = as.Date('1966-05-10'), "groupedBy" ="", "predictedValues" = "NULL") %>% mutate( 
+               groupedBy = ifelse(whichRegion == "Deutschland", "Deutschland", 
+                                  ifelse(whichRegion %in% historyDf$Bundesland, "Bundesland",
+                                         ifelse(whichRegion %in% historyDf$Landkreis, "Landkreis",""))))
+  save(RkiDataWithSumsNested, file = "data/createDfBundLandKreisOutput.RData")
+  return(list(RkiDataWithSumsNested))
 }
+
+
+createDfBundLandKreis()
+
+
+

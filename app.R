@@ -24,7 +24,12 @@ if (!("shinyalert" %in% rownames(installed.packages()))) install.packages("shiny
 if (!("shinyWidgets" %in% rownames(installed.packages()))) install.packages("shinyWidgets")
 if (!("staTools" %in% rownames(installed.packages()))) install.packages("staTools")
 if (!("GA" %in% rownames(installed.packages()))) install.packages("GA")
+if (!("tictoc" %in% rownames(installed.packages()))) install.packages("tictoc")
+if (!("httr" %in% rownames(installed.packages()))) install.packages("httr")
 
+
+library(httr)
+library(tictoc)
 library(GA)
 library(staTools)
 library(shinyWidgets)
@@ -47,18 +52,22 @@ library(scales)
 
 
 source(file = "src/Rechenkern.R")
-source(file = "src/createLandkreisR0_no_erfasstDf.R")
-source(file = "src/createDfBundLandKreis.R")
-source(file = "src/optimizerLoopingR0N0.R")
+#source(file = "src/createLandkreisR0_no_erfasstDf.R")
+#source(file = "src/createDfBundLandKreis.R")
+# source(file = "src/optimizerLoopingR0N0.R")
 source(file = "src/helperForCovid19.R")
 
 
 
-
-outpput <-  createDfBundLandKreis()
-historyDfBund <- outpput[[1]]
-historyDfBundesLand <- outpput[[2]]
-historyDfLandkreis <- outpput[[3]]
+if(file.exists("data/RkiReduzierungOptFrame.RData")){
+  
+  load("data/RkiReduzierungOptFrame.RData")
+  
+} else{
+  
+  RkiDataWithSumsNested <-  createDfBundLandKreis() # data are generated and stored so they are ready for next call 
+  
+}
 
 # source(file = "src/ui.R")
 ui <- function(request) {
@@ -89,23 +98,25 @@ ui <- function(request) {
                                            
                                            column(6,
                                                   
-                                                  selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("---","Deutschland",historyDfBundesLand$Bundesland %>% unique() %>% str_sort), selected = "Deutschland", multiple = FALSE,
+                                                  selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("---","Deutschland", RkiDataWithSumsNested %>% filter(groupedBy == "Bundesland") %>% 
+                                                                select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "Deutschland", multiple = FALSE,
                                                               selectize = TRUE, width = NULL, size = NULL)),
                                            column(6,
-                                                  selectInput("LandkreiseSelected", "Landkeis", choices = c("---",historyDfLandkreis$Landkreis %>% unique() %>% str_sort), selected = "LK Esslingen")
+                                                  selectInput("LandkreiseSelected", "Landkeis", choices = c("---", RkiDataWithSumsNested %>% filter(groupedBy == "Landkreis") %>% 
+                                                               select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "LK Esslingen")
                                            ))),
                                        
                                        
                                        
                                        h3("Reduzierende Massnahmen"), 
                                        wellPanel(
-                                       fluidRow(
-                                         column(5,
-                                       
-                                       actionButton("optimizeReduzierendeBtn", "Ermittlung Startwert für Reduzierung Rt")), 
-                                       column(7,
-                                       helpText("Starwerte für die Reduzierung Rt für einen guten Fit werden ermittelt")
-                                       ))),
+                                         fluidRow(
+                                           column(5,
+                                                  
+                                                  actionButton("optimizeReduzierendeBtn", "Ermittlung Startwert für Reduzierung Rt")), 
+                                           column(7,
+                                                  helpText("Starwerte für die Reduzierung Rt für einen guten Fit werden ermittelt")
+                                           ))),
                                        wellPanel(
                                          fluidRow(
                                            column(4,
@@ -150,8 +161,8 @@ ui <- function(request) {
                                                   numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15, min=1, max=100, step=1),
                                                   numericInput("ta", label = "Infektiosität [d]", value = 6, min=1, max=20, step=1),
                                                   numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 4, min=1, max=20, step=1)))),
-                                     
-                                     
+                                       
+                                       
                                        h3("Einstellen der Darstellung") ,
                                        column(7,   
                                               wellPanel(
@@ -174,18 +185,18 @@ ui <- function(request) {
                                               )),
                                        column(8,
                                               #wellPanel(
-                                                tags$a(
-                                                  href="https://admos.de/de/", 
-                                                  tags$img(src = "logo-admos.png",
-                                                           width = "220px", height = "71px"),
+                                              tags$a(
+                                                href="https://admos.de/de/", 
+                                                tags$img(src = "logo-admos.png",
+                                                         width = "220px", height = "71px"),
                                                 #)
-                                                )),
+                                              )),
                                        column(4,
                                               #wellPanel(
-                                                tags$a(
-                                                  href="https://www.st2c.de", 
-                                                  tags$img(src = "logoSt2c.png",
-                                                           width = "100px", height = "100px"),
+                                              tags$a(
+                                                href="https://www.st2c.de", 
+                                                tags$img(src = "logoSt2c.png",
+                                                         width = "100px", height = "100px"),
                                                 #)
                                               )),                                      
                                        
@@ -195,19 +206,19 @@ ui <- function(request) {
                                        
                                        # adding the new div tag to the sidebar
                                        tags$div(
-                                              HTML(paste("Source code available on",
-                                                   tags$a(href="https://github.com/uwesterr/CoronaPredict", "GitHub"))),
-                                              br(),
-                                              HTML(paste("Data accessed on",
-                                                   Sys.time(),
-                                                   tags$a(href="https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson",
-                                                   "from RKI")))
+                                         HTML(paste("Source code available on",
+                                                    tags$a(href="https://github.com/uwesterr/CoronaPredict", "GitHub"))),
+                                         br(),
+                                         HTML(paste("Data accessed on",
+                                                    Sys.time(),
+                                                    tags$a(href="https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson",
+                                                           "from RKI")))
                                        ),
                                        
                                        #dummy to show lowest elements
                                        column(6,
                                               br(),br(),br(),br(),br()
-                                              ),
+                                       ),
                                        
                                      ), # end sidebar panel
                                      mainPanel(
@@ -226,7 +237,7 @@ ui <- function(request) {
                                              cellArgs = list(style = "padding: 6px"), 
                                              addSpinner(plotlyOutput(outputId ="Kumuliert"), spin = "circle", color = "#E41A1C"),
                                              addSpinner(plotlyOutput(outputId ="Verlauf"), spin = "circle", color = "#E41A1C"))
-#addSpinner(plotOutput("plot1"), spin = "circle", color = "#E41A1C"),                                           
+                                           #addSpinner(plotOutput("plot1"), spin = "circle", color = "#E41A1C"),                                           
                                          )
                                        ),
                                        
@@ -256,7 +267,7 @@ ui <- function(request) {
                                              cellHeight = "120%",
                                              addSpinner(plotlyOutput(outputId ="Krankenhaus"), spin = "circle", color = "#E41A1C"),
                                              addSpinner(plotlyOutput(outputId ="Reproduktionsrate"), spin = "circle", color = "#E41A1C"))                                             
-                                            # plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
+                                           # plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
                                          ),
                                          
                                        )       
@@ -299,18 +310,18 @@ ui <- function(request) {
 
 server <- function(input, output, session) {
   
-
-
+  
+  
   vals <- reactiveValues(Flag = "Bundesland")
   r0_no_erfasstDf <- reactiveVal(0) 
   
-
+  
   
   observeEvent(input$optimizeReduzierendeBtn, {
     showModal(modalDialog(title = "Optimierung läuft"))
-
+    
     if(vals$Flag  == "Bundesland"){
-    regionSelected = 2
+      regionSelected = 2
     } else {
       regionSelected = 3
     }
@@ -324,23 +335,28 @@ server <- function(input, output, session) {
              seed = 2020,
              lower = c(0, 0,-100 ), upper = c(100, 100, 100), 
              popSize = 10, maxiter = 30, run = 5)
-   # browser()
+    # browser()
     updateSliderInput(session, "reduzierung_rt1", value = GA@solution[[1]])
     updateSliderInput(session, "reduzierung_rt2", value = GA@solution[[2]])
     updateSliderInput(session, "reduzierung_rt3", value = GA@solution[[3]])
     removeModal()
-    })
+  })
   
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
-
+    
     if(input$BundeslandSelected =="---"){
     }else {
       showModal(modalDialog(title = "Daten werden berechnet"))
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
-      r0_no_erfasstDf(r0_no_erfasstDf)
+     #browser()
+      RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
+    
+      updateSliderInput(session, "reduzierung_rt1", value = RkiDataWithSumsNested$reduzierung_rt1)
+      updateSliderInput(session, "reduzierung_rt2", value = RkiDataWithSumsNested$reduzierung_rt2)
+      updateSliderInput(session, "reduzierung_rt3", value = RkiDataWithSumsNested$reduzierung_rt3)
+      r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
       removeModal()
       
@@ -356,21 +372,28 @@ server <- function(input, output, session) {
       updateSelectInput(session, "BundeslandSelected",  selected = "---")
       vals$Flag  <- "Landkreis"
       regionSelected = 3
-      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
-      r0_no_erfasstDf(r0_no_erfasstDf)
+      # browser()
+      RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$LandkreiseSelected)
+      updateSliderInput(session, "reduzierung_rt1", value = RkiDataWithSumsNested$reduzierung_rt1)
+      updateSliderInput(session, "reduzierung_rt2", value = RkiDataWithSumsNested$reduzierung_rt2)
+      updateSliderInput(session, "reduzierung_rt3", value = RkiDataWithSumsNested$reduzierung_rt3)
+      r0_no_erfasstDf(RkiDataWithSumsNested)
       removeModal()
       
     }
   })
   
   rkiAndPredictData <- reactive({
-    dfRoNo <- r0_no_erfasstDf()[[1]]
-    n0_erfasst_nom_min_max <- r0_no_erfasstDf()[[2]]
-    R0_conf_nom_min_max <- r0_no_erfasstDf()[[3]]
-    startDate <- r0_no_erfasstDf()[[4]]
-    rechenDf_nom <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_nom, R0 =R0_conf_nom_min_max$R0_nom)
-    df_nom <-  Rechenkern(rechenDf_nom,input, startDate)
-    
+  #  browser()
+    if (r0_no_erfasstDf()$NotEnoughDataFlag) {
+      showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", 
+                            "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. 
+                            Hierdurch ist aber auch keine valide Zukunftsschätzung möglich.",  footer = modalButton("Ok")))
+      
+    }
+    RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest(data)
+  
+    df_nom <-  Rechenkern(RkiDataWithR0N0, input)
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
     konfidenz_je_tag <- mean(c(0.023, 0.029/2)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
@@ -401,7 +424,7 @@ server <- function(input, output, session) {
     df_nom$IntensivBerechnet_min <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
     df_nom$IntensivBerechnet_max <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
     
- 
+    
     df <- df_nom %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
                             Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
   }) 
@@ -430,7 +453,7 @@ server <- function(input, output, session) {
     
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
-   
+    
     tmp <- rkiAndPredictData()
     colnames(tmp)[colnames(tmp) == "SumAnzahl"] <- "Erfasste_Infizierte"
     colnames(tmp)[colnames(tmp) == "sumTote"] <- "Erfasste_Todesfaelle"
@@ -470,7 +493,7 @@ server <- function(input, output, session) {
                                                            'Todesfälle erfasst' = color5)) +
       
       labs(color = 'Daten') + scale_y_continuous(labels = scales::comma)
-  
+    
     if(logy){
       p <- p +  scale_y_log10(label = label_number_si())
       
@@ -494,7 +517,7 @@ server <- function(input, output, session) {
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
     p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) +  geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
       geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
- 
+      
       geom_point(aes(x=Tag,y= AnzahlFall, color = "Neu Infizierte erfasst")) +
       geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y=NeueToteErfasst, color = "Neue Todesfälle erfasst")) +
       geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
@@ -605,7 +628,7 @@ server <- function(input, output, session) {
     p
     
   })  
-
+  
   # Save extra values in state$values when we bookmark
   onBookmark(function(state) {
     state$values$currentSum <- vals$Flag
@@ -625,8 +648,8 @@ server <- function(input, output, session) {
     }else {
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfBundesLand, historyDfBund, regionSelected, vals, input,session)
-      r0_no_erfasstDf(r0_no_erfasstDf)
+      RkiDataWithSumsNested  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
+      r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
     }
@@ -636,8 +659,8 @@ server <- function(input, output, session) {
     }else {
       vals$Flag  <- "Landkreis"
       regionSelected = 3
-      r0_no_erfasstDf  <- createLandkreisR0_no_erfasstDf(historyDfLandkreis, historyDfBund, regionSelected, vals, input,session)
-      r0_no_erfasstDf(r0_no_erfasstDf)
+      RkiDataWithSumsNested  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
+      r0_no_erfasstDf(RkiDataWithSumsNested)
       updateSelectInput(session, "BundeslandSelected",  selected = "---")
     }
     
