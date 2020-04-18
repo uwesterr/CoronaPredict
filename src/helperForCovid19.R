@@ -46,10 +46,10 @@ calcMetric <- function(dfRechenKern, data){
 
 
 
-createRkiRegOptFrame <- function(dfNested, regionSelected, parameter_tibble, optFunction, resultColumnName, input){
+createRkiRegOptFrame <- function(dfNested, regionSelected, parameter_tibble, optFunction, resultColumnName,  gaPara, input){
   # browser()
   dfUnNested <- dfNested %>%  filter(whichRegion == regionSelected) %>% unnest(data)
-  res <- optimizerGeneticAlgorithmRedReduction(dfUnNested, parameter_tibble, optFunction, input)
+  res <- optimizerGeneticAlgorithmRedReduction(dfUnNested, parameter_tibble, optFunction,  gaPara, input)
   indexEntitiy <- which(dfNested$whichRegion == regionSelected)
  # dfNested$reduzierungsOptResult[indexEntitiy] <- list(res$OptResult)
   #dfNested[[resultColumnName]][indexEntitiy]
@@ -57,7 +57,7 @@ createRkiRegOptFrame <- function(dfNested, regionSelected, parameter_tibble, opt
   
   return(list( "dfNested" = dfNested))
 }
-optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, optFunction, input) {
+optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, optFunction,  gaPara, input) {
   # optimizer using genetic algorithm to optimize reduzierungsmaßnahmen und R0 n0
   # dfRoNoOpt should be dataframe starting with reduzierung_datum1
   dateOfFirstAction <- input$reduzierung_datum1
@@ -76,7 +76,8 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
             fitness = optFunction,
             lower = minOpt,
             upper = maxOpt,
-            popSize = 10, maxiter = 3,
+            popSize =  gaPara$popSize, 
+            maxiter = gaPara$maxiter,
             seed = 2020,
             allPara = allPara, parameter_tibble = parameter_tibble, dfUnNested = dfUnNested, input = input,
             keepBest = FALSE

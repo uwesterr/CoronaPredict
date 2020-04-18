@@ -21,10 +21,8 @@ RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>%
 load("../data/landkreiseBadenWuerttemberg.RData")
 RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoOpimizedUpToDate
 RkiDataWithRoNoAndReduzierungOpimized$inputOrig <- list(input)
-RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
-  as_tibble() %>% 
-  select(!contains("redu")) %>% add_column("reduzierungsOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
-############ define optimization parameters
+
+############ define optimization parameters, optFunction and resultColumnName #################
 parameter_tibble <- tribble(
   ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
   "reduzierung_rt1", 0         ,  0,        60,        "TRUE",
@@ -33,6 +31,10 @@ parameter_tibble <- tribble(
 # function to be used to calculate metric for optimizer
 optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
+gaPara <- list("popSize" = 15, "maxiter" = 4)
+RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
+  as_tibble() %>% 
+  select(!contains("redu")) %>% add_column("reduzierungsOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
 
 index <- 0
 
@@ -48,7 +50,8 @@ for (regionSelected in RkiDataWithRoNoAndReduzierungOpimized$whichRegion) {
   index <- index +1
   print(index)
   print(regionSelected)#
-  tmp <-   createRkiRegOptFrame(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, parameter_tibble, optFunction, resultColumnName, input)
+  tmp <-   createRkiRegOptFrame(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, parameter_tibble, 
+                                optFunction, resultColumnName, gaPara, input)
   regionSelectedDf <- tmp[["dfNested"]] %>% filter(whichRegion == regionSelected)
   RkiDataWithRoNoAndReduzierungOpimized[match(regionSelectedDf$whichRegion, RkiDataWithRoNoAndReduzierungOpimized$whichRegion), ] <- regionSelectedDf
 }

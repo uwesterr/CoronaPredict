@@ -13,39 +13,42 @@ load("../data/RkiReduzierungOptFrameBW200417.RData")
 #  loads dataframe RkiDataWithRoNoAndReduzierungOpimized from  file RkiReduzierungOpt.RData created by 
 # cronjob running createRkiReduzierungOptFrame.R every day at 0.01am 
 
-
-
-
 RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized <- RkiDataWithRoNoAndReduzierungOpimized
 RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized$inputOrig <- list(input)
 
-############ define optimization parameters
+############ define optimization parameters, optFunction and resultColumnName #################
 parameter_tibble <- tribble(
   ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
-  "reduzierung_rt1", 0         ,  0,        60,        "TRUE",
-  "reduzierung_rt2", 0         ,  0,        60,        "TRUE",
-  "reduzierung_rt3", -20       ,  -40,      30,        "TRUE")
-# function to be used to calculate metric for optimizer
-optFunction <- calcOptimizationKrankenhausDaten
-resultColumnName <- "KrankenhausOptResult"
+  "kh_normal",         4.5         ,  1,        20,        "TRUE", # Anteil an aktuellen Infizierten [%]
+  "kh_intensiv",       25          ,  10,       40,        "TRUE", # Anteil Intensivstation [%]
+  "t_kh",              10          ,  5,        30,        "TRUE", # Dauer in Krankenhaus
+  "t_intensiv",        10          ,  5,        30,        "TRUE", # Dauer Intensivstation
+  "dt_inf_kh",          8          ,  3,        14,        "TRUE", # Versatz nach Infektion
+  "dt_kh_int",          1          ,  1,        15,        "TRUE", # Versatz Krankenhaus - Intensivstations
+  )
+
+optFunction <- calcOptimizationKrankenhausDaten # function to be used to calculate metric for optimizer
+resultColumnName <- "KrankenhausOptResult" # column where result of optimizer is stored
+gaPara <- list("popSize" = 10, "maxiter" = 3)
 RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized <- RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>% 
   as_tibble()  %>% add_column("KrankenhausOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
 
+###################################################################################################
 index <- 0
 
-################## only baden-württemberg  #########
+################## only Baden-Württemberg   because we only have krankenhausdata for Baden-Württemberg #########
 RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized <- RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>%
   filter(whichRegion %in% c(landkreiseBadenWuerttemberg, "Baden-Württemberg")) %>% head(2)
 
 #####################################################
 tictoc::tic()
-source(file = "helperForCovid19.R")
 
 for (regionSelected in RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized$whichRegion) {
   index <- index +1
   print(index)
   print(regionSelected)#
-  tmp <-   createRkiRegOptFrame(RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized, regionSelected, parameter_tibble, optFunction, resultColumnName, input)
+  tmp <-   createRkiRegOptFrame(RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized, regionSelected, parameter_tibble, 
+                                optFunction, resultColumnName, gaPara, input)
   regionSelectedDf <- tmp[["dfNested"]] %>% filter(whichRegion == regionSelected)
   RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized[match(regionSelectedDf$whichRegion, RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized$whichRegion), ] <- regionSelectedDf
 }
