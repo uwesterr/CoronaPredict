@@ -77,8 +77,10 @@ if(file.exists("data/createDfBundLandKreisOutput.RData")){
   #  loads dataframe RkiDataWithSumsNested from  file RkiReduzierungOpt.RData created by 
   # cronjob running createRkiReduzierungOptFrame.R every day at 0.01am 
   
+  #### needs to replace as soon as optimized values are available
+  load("data/RkiReduzierungOptFrameBW200417.RData")
   
-  RkiDataWithSumsNested  <- RkiDataWithRoNoOpimizedUpToDate
+  RkiDataWithSumsNested  <- RkiDataWithRoNoAndReduzierungOpimized %>% unnest(reduzierungsOptResult) #
   
 
 } else{
@@ -368,7 +370,7 @@ server <- function(input, output, session) {
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-      #browser()
+      # browser()
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
       
       updateSliderInput(session, "reduzierung_rt1", value = RkiDataWithSumsNested$reduzierung_rt1)
@@ -402,7 +404,7 @@ server <- function(input, output, session) {
   })
   
   rkiAndPredictData <- reactive({
-    #  browser()
+   #  browser()
     if (r0_no_erfasstDf()$NotEnoughDataFlag) {
       showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", 
                             "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. 

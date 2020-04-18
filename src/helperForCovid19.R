@@ -47,7 +47,7 @@ calcMetric <- function(dfRechenKern, data){
 
 
 createRkiRegOptFrame <- function(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, parameter_tibble, input ){
-   browser()
+   #browser()
   RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>%  filter(whichRegion == regionSelected) %>% unnest(data)
   res <- optimizerGeneticAlgorithmRedReduction(RkiDataWithR0N0, parameter_tibble, input )
   indexEntitiy <- which(RkiDataWithRoNoAndReduzierungOpimized$whichRegion == regionSelected)
@@ -74,19 +74,18 @@ optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, parameter_tib
             fitness = calcPredictionsForGaOptimization,
             lower = minOpt,
             upper = maxOpt,
-            popSize = 10, maxiter = 30,
+            popSize = 15, maxiter = 30,
             seed = 2020,
             allPara = allPara, parameter_tibble = parameter_tibble, RkiDataWithR0N0 = RkiDataWithR0N0, input = input,
             keepBest = FALSE
   )
-  denormPara <- denormalizePara(GA@solution, parameter_tibble, para)
   
   print(GA@solution)
-  for(i in seq(1, length(denormPara)))  {
-    print(i)
-    GA@solution[i] <- denormPara[[i]]
-  }
-  print(GA@solution)
+  #browser()
+  # using always the first line of the solution output, TODO: understand why at times there are several 
+  # output lines
+  denormPara <- denormalizePara(GA@solution[1,], parameter_tibble, para)
+
   cat("denormPara", unlist(denormPara), "\n")  
 
   #  ############## non normalized optimization
@@ -111,7 +110,6 @@ optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, parameter_tib
 }
 
 createOptParmeters <- function(parameter_tibble){
-  browser()
   parameter_tibble$new_sol <- NA 
   
   parameter_tibble <- parameter_tibble %>% mutate(start_value = var_value)

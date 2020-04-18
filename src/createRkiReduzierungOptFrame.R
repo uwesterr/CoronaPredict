@@ -35,16 +35,21 @@ RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>%
  index <- 0
  
  ################## only baden-württemberg  #########
- RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% filter(whichRegion %in% c(landkreiseBadenWuerttemberg, "Baden-Württemberg")) 
+ RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%
+   filter(whichRegion %in% c(landkreiseBadenWuerttemberg, "Baden-Württemberg")) %>% head(10)
  
  #####################################################
  tictoc::tic()
+ source(file = "helperForCovid19.R")
+ 
  for (regionSelected in RkiDataWithRoNoAndReduzierungOpimized$whichRegion) {
    index <- index +1
    print(index)
-   print(regionSelected)
+ 
+   print(regionSelected)#
    tmp <-   createRkiRegOptFrame(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, parameter_tibble, input )
    regionSelectedDf <- tmp[["RkiDataWithRoNoAndReduzierungOpimized"]] %>% filter(whichRegion == regionSelected)
+  # browser()
    RkiDataWithRoNoAndReduzierungOpimized[match(regionSelectedDf$whichRegion, RkiDataWithRoNoAndReduzierungOpimized$whichRegion), ] <- regionSelectedDf
    
  }
@@ -53,16 +58,18 @@ RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>%
  toc()
 #browser()
 save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameBW200417.RData")
-
+#browser()
 ############### create compare plots  #######################
 
  
- load("../data/RkiReduzierungOptFrameServer0416.RData")
+# load("../data/RkiReduzierungOptFrameServer0416.RData")
 plotCreate <- 1
-load("../data/RkiReduzierungOptFrameServerMPEItr500417.RData")
+#load("../data/RkiReduzierungOptFrameServerMPEItr500417.RData")
 
 
 if(plotCreate){
+  # plot the worst n regions depending on optimizer fitness
+  a <- RkiDataWithRoNoAndReduzierungOpimized %>% unnest(reduzierungsOptResult) %>% arrange(GaFitnessValue)
   RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%    as_tibble()  %>% add_column("dfRechenKern" = 0)
   
   createRkiRegOptPlots<- function(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, input ){
@@ -85,7 +92,7 @@ if(plotCreate){
   tictoc::tic()
   dfRechenkernAndRki <- tibble()
   for (regionSelected in RkiDataWithRoNoAndReduzierungOpimized$whichRegion %>% head(10)) {
-    RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>% filter(whichRegion == regionSelected) %>% unnest(data)
+    RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>% filter(whichRegion == regionSelected) %>% unnest(data) %>% unnest(reduzierungsOptResult)
     inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
     inputForOptimization$reduzierung_rt1 <- RkiDataWithR0N0$reduzierung_rt1 %>% unique()
     inputForOptimization$reduzierung_rt2 <- RkiDataWithR0N0$reduzierung_rt2 %>% unique()
