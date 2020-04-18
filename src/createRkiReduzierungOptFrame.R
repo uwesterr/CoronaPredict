@@ -24,6 +24,14 @@ RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>%
  RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
    as_tibble() %>% 
    select(!contains("redu")) %>% add_column("reduzierungsOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
+ ############ define optimization parameters
+ parameter_tibble <- tribble(
+   ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
+   "reduzierung_rt1", 0         ,  0,        60,        "TRUE",
+   "reduzierung_rt2", 0         ,  0,        60,        "TRUE",
+   "reduzierung_rt3", -20       ,  -40,      30,        "TRUE")
+
+ 
  index <- 0
  
  ################## only baden-württemberg  #########
@@ -35,7 +43,7 @@ RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>%
    index <- index +1
    print(index)
    print(regionSelected)
-   tmp <-   createRkiRegOptFrame(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, input )
+   tmp <-   createRkiRegOptFrame(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, parameter_tibble, input )
    regionSelectedDf <- tmp[["RkiDataWithRoNoAndReduzierungOpimized"]] %>% filter(whichRegion == regionSelected)
    RkiDataWithRoNoAndReduzierungOpimized[match(regionSelectedDf$whichRegion, RkiDataWithRoNoAndReduzierungOpimized$whichRegion), ] <- regionSelectedDf
    

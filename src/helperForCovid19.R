@@ -43,17 +43,75 @@ calcMetric <- function(dfRechenKern, data){
 
 ################    optimizing reduzierung  #################
 
-createOptParmeters <- function(){
+
+
+
+createRkiRegOptFrame <- function(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, parameter_tibble, input ){
+   browser()
+  RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>%  filter(whichRegion == regionSelected) %>% unnest(data)
+  res <- optimizerGeneticAlgorithmRedReduction(RkiDataWithR0N0, parameter_tibble, input )
+  indexEntitiy <- which(RkiDataWithRoNoAndReduzierungOpimized$whichRegion == regionSelected)
+  RkiDataWithRoNoAndReduzierungOpimized$reduzierungsOptResult[indexEntitiy] <-list(res$reduzierungsOptResult )
   
-  parameter_tibble <- tribble(
-    ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
-    "reduzierung_rt1", 0         ,  0,        60,        "TRUE",
-    "reduzierung_rt2", 0         ,  0,        60,        "TRUE",
-    "reduzierung_rt3", -20       ,  -40,      30,        "TRUE")
+  return(list( "RkiDataWithRoNoAndReduzierungOpimized" = RkiDataWithRoNoAndReduzierungOpimized))
+}
+optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, parameter_tibble, input ) {
+  # optimizer using genetic algorithm to optimize reduzierungsmaßnahmen und R0 n0
+  # dfRoNoOpt should be dataframe starting with reduzierung_datum1
+  dateOfFirstAction <- input$reduzierung_datum1
+  RkiDataWithR0N0 <- RkiDataWithR0N0 %>% filter(MeldeDate >= dateOfFirstAction) # only consider values after first reduction action
   
-  parameter_tibble$var_selected <- TRUE
-  # parameter_tibble[parameter_tibble$var_name =="TNOM", "var_selected"] <- "FALSE"
+  res <- createOptParmeters(parameter_tibble)
+  allPara          <- res[[1]]
+  optPara          <- res[[2]]
+  minOpt           <- res[[3]]
+  maxOpt           <- res[[4]]
+  suggestions      <- res[[5]]
+  parameter_tibble <- res[[6]]
   
+  GA <-  ga(type = "real-valued",
+            suggestions = suggestions,
+            fitness = calcPredictionsForGaOptimization,
+            lower = minOpt,
+            upper = maxOpt,
+            popSize = 10, maxiter = 30,
+            seed = 2020,
+            allPara = allPara, parameter_tibble = parameter_tibble, RkiDataWithR0N0 = RkiDataWithR0N0, input = input,
+            keepBest = FALSE
+  )
+  denormPara <- denormalizePara(GA@solution, parameter_tibble, para)
+  
+  print(GA@solution)
+  for(i in seq(1, length(denormPara)))  {
+    print(i)
+    GA@solution[i] <- denormPara[[i]]
+  }
+  print(GA@solution)
+  cat("denormPara", unlist(denormPara), "\n")  
+
+  #  ############## non normalized optimization
+  #  suggestions <- c( 0, 0, -20)
+  #  GA <- ga(type = "real-valued", 
+  #           fitness =  function(x) calcPredictionsForGaOptimization(x[1], x[2], x[3], RkiDataWithR0N0, input),
+  #           suggestions =suggestions,
+  #           lower = c(0, 0, -40), upper = c(60, 60, 30), 
+  #           popSize = 10, maxiter = 30, run = 5, seed = 2020,
+  #           keepBest = TRUE) #a logical argument specifying if best solutions at each iteration should be saved in a slot called bestSol
+  #  
+  #  input$reduzierung_rt1 <- GA@solution[[1]]
+  #  input$reduzierung_rt2 <- GA@solution[[2]]
+  #  input$reduzierung_rt3 <- GA@solution[[3]]
+  #  print(GA@solution)
+  #  browser()
+  #########################################
+  reduzierungsOptResult <- tibble("reduzierung_rt1" = denormPara[["reduzierung_rt1"]], "reduzierung_rt2" = denormPara[["reduzierung_rt2"]],
+                                  "reduzierung_rt3" = denormPara[["reduzierung_rt3"]], "GaFitnessValue" = GA@fitnessValue, "GaPara" = list(summary(GA)))
+  return(list("reduzierungsOptResult" = reduzierungsOptResult))
+  
+}
+
+createOptParmeters <- function(parameter_tibble){
+  browser()
   parameter_tibble$new_sol <- NA 
   
   parameter_tibble <- parameter_tibble %>% mutate(start_value = var_value)
@@ -83,85 +141,6 @@ createOptParmeters <- function(){
   maxOpt <- rep(1, length(minOpt))
   # browser()
   return(list(allPara, optPara, minOpt, maxOpt, suggestions, parameter_tibble  ))
-}
-
-denormalizePara <- function(optPara, parameter_tibble, para) {
-  denormPara <- list(NULL)
-  # browser()
-  for(i in 1 : length(optPara)){
-    denormPara[[i]] <- optPara[[i]] * (parameter_tibble$var_max[i]-parameter_tibble$var_min[i]) +
-      parameter_tibble$var_min[i]
-  }
-  
-  # browser()
-  names(denormPara) <- parameter_tibble$var_name
-  denormPara
-}
-createRkiRegOptFrame <- function(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, input ){
-  # browser()
-  RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>%  filter(whichRegion == regionSelected) %>% unnest(data)
-  res <- optimizerGeneticAlgorithmRedReduction(RkiDataWithR0N0, input)
-  indexEntitiy <- which(RkiDataWithRoNoAndReduzierungOpimized$whichRegion == regionSelected)
-  RkiDataWithRoNoAndReduzierungOpimized$reduzierungsOptResult[indexEntitiy] <-list(res$reduzierungsOptResult )
-  
-  return(list( "RkiDataWithRoNoAndReduzierungOpimized" = RkiDataWithRoNoAndReduzierungOpimized))
-}
-optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, input) {
-  # optimizer using genetic algorithm to optimize reduzierungsmaßnahmen und R0 n0
-  # dfRoNoOpt should be dataframe starting with reduzierung_datum1
-  dateOfFirstAction <- input$reduzierung_datum1
-  RkiDataWithR0N0 <- RkiDataWithR0N0 %>% filter(MeldeDate >= dateOfFirstAction) # only consider values after first reduction action
-  
-  res <- createOptParmeters()
-  allPara          <- res[[1]]
-  optPara          <- res[[2]]
-  minOpt           <- res[[3]]
-  maxOpt           <- res[[4]]
-  suggestions      <- res[[5]]
-  parameter_tibble <- res[[6]]
-  
-  GA <-  ga(type = "real-valued",
-            suggestions = suggestions,
-            fitness = calcPredictionsForGaOptimization,
-            lower = minOpt,
-            upper = maxOpt,
-            popSize = 10, maxiter = 30,
-            seed = 2020,
-            allPara = allPara, parameter_tibble = parameter_tibble, RkiDataWithR0N0 = RkiDataWithR0N0, input = input,
-            keepBest = FALSE
-  )
-  denormPara <- denormalizePara(GA@solution, parameter_tibble, para)
-  
-  print(GA@solution)
-  for(i in seq(1, length(denormPara)))  {
-    print(i)
-    GA@solution[i] <- denormPara[[i]]
-  }
-  print(GA@solution)
-  cat("denormPara", unlist(denormPara), "\n")  
-  # browser()
-  
-  
-  
-  #  ############## non normalized optimization
-  #  suggestions <- c( 0, 0, -20)
-  #  GA <- ga(type = "real-valued", 
-  #           fitness =  function(x) calcPredictionsForGaOptimization(x[1], x[2], x[3], RkiDataWithR0N0, input),
-  #           suggestions =suggestions,
-  #           lower = c(0, 0, -40), upper = c(60, 60, 30), 
-  #           popSize = 10, maxiter = 30, run = 5, seed = 2020,
-  #           keepBest = TRUE) #a logical argument specifying if best solutions at each iteration should be saved in a slot called bestSol
-  #  
-  #  input$reduzierung_rt1 <- GA@solution[[1]]
-  #  input$reduzierung_rt2 <- GA@solution[[2]]
-  #  input$reduzierung_rt3 <- GA@solution[[3]]
-  #  print(GA@solution)
-  #  browser()
-  #########################################
-  reduzierungsOptResult <- tibble("reduzierung_rt1" = denormPara[["reduzierung_rt1"]], "reduzierung_rt2" = denormPara[["reduzierung_rt2"]],
-                                  "reduzierung_rt3" = denormPara[["reduzierung_rt3"]], "GaFitnessValue" = GA@fitnessValue, "GaPara" = list(summary(GA)))
-  return(list("reduzierungsOptResult" = reduzierungsOptResult))
-  
 }
 calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, RkiDataWithR0N0,input) {   
   # calculate the predictions for the optimzaition loop, i.e. GA algorithm
@@ -195,7 +174,20 @@ calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, 
   # res <- sqrt(mean((log10(dfRechenKern$ErfassteInfizierteBerechnet)-log10(RkiDataWithR0N0$SumAnzahl))^2))
   return(-res)
 } 
+denormalizePara <- function(optPara, parameter_tibble, para) {
+  denormPara <- list(NULL)
+  # browser()
+  for(i in 1 : length(optPara)){
+    denormPara[[i]] <- optPara[[i]] * (parameter_tibble$var_max[i]-parameter_tibble$var_min[i]) +
+      parameter_tibble$var_min[i]
+  }
+  
+  # browser()
+  names(denormPara) <- parameter_tibble$var_name
+  denormPara
+}
 
+############# ValidationsScriptBundeslaender ##############
 
 calcReduziertOptPredictions <- function(R0, n0, dfRoNoOpt, input, startDate){
   # browser()
