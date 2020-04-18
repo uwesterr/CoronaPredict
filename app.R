@@ -68,17 +68,18 @@ if(file.exists("data/createDfBundLandKreisOutput.RData")){
   #  loads dataframe RkiDataWithRoNoOpimized from  file R0n0OptimizedStep0.0120200418.RData created by 
   #  running createRkiRegOptFrame.R on 2020.04.18
   # join with up to date data from RKI and throwing old data away
-  RkiDataWithRoNoOpimizedUpToDate <- left_join(RkiData,RkiDataWithRoNoOpimized %>% select(-data))
   RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>% 
-                                      select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, predictedValues)),
-                                    RkiDataWithRoNoOpimized %>% select(-data))
-  # next step is to read in reduzierungs values
+                                                select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, 
+                                                          predictedValues, NotEnoughDataFlag)),
+                                              RkiDataWithRoNoOpimized %>% select(-c(data)))
+
  # load("data/RkiReduzierungOpt.RData")
-  #  loads dataframe RkiDataWithSumsNested from  file RkiReduzierungOpt.RData created by 
-  # cronjob running createRkiReduzierungOptFrame.R every day at 0.01am 
+
   
   #### needs to replace as soon as optimized values are available
   load("data/RkiReduzierungOptFrameBW200417.RData")
+  #  loads dataframe RkiDataWithRoNoAndReduzierungOpimized from  file RkiReduzierungOpt.RData created by 
+  # cronjob running createRkiReduzierungOptFrame.R every day at 0.01am 
   
   RkiDataWithSumsNested  <- RkiDataWithRoNoAndReduzierungOpimized %>% unnest(reduzierungsOptResult) #
   

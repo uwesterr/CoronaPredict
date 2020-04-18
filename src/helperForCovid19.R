@@ -46,12 +46,14 @@ calcMetric <- function(dfRechenKern, data){
 
 
 
-createRkiRegOptFrame <- function(dfNested, regionSelected, parameter_tibble, optFunction, input){
-   #browser()
+createRkiRegOptFrame <- function(dfNested, regionSelected, parameter_tibble, optFunction, resultColumnName, input){
+  # browser()
   dfUnNested <- dfNested %>%  filter(whichRegion == regionSelected) %>% unnest(data)
   res <- optimizerGeneticAlgorithmRedReduction(dfUnNested, parameter_tibble, optFunction, input)
   indexEntitiy <- which(dfNested$whichRegion == regionSelected)
-  dfNested$reduzierungsOptResult[indexEntitiy] <-list(res$reduzierungsOptResult )
+ # dfNested$reduzierungsOptResult[indexEntitiy] <- list(res$OptResult)
+  #dfNested[[resultColumnName]][indexEntitiy]
+  dfNested[[indexEntitiy, resultColumnName]] <- list(res$OptResult)
   
   return(list( "dfNested" = dfNested))
 }
@@ -103,9 +105,10 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
   #  print(GA@solution)
   #  browser()
   #########################################
-  reduzierungsOptResult <- tibble("reduzierung_rt1" = denormPara[["reduzierung_rt1"]], "reduzierung_rt2" = denormPara[["reduzierung_rt2"]],
+ 
+  OptResult <- tibble("reduzierung_rt1" = denormPara[["reduzierung_rt1"]], "reduzierung_rt2" = denormPara[["reduzierung_rt2"]],
                                   "reduzierung_rt3" = denormPara[["reduzierung_rt3"]], "GaFitnessValue" = GA@fitnessValue, "GaPara" = list(summary(GA)))
-  return(list("reduzierungsOptResult" = reduzierungsOptResult))
+  return(list("OptResult" = OptResult))
   
 }
 
@@ -185,6 +188,40 @@ denormalizePara <- function(optPara, parameter_tibble, para) {
   denormPara
 }
 
+
+###############  error function for krankenhausdaten optimization ###################
+
+calcOptimizationKrankenhausDaten = function(optPara, allPara, parameter_tibble, dfUnNested,input) {   
+  # calculate the predictions for the optimzaition loop, i.e. GA algorithm
+  denormPara <- denormalizePara(optPara, parameter_tibble)
+  #  cat("para",unlist(denormPara,"\n"))
+  for(i in 1 : length(optPara)){
+    allPara[[i]] <- denormPara[[i]]
+  }
+  inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
+  inputVarNames <- names(allPara)
+  for (inputVarName in   inputVarNames ) {
+    inputForOptimization[[inputVarName]]<- allPara[[inputVarName]]
+  }
+  
+  inputForOptimization$dateInput[2] = dfUnNested$MeldeDate %>% max() # set endDate to date of last MeldeDate
+  dfRechenKern <-   Rechenkern(dfUnNested, inputForOptimization)
+  
+  dfRechenKern <- dfRechenKern %>% filter(Tag  %in% dfUnNested$MeldeDate)
+  dfUnNested <- dfUnNested %>% filter(MeldeDate  %in% dfRechenKern$Tag)
+  # res <- MPE(dfRechenKern$ErfassteInfizierteBerechnet,dfUnNested$SumAnzahl)
+  # browser()
+  #    res <- (
+  #      (sum(
+  #      (log10(dfUnNested$SumAnzahl)   - log10(dfRechenKern$ErfassteInfizierteBerechnet))^2)
+  #      )/(nrow(dfRechenKern)-1)
+  #      )^0.5
+  #  res <- sqrt(mean((log10(dfUnNested$SumAnzahl)-log10(dfRechenKern$ErfassteInfizierteBerechnet))^2))
+  res <- MAPE(log10(dfUnNested$SumAnzahl),log10(dfRechenKern$ErfassteInfizierteBerechnet))
+  # cat("res is :", res , "redu1 = ", reduzierung_rt1, "\n")
+  # res <- sqrt(mean((log10(dfRechenKern$ErfassteInfizierteBerechnet)-log10(dfUnNested$SumAnzahl))^2))
+  return(-res)
+} 
 ############# ValidationsScriptBundeslaender ##############
 
 calcReduziertOptPredictions <- function(R0, n0, dfRoNoOpt, input, startDate){

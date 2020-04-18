@@ -6,24 +6,19 @@ source(file = "Rechenkern.R")
 source(file = "helperForCovid19.R")
 load("../data/inputExample.RData")
 input <- isolate(reactiveValuesToList(inputExample))
-load("../data/createDfBundLandKreisOutput.RData") 
-#  loads dataframe RkiData from  file createDfBundLandKreisOutput.RData created by 
-# cronjob running createDfBundLandKreis.R every day at 0.01am 
-load("../data/R0n0OptimizedStep0.0120200418.RData") 
-#  loads dataframe RkiDataWithRoNoOpimized from  file R0n0OptimizedStep0.0120200418.RData created by 
-#  running createRkiRegOptFrame.R on 2020.04.18
-# join with up to date data from RKI and throwing old data away
-RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>% 
-                                              select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, 
-                                                        predictedValues, NotEnoughDataFlag)),
-                                            RkiDataWithRoNoOpimized %>% select(-c(data)))
 
+############### load data of other optimizations
 load("../data/landkreiseBadenWuerttemberg.RData")
-RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoOpimizedUpToDate
-RkiDataWithRoNoAndReduzierungOpimized$inputOrig <- list(input)
-RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
-  as_tibble() %>% 
-  select(!contains("redu")) %>% add_column("reduzierungsOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
+load("../data/RkiReduzierungOptFrameBW200417.RData")
+#  loads dataframe RkiDataWithRoNoAndReduzierungOpimized from  file RkiReduzierungOpt.RData created by 
+# cronjob running createRkiReduzierungOptFrame.R every day at 0.01am 
+
+
+
+
+RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized <- RkiDataWithRoNoAndReduzierungOpimized
+RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized$inputOrig <- list(input)
+
 ############ define optimization parameters
 parameter_tibble <- tribble(
   ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
@@ -31,29 +26,32 @@ parameter_tibble <- tribble(
   "reduzierung_rt2", 0         ,  0,        60,        "TRUE",
   "reduzierung_rt3", -20       ,  -40,      30,        "TRUE")
 # function to be used to calculate metric for optimizer
-optFunction <- calcPredictionsForGaOptimization
-resultColumnName <- "reduzierungsOptResult"
+optFunction <- calcOptimizationKrankenhausDaten
+resultColumnName <- "KrankenhausOptResult"
+RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized <- RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>% 
+  as_tibble()  %>% add_column("KrankenhausOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
 
 index <- 0
 
 ################## only baden-württemberg  #########
-RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%
+RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized <- RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>%
   filter(whichRegion %in% c(landkreiseBadenWuerttemberg, "Baden-Württemberg")) %>% head(2)
 
 #####################################################
 tictoc::tic()
 source(file = "helperForCovid19.R")
 
-for (regionSelected in RkiDataWithRoNoAndReduzierungOpimized$whichRegion) {
+for (regionSelected in RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized$whichRegion) {
   index <- index +1
   print(index)
   print(regionSelected)#
-  tmp <-   createRkiRegOptFrame(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, parameter_tibble, optFunction, resultColumnName, input)
+  tmp <-   createRkiRegOptFrame(RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized, regionSelected, parameter_tibble, optFunction, resultColumnName, input)
   regionSelectedDf <- tmp[["dfNested"]] %>% filter(whichRegion == regionSelected)
-  RkiDataWithRoNoAndReduzierungOpimized[match(regionSelectedDf$whichRegion, RkiDataWithRoNoAndReduzierungOpimized$whichRegion), ] <- regionSelectedDf
+  RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized[match(regionSelectedDf$whichRegion, RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized$whichRegion), ] <- regionSelectedDf
 }
+browser()
 toc()
-save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameBW200417.RData")
+save(RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized, file  = "../data/RkiDataWithRoNoAndReduzierungOpimized.RData")
 #browser()
 ############### create compare plots  #######################
 
@@ -65,25 +63,26 @@ plotCreate <- 1
 
 if(plotCreate){
   # plot the worst n regions depending on optimizer fitness
-  # a <- RkiDataWithRoNoAndReduzierungOpimized %>% unnest(reduzierungsOptResult) %>% arrange(GaFitnessValue)
-  RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%    as_tibble()  %>% add_column("dfRechenKern" = 0)
+  # a <- RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>% unnest(reduzierungsOptResult) %>% arrange(GaFitnessValue)
+  RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized <- RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>% 
+    as_tibble()  %>% add_column("dfRechenKern" = 0)
   
-  createRkiRegOptPlots<- function(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, input ){
+  createRkiRegOptPlots<- function(RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized, regionSelected, input ){
     
-    RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>% filter(whichRegion == regionSelected) %>% unnest(data)
+    RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>% filter(whichRegion == regionSelected) %>% unnest(data)
     df_nom <-  Rechenkern(RkiDataWithR0N0, input) %>% as_tibble()
     df_nom$whichRegion = regionSelected
     df_nomNetest <- df_nom %>% group_by(whichRegion) %>% nest()
     
-    indexEntitiy <- which(RkiDataWithRoNoAndReduzierungOpimized$whichRegion == regionSelected)
+    indexEntitiy <- which(RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized$whichRegion == regionSelected)
     df_nom$whichRegion
-    RkiDataWithRoNoAndReduzierungOpimized$dfRechenKern[indexEntitiy] <- df_nom 
-    return( RkiDataWithRoNoAndReduzierungOpimized)
+    RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized$dfRechenKern[indexEntitiy] <- df_nom 
+    return( RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized)
   }
   tictoc::tic()
   dfRechenkernAndRki <- tibble()
-  for (regionSelected in RkiDataWithRoNoAndReduzierungOpimized$whichRegion %>% head(10)) {
-    RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>% filter(whichRegion == regionSelected) %>% unnest(data) %>% unnest(reduzierungsOptResult)
+  for (regionSelected in RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized$whichRegion %>% head(10)) {
+    RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>% filter(whichRegion == regionSelected) %>% unnest(data) %>% unnest(reduzierungsOptResult)
     inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
     inputForOptimization$reduzierung_rt1 <- RkiDataWithR0N0$reduzierung_rt1 %>% unique()
     inputForOptimization$reduzierung_rt2 <- RkiDataWithR0N0$reduzierung_rt2 %>% unique()
