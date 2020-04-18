@@ -1,6 +1,6 @@
 # optimizer as imnplemented by thomas april 2020
 
-optimizerLoopingR0N0 <- function(RkiDataWithR0N0, input, optsPara = list("iStep" =0.2, "kStep" = 0.1)) {
+optimizerLoopingR0N0 <- function(RkiDataWithR0N0, input, optsPara = list("iStep" =0.1, "kStep" = 0.01)) {
   #browser()
   # lShould be replaced by a real optimizer. 
   # with e.g. a simple levenberg-marquardt optimizer

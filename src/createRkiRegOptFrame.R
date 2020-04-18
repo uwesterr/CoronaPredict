@@ -88,14 +88,14 @@ load("../data/inputExample.RData")
 input <- isolate(reactiveValuesToList(inputExample))
 load("../data/createDfBundLandKreisOutput.RData")
 tictoc::tic()
-for (regionSelected in RkiDataWithSumsNested$whichRegion) {
+RkiDataWithRoNoOpimized <- RkiData # create new dataframe to which the results of the R0n0 optimizsation will be added
+for (regionSelected in RkiDataWithRoNoOpimized$whichRegion) {
 print(regionSelected)
-tmp <-   createRkiRegOptFrame(RkiDataWithSumsNested, regionSelected, input, optimizeFunction = optimizerLoopingR0N0 )
+tmp <-   createRkiRegOptFrame(RkiDataWithRoNoOpimized, regionSelected, input, optimizeFunction = optimizerLoopingR0N0 )
 regionSelectedDf <- tmp[["RkiDataWithSumsNested"]] %>% filter(whichRegion == regionSelected)
 
-RkiDataWithSumsNested[match(regionSelectedDf$whichRegion, RkiDataWithSumsNested$whichRegion), ] <- regionSelectedDf
+RkiDataWithRoNoOpimized[match(regionSelectedDf$whichRegion, RkiDataWithRoNoOpimized$whichRegion), ] <- regionSelectedDf
 
 }
-
 toc()
-save(RkiDataWithSumsNested, file = "../data/createDfBundLandKreisOutput.RData")
+save(RkiDataWithRoNoOpimized, file = "../data/R0n0OptimizedStep0.0120200418.RData")
