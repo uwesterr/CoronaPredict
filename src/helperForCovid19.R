@@ -46,20 +46,20 @@ calcMetric <- function(dfRechenKern, data){
 
 
 
-createRkiRegOptFrame <- function(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, parameter_tibble, input ){
+createRkiRegOptFrame <- function(dfNested, regionSelected, parameter_tibble, optFunction, input){
    #browser()
-  RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>%  filter(whichRegion == regionSelected) %>% unnest(data)
-  res <- optimizerGeneticAlgorithmRedReduction(RkiDataWithR0N0, parameter_tibble, input )
-  indexEntitiy <- which(RkiDataWithRoNoAndReduzierungOpimized$whichRegion == regionSelected)
-  RkiDataWithRoNoAndReduzierungOpimized$reduzierungsOptResult[indexEntitiy] <-list(res$reduzierungsOptResult )
+  dfUnNested <- dfNested %>%  filter(whichRegion == regionSelected) %>% unnest(data)
+  res <- optimizerGeneticAlgorithmRedReduction(dfUnNested, parameter_tibble, optFunction, input)
+  indexEntitiy <- which(dfNested$whichRegion == regionSelected)
+  dfNested$reduzierungsOptResult[indexEntitiy] <-list(res$reduzierungsOptResult )
   
-  return(list( "RkiDataWithRoNoAndReduzierungOpimized" = RkiDataWithRoNoAndReduzierungOpimized))
+  return(list( "dfNested" = dfNested))
 }
-optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, parameter_tibble, input ) {
+optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, optFunction, input) {
   # optimizer using genetic algorithm to optimize reduzierungsmaßnahmen und R0 n0
   # dfRoNoOpt should be dataframe starting with reduzierung_datum1
   dateOfFirstAction <- input$reduzierung_datum1
-  RkiDataWithR0N0 <- RkiDataWithR0N0 %>% filter(MeldeDate >= dateOfFirstAction) # only consider values after first reduction action
+  dfUnNested <- dfUnNested %>% filter(MeldeDate >= dateOfFirstAction) # only consider values after first reduction action
   
   res <- createOptParmeters(parameter_tibble)
   allPara          <- res[[1]]
@@ -71,12 +71,12 @@ optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, parameter_tib
   
   GA <-  ga(type = "real-valued",
             suggestions = suggestions,
-            fitness = calcPredictionsForGaOptimization,
+            fitness = optFunction,
             lower = minOpt,
             upper = maxOpt,
-            popSize = 15, maxiter = 30,
+            popSize = 10, maxiter = 3,
             seed = 2020,
-            allPara = allPara, parameter_tibble = parameter_tibble, RkiDataWithR0N0 = RkiDataWithR0N0, input = input,
+            allPara = allPara, parameter_tibble = parameter_tibble, dfUnNested = dfUnNested, input = input,
             keepBest = FALSE
   )
   
@@ -85,13 +85,13 @@ optimizerGeneticAlgorithmRedReduction <- function(RkiDataWithR0N0, parameter_tib
   # using always the first line of the solution output, TODO: understand why at times there are several 
   # output lines
   denormPara <- denormalizePara(GA@solution[1,], parameter_tibble, para)
-
-  cat("denormPara", unlist(denormPara), "\n")  
+  cat("denormPara: ", unlist(denormPara %>% names), "\n") 
+  cat("denormPara: ", unlist(denormPara), "\n")  
 
   #  ############## non normalized optimization
   #  suggestions <- c( 0, 0, -20)
   #  GA <- ga(type = "real-valued", 
-  #           fitness =  function(x) calcPredictionsForGaOptimization(x[1], x[2], x[3], RkiDataWithR0N0, input),
+  #           fitness =  function(x) calcPredictionsForGaOptimization(x[1], x[2], x[3], dfUnNested, input),
   #           suggestions =suggestions,
   #           lower = c(0, 0, -40), upper = c(60, 60, 30), 
   #           popSize = 10, maxiter = 30, run = 5, seed = 2020,
@@ -140,7 +140,7 @@ createOptParmeters <- function(parameter_tibble){
   # browser()
   return(list(allPara, optPara, minOpt, maxOpt, suggestions, parameter_tibble  ))
 }
-calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, RkiDataWithR0N0,input) {   
+calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, dfUnNested,input) {   
   # calculate the predictions for the optimzaition loop, i.e. GA algorithm
   denormPara <- denormalizePara(optPara, parameter_tibble)
   #  cat("para",unlist(denormPara,"\n"))
@@ -154,22 +154,22 @@ calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, 
     inputForOptimization[[inputVarName]]<- allPara[[inputVarName]]
   }
   
-  inputForOptimization$dateInput[2] = RkiDataWithR0N0$MeldeDate %>% max() # set endDate to date of last MeldeDate
-    dfRechenKern <-   Rechenkern(RkiDataWithR0N0, inputForOptimization)
+  inputForOptimization$dateInput[2] = dfUnNested$MeldeDate %>% max() # set endDate to date of last MeldeDate
+    dfRechenKern <-   Rechenkern(dfUnNested, inputForOptimization)
 
-  dfRechenKern <- dfRechenKern %>% filter(Tag  %in% RkiDataWithR0N0$MeldeDate)
-  RkiDataWithR0N0 <- RkiDataWithR0N0 %>% filter(MeldeDate  %in% dfRechenKern$Tag)
-  # res <- MPE(dfRechenKern$ErfassteInfizierteBerechnet,RkiDataWithR0N0$SumAnzahl)
+  dfRechenKern <- dfRechenKern %>% filter(Tag  %in% dfUnNested$MeldeDate)
+  dfUnNested <- dfUnNested %>% filter(MeldeDate  %in% dfRechenKern$Tag)
+  # res <- MPE(dfRechenKern$ErfassteInfizierteBerechnet,dfUnNested$SumAnzahl)
   # browser()
   #    res <- (
   #      (sum(
-  #      (log10(RkiDataWithR0N0$SumAnzahl)   - log10(dfRechenKern$ErfassteInfizierteBerechnet))^2)
+  #      (log10(dfUnNested$SumAnzahl)   - log10(dfRechenKern$ErfassteInfizierteBerechnet))^2)
   #      )/(nrow(dfRechenKern)-1)
   #      )^0.5
-  #  res <- sqrt(mean((log10(RkiDataWithR0N0$SumAnzahl)-log10(dfRechenKern$ErfassteInfizierteBerechnet))^2))
-  res <- MAPE(log10(RkiDataWithR0N0$SumAnzahl),log10(dfRechenKern$ErfassteInfizierteBerechnet))
+  #  res <- sqrt(mean((log10(dfUnNested$SumAnzahl)-log10(dfRechenKern$ErfassteInfizierteBerechnet))^2))
+  res <- MAPE(log10(dfUnNested$SumAnzahl),log10(dfRechenKern$ErfassteInfizierteBerechnet))
   # cat("res is :", res , "redu1 = ", reduzierung_rt1, "\n")
-  # res <- sqrt(mean((log10(dfRechenKern$ErfassteInfizierteBerechnet)-log10(RkiDataWithR0N0$SumAnzahl))^2))
+  # res <- sqrt(mean((log10(dfRechenKern$ErfassteInfizierteBerechnet)-log10(dfUnNested$SumAnzahl))^2))
   return(-res)
 } 
 denormalizePara <- function(optPara, parameter_tibble, para) {

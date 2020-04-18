@@ -30,13 +30,13 @@ RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>%
    "reduzierung_rt1", 0         ,  0,        60,        "TRUE",
    "reduzierung_rt2", 0         ,  0,        60,        "TRUE",
    "reduzierung_rt3", -20       ,  -40,      30,        "TRUE")
-
+ optFunction <- calcPredictionsForGaOptimization
  
  index <- 0
  
  ################## only baden-württemberg  #########
  RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%
-   filter(whichRegion %in% c(landkreiseBadenWuerttemberg, "Baden-Württemberg")) %>% head(10)
+   filter(whichRegion %in% c(landkreiseBadenWuerttemberg, "Baden-Württemberg")) %>% head(2)
  
  #####################################################
  tictoc::tic()
@@ -47,13 +47,14 @@ RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>%
    print(index)
  
    print(regionSelected)#
-   tmp <-   createRkiRegOptFrame(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, parameter_tibble, input )
-   regionSelectedDf <- tmp[["RkiDataWithRoNoAndReduzierungOpimized"]] %>% filter(whichRegion == regionSelected)
+   tmp <-   createRkiRegOptFrame(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, parameter_tibble, optFunction, input)
+
+   regionSelectedDf <- tmp[["dfNested"]] %>% filter(whichRegion == regionSelected)
   # browser()
    RkiDataWithRoNoAndReduzierungOpimized[match(regionSelectedDf$whichRegion, RkiDataWithRoNoAndReduzierungOpimized$whichRegion), ] <- regionSelectedDf
    
  }
-
+browser()
 # RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% unnest(reduzierungsOptResult)
  toc()
 #browser()
@@ -69,24 +70,19 @@ plotCreate <- 1
 
 if(plotCreate){
   # plot the worst n regions depending on optimizer fitness
-  a <- RkiDataWithRoNoAndReduzierungOpimized %>% unnest(reduzierungsOptResult) %>% arrange(GaFitnessValue)
+ # a <- RkiDataWithRoNoAndReduzierungOpimized %>% unnest(reduzierungsOptResult) %>% arrange(GaFitnessValue)
   RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%    as_tibble()  %>% add_column("dfRechenKern" = 0)
   
   createRkiRegOptPlots<- function(RkiDataWithRoNoAndReduzierungOpimized, regionSelected, input ){
     
     RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>% filter(whichRegion == regionSelected) %>% unnest(data)
-    #browser()
-    
     df_nom <-  Rechenkern(RkiDataWithR0N0, input) %>% as_tibble()
     df_nom$whichRegion = regionSelected
     df_nomNetest <- df_nom %>% group_by(whichRegion) %>% nest()
     
     indexEntitiy <- which(RkiDataWithRoNoAndReduzierungOpimized$whichRegion == regionSelected)
     df_nom$whichRegion
-    browser()
     RkiDataWithRoNoAndReduzierungOpimized$dfRechenKern[indexEntitiy] <- df_nom 
-    
-    
     return( RkiDataWithRoNoAndReduzierungOpimized)
   }
   tictoc::tic()
@@ -110,9 +106,9 @@ if(plotCreate){
   redDate1 <- input$reduzierung_datum1
   redDate2 <- input$reduzierung_datum2
   redDate3 <- input$reduzierung_datum3
-  maxMeldeDate <- max(dfRechenkernAndRkiUnnest$MeldeDate)
-  a <- dfRechenkernAndRkiUnnest %>%  filter(!is.na(SumAnzahl))
-  a %>%  group_by(whichRegion)  %>% filter(Tag >= redDate1 & !is_na(SumAnzahl)) %>% ggplot(aes(Tag, SumAnzahl)) + geom_point() + 
+  #maxMeldeDate <- max(dfRechenkernAndRkiUnnest$MeldeDate)
+  tmp <- dfRechenkernAndRkiUnnest %>%  filter(!is.na(SumAnzahl))
+  tmp %>%  group_by(whichRegion)  %>% filter(Tag >= redDate1 & !is_na(SumAnzahl)) %>% ggplot(aes(Tag, SumAnzahl)) + geom_point() + 
     geom_line(aes(Tag, ErfassteInfizierteBerechnet))  +
     facet_wrap(vars(whichRegion), scales="free") +  scale_y_log10(label = label_number_si()) + 
     geom_vline(xintercept = redDate1, color = "green") + 
