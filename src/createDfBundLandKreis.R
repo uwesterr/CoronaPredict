@@ -70,9 +70,15 @@ createDfBundLandKreis <- function() {
                                                 select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, 
                                                           predictedValues, NotEnoughDataFlag)),
                                               RkiDataWithRoNoOpimized %>% select(-c(data)))
+  
+  ############# add krankenhaus daten
+  load("../data/LK_KH_Data.RData")
+  RkiDataWithRoNoOpimizedUpToDate <- left_join(RkiDataWithRoNoOpimizedUpToDate,LK_KH_Data, by = c("whichRegion" = "Landkreis"))
+  
+  
 
   save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/createDfBundLandKreisOutput.RData")
-  return(list(RkiData))
+  return(list(RkiDataWithRoNoOpimizedUpToDate))
 }
 
 
