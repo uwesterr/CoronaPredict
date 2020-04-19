@@ -51,8 +51,13 @@ createDfBundLandKreis <- function() {
            SumAnzahl = ifelse(SumAnzahl <1, 0.1,SumAnzahl),
            Index = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(LandkreisFirstMeldung) %>%  left_join(landKreisPopulation)  %>% 
      rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) 
+  ############# add krankenhaus daten
+  load("../data/LK_KH_Data.RData")
+  tmp <- bind_rows(historyDfBund, historyDfBundesLand, historyDfLandkreis) %>%
+    left_join(LK_KH_Data, by = c("whichRegion" = "Landkreis", "MeldeDate" = "Date"))
   
-  RkiData <- bind_rows(historyDfBund, historyDfBundesLand, historyDfLandkreis) %>% group_by(whichRegion) %>% nest() %>% 
+  
+  RkiData <- tmp %>% group_by(whichRegion) %>% nest() %>% 
     add_column("R0Start"= -1e7, "R0Opt"= -1e7, "n0Start" = -1e7, "n0Opt" = -1e7, "RegStartDate" = as.Date('1966-05-10'), 
                "groupedBy" ="", "predictedValues" = "NULL", "NotEnoughDataFlag" = 0) %>% mutate( 
                groupedBy = ifelse(whichRegion == "Deutschland", "Deutschland", 
@@ -71,11 +76,7 @@ createDfBundLandKreis <- function() {
                                                           predictedValues, NotEnoughDataFlag)),
                                               RkiDataWithRoNoOpimized %>% select(-c(data)))
   
-  ############# add krankenhaus daten
-  load("../data/LK_KH_Data.RData")
-  RkiDataWithRoNoOpimizedUpToDate <- left_join(RkiDataWithRoNoOpimizedUpToDate,LK_KH_Data, by = c("whichRegion" = "Landkreis"))
-  
-  
+
 
   save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/createDfBundLandKreisOutput.RData")
   return(list(RkiDataWithRoNoOpimizedUpToDate))
