@@ -58,7 +58,20 @@ createDfBundLandKreis <- function() {
                groupedBy = ifelse(whichRegion == "Deutschland", "Deutschland", 
                                   ifelse(whichRegion %in% historyDf$Bundesland, "Bundesland",
                                          ifelse(whichRegion %in% historyDf$Landkreis, "Landkreis",""))))
-  save(RkiData, file = "../data/createDfBundLandKreisOutput.RData")
+  
+  
+  load("../data/R0n0OptimizedStep0.0120200418.RData") 
+  #  loads 
+  # dataframe RkiDataWithRoNoOpimized 
+  # from  file R0n0OptimizedStep0.0120200418.RData created by 
+  #  running createRkiRegOptFrame.R on 2020.04.18
+  # join with up to date data from RKI and throwing old data away
+  RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>% 
+                                                select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, 
+                                                          predictedValues, NotEnoughDataFlag)),
+                                              RkiDataWithRoNoOpimized %>% select(-c(data)))
+
+  save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/createDfBundLandKreisOutput.RData")
   return(list(RkiData))
 }
 
