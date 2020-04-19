@@ -62,10 +62,15 @@ source(file = "src/helperForCovid19.R")
 if(file.exists("data/createDfBundLandKreisOutput.RData")){
   
   load("data/createDfBundLandKreisOutput.RData") 
-  #  loads dataframe RkiData from  file createDfBundLandKreisOutput.RData created by 
+  #  loads 
+  # dataframe RkiData 
+  # from  file createDfBundLandKreisOutput.RData created by 
   # cronjob running createDfBundLandKreis.R every day at 0.01am 
+  
   load("data/R0n0OptimizedStep0.0120200418.RData") 
-  #  loads dataframe RkiDataWithRoNoOpimized from  file R0n0OptimizedStep0.0120200418.RData created by 
+  #  loads 
+  # dataframe RkiDataWithRoNoOpimized 
+  # from  file R0n0OptimizedStep0.0120200418.RData created by 
   #  running createRkiRegOptFrame.R on 2020.04.18
   # join with up to date data from RKI and throwing old data away
   RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>% 
@@ -73,15 +78,28 @@ if(file.exists("data/createDfBundLandKreisOutput.RData")){
                                                           predictedValues, NotEnoughDataFlag)),
                                               RkiDataWithRoNoOpimized %>% select(-c(data)))
 
- # load("data/RkiReduzierungOpt.RData")
-
-  
-  #### needs to replace as soon as optimized values are available
-  load("data/RkiReduzierungOptFrameBW200417.RData")
-  #  loads dataframe RkiDataWithRoNoAndReduzierungOpimized from  file RkiReduzierungOpt.RData created by 
+  #### needs be to replace as soon as optimized values are available
+  load("data/RkiReduzierungOptFrameDeutschland.RData")
+  #  loads 
+  # dataframe RkiDataWithRoNoAndReduzierungOpimized 
+  # from  file RkiReduzierungOpt.RData created by 
   # cronjob running createRkiReduzierungOptFrame.R every day at 0.01am 
   
-  RkiDataWithSumsNested  <- RkiDataWithRoNoAndReduzierungOpimized %>% unnest(reduzierungsOptResult) #
+  RkiDataWithSumsNested  <- RkiDataWithRoNoAndReduzierungOpimized  #
+  
+  load("data/RkiDataWithRoNoAndReduzierungOpimized.RData")
+  #  loads 
+  # dataframe RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized 
+  # from  file RkiDataWithRoNoAndReduzierungOpimized.RData created by 
+  # cronjob running createRescueTrackerKrankenhausOptFrame.R every day at 0.01am 
+  
+#  ########## needs to be inserted once data is available
+#  RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiDataWithRoNoOpimizedUpToDate %>% 
+#                                                select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, 
+#                                                          predictedValues, NotEnoughDataFlag)),
+#                                              RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>% select(-c(data)))
+#  
+  
   
 
 } else{
@@ -371,12 +389,12 @@ server <- function(input, output, session) {
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-      # browser()
+     #  browser()
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
-      
-      updateSliderInput(session, "reduzierung_rt1", value = RkiDataWithSumsNested$reduzierung_rt1)
-      updateSliderInput(session, "reduzierung_rt2", value = RkiDataWithSumsNested$reduzierung_rt2)
-      updateSliderInput(session, "reduzierung_rt3", value = RkiDataWithSumsNested$reduzierung_rt3)
+      reduzierungsOptResultDf <- RkiDataWithSumsNested %>% select(reduzierungsOptResult) %>% unnest(reduzierungsOptResult)
+      for (paraName in reduzierungsOptResultDf$OptParaNames[[1]]) {
+        updateSliderInput(session, paraName, value = reduzierungsOptResultDf[[paraName]])
+      }
       r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
       removeModal()
@@ -395,9 +413,10 @@ server <- function(input, output, session) {
       regionSelected = 3
       # browser()
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$LandkreiseSelected)
-      updateSliderInput(session, "reduzierung_rt1", value = RkiDataWithSumsNested$reduzierung_rt1)
-      updateSliderInput(session, "reduzierung_rt2", value = RkiDataWithSumsNested$reduzierung_rt2)
-      updateSliderInput(session, "reduzierung_rt3", value = RkiDataWithSumsNested$reduzierung_rt3)
+      reduzierungsOptResultDf <- RkiDataWithSumsNested %>% select(reduzierungsOptResult) %>% unnest(reduzierungsOptResult)
+      for (paraName in reduzierungsOptResultDf$OptParaNames[[1]]) {
+        updateSliderInput(session, paraName, value = reduzierungsOptResultDf[[paraName]])
+      }
       r0_no_erfasstDf(RkiDataWithSumsNested)
       removeModal()
       

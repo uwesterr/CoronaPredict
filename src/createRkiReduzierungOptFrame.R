@@ -31,7 +31,7 @@ parameter_tibble <- tribble(
 # function to be used to calculate metric for optimizer
 optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
-gaPara <- list("popSize" = 15, "maxiter" = 4)
+gaPara <- list("popSize" = 5, "maxiter" = 2)
 RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
   as_tibble() %>% 
   select(!contains("redu")) %>% add_column("reduzierungsOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
@@ -40,7 +40,7 @@ index <- 0
 
 ################## only baden-württemberg  #########
 RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%
-  filter(whichRegion %in% c(landkreiseBadenWuerttemberg, "Baden-Württemberg")) %>% head(2)
+  filter(whichRegion %in% c("Deutschland" ,landkreiseBadenWuerttemberg, "Baden-Württemberg")) %>% head(2)
 
 #####################################################
 tictoc::tic()
@@ -56,7 +56,7 @@ for (regionSelected in RkiDataWithRoNoAndReduzierungOpimized$whichRegion) {
   RkiDataWithRoNoAndReduzierungOpimized[match(regionSelectedDf$whichRegion, RkiDataWithRoNoAndReduzierungOpimized$whichRegion), ] <- regionSelectedDf
 }
 toc()
-save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameBW200417.RData")
+save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameDeutschland.RData")
 #browser()
 ############### create compare plots  #######################
 
