@@ -9,7 +9,9 @@ input <- isolate(reactiveValuesToList(inputExample))
 
 ############### load data of other optimizations
 load("../data/landkreiseBadenWuerttemberg.RData")
-load("../data/RkiReduzierungOptFrameDeutschland.RData")
+# load("../data/RkiReduzierungOptFrameDeutschland.RData")
+load("../data/RkiReduzierungOptServer20200419.RData")
+
 #  loads dataframe RkiDataWithRoNoAndReduzierungOpimized from  file RkiReduzierungOpt.RData created by 
 # cronjob running createRkiReduzierungOptFrame.R every day at 0.01am 
 
@@ -61,9 +63,10 @@ for (regionSelected in RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized$which
   regionSelectedDf <- tmp[["dfNested"]] %>% filter(whichRegion == regionSelected)
   RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized[match(regionSelectedDf$whichRegion, RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized$whichRegion), ] <- regionSelectedDf
 }
-browser()
 toc()
 save(RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized, file  = "../data/RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized.RData")
+browser()
+
 #browser()
 ############### create compare plots  #######################
 
