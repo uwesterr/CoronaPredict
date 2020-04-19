@@ -63,21 +63,11 @@ if(file.exists("data/createDfBundLandKreisOutput.RData")){
   
   load("data/createDfBundLandKreisOutput.RData") 
   #  loads 
-  # dataframe RkiData 
+  # dataframe RkiDataWithRoNoOpimizedUpToDate 
   # from  file createDfBundLandKreisOutput.RData created by 
   # cronjob running createDfBundLandKreis.R every day at 0.01am 
   
-  load("data/R0n0OptimizedStep0.0120200418.RData") 
-  #  loads 
-  # dataframe RkiDataWithRoNoOpimized 
-  # from  file R0n0OptimizedStep0.0120200418.RData created by 
-  #  running createRkiRegOptFrame.R on 2020.04.18
-  # join with up to date data from RKI and throwing old data away
-  RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>% 
-                                                select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, 
-                                                          predictedValues, NotEnoughDataFlag)),
-                                              RkiDataWithRoNoOpimized %>% select(-c(data)))
-
+  
   #### needs be to replace as soon as optimized values are available
   load("data/RkiReduzierungOptFrameDeutschland.RData")
   #  loads 
@@ -87,24 +77,26 @@ if(file.exists("data/createDfBundLandKreisOutput.RData")){
   
   RkiDataWithSumsNested  <- RkiDataWithRoNoAndReduzierungOpimized  #
   
-  load("data/RkiDataWithRoNoAndReduzierungOpimized.RData")
+  # load("data/RkiDataWithRoNoAndReduzierungOpimized.RData")
   #  loads 
   # dataframe RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized 
   # from  file RkiDataWithRoNoAndReduzierungOpimized.RData created by 
   # cronjob running createRescueTrackerKrankenhausOptFrame.R every day at 0.01am 
   
-#  ########## needs to be inserted once data is available
-#  RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiDataWithRoNoOpimizedUpToDate %>% 
-#                                                select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, 
-#                                                          predictedValues, NotEnoughDataFlag)),
-#                                              RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>% select(-c(data)))
-#  
+  #  ########## needs to be inserted once data is available
+  RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiDataWithRoNoOpimizedUpToDate %>% 
+                                                select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, 
+                                                          predictedValues, NotEnoughDataFlag)),
+                                              RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>% select(-c(data)))
   
   
-
+  load("data/RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized.RData")
+  
+  RkiDataWithSumsNested <-  RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized
+  
 } else{
   
- showModal("Fehler, Daten fehlen ")
+  showModal("Fehler, Daten fehlen ")
   
 }
 
@@ -389,11 +381,16 @@ server <- function(input, output, session) {
       updateSelectInput(session, "LandkreiseSelected",  selected = "---")
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-     #  browser()
+      #  browser()
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
       reduzierungsOptResultDf <- RkiDataWithSumsNested %>% select(reduzierungsOptResult) %>% unnest(reduzierungsOptResult)
       for (paraName in reduzierungsOptResultDf$OptParaNames[[1]]) {
         updateSliderInput(session, paraName, value = reduzierungsOptResultDf[[paraName]])
+      }
+      #browser()
+      reduzierungsOptResultDf <- RkiDataWithSumsNested %>% select(KrankenhausOptResult) %>% unnest(KrankenhausOptResult)
+      for (paraName in reduzierungsOptResultDf$OptParaNames[[1]]) {
+        updateSliderInput(session, paraName, value = round(reduzierungsOptResultDf[[paraName]],1))
       }
       r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
@@ -424,7 +421,7 @@ server <- function(input, output, session) {
   })
   
   rkiAndPredictData <- reactive({
-   #  browser()
+    #  browser()
     if (r0_no_erfasstDf()$NotEnoughDataFlag) {
       showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", 
                             "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. 
