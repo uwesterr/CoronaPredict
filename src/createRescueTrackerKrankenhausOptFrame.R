@@ -29,7 +29,7 @@ parameter_tibble <- tribble(
 
 optFunction <- calcOptimizationKrankenhausDaten # function to be used to calculate metric for optimizer
 resultColumnName <- "KrankenhausOptResult" # column where result of optimizer is stored
-gaPara <- list("popSize" = 10, "maxiter" = 3)
+gaPara <- list("popSize" = 5, "maxiter" = 2, run = 5)
 RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized <- RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>% 
   as_tibble()  %>% add_column("KrankenhausOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
 

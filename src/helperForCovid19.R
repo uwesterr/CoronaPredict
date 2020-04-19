@@ -78,6 +78,7 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
             upper = maxOpt,
             popSize =  gaPara$popSize, 
             maxiter = gaPara$maxiter,
+            run = gaPara$run,
             seed = 2020,
             allPara = allPara, parameter_tibble = parameter_tibble, dfUnNested = dfUnNested, input = input,
             keepBest = FALSE
@@ -99,8 +100,8 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
     OptResult[[denormParaNames[[i]]]] <- denormPara[[i]]
   }
   OptResult[["GaFitnessValue"]] <- GA@fitnessValue
-  OptResult[["OptParaNames"]] <- list(denormParaNames)
-  OptResult[["GaPara"]] <- list(summary(GA))
+  OptResult[["OptParaNames"]] <- list("denormParaNames" = denormParaNames)
+  OptResult[["GaPara"]] <- list( "summmaryGA" = summary(GA))
  
   return(list("OptResult" = OptResult))
   
