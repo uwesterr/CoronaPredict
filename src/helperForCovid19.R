@@ -91,24 +91,17 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
   cat("denormPara: ", unlist(denormPara %>% names), "\n") 
   cat("denormPara: ", unlist(denormPara), "\n")  
 
-  #  ############## non normalized optimization
-  #  suggestions <- c( 0, 0, -20)
-  #  GA <- ga(type = "real-valued", 
-  #           fitness =  function(x) calcPredictionsForGaOptimization(x[1], x[2], x[3], dfUnNested, input),
-  #           suggestions =suggestions,
-  #           lower = c(0, 0, -40), upper = c(60, 60, 30), 
-  #           popSize = 10, maxiter = 30, run = 5, seed = 2020,
-  #           keepBest = TRUE) #a logical argument specifying if best solutions at each iteration should be saved in a slot called bestSol
-  #  
-  #  input$reduzierung_rt1 <- GA@solution[[1]]
-  #  input$reduzierung_rt2 <- GA@solution[[2]]
-  #  input$reduzierung_rt3 <- GA@solution[[3]]
-  #  print(GA@solution)
-  #  browser()
-  #########################################
+  denormParaNames <- denormPara %>% names
+  
+  # create output frame 
+  OptResult <- tibble(timeStamp = now())
+  for(i in 1 : length(denormPara)){
+    OptResult[[denormParaNames[[i]]]] <- denormPara[[i]]
+  }
+  OptResult[["GaFitnessValue"]] <- GA@fitnessValue
+  OptResult[["OptParaNames"]] <- list(denormParaNames)
+  OptResult[["GaPara"]] <- list(summary(GA))
  
-  OptResult <- tibble("reduzierung_rt1" = denormPara[["reduzierung_rt1"]], "reduzierung_rt2" = denormPara[["reduzierung_rt2"]],
-                                  "reduzierung_rt3" = denormPara[["reduzierung_rt3"]], "GaFitnessValue" = GA@fitnessValue, "GaPara" = list(summary(GA)))
   return(list("OptResult" = OptResult))
   
 }
