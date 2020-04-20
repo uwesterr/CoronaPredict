@@ -39,7 +39,6 @@ library(rlang)
 library(DT)
 library(modelr)
 library(tidyr)
-
 library(jsonlite)
 library(shiny)
 library(tidyverse)
@@ -49,52 +48,16 @@ library(plotly)
 library(readxl)
 library(scales)
 
-
-
 source(file = "src/Rechenkern.R")
-#source(file = "src/createLandkreisR0_no_erfasstDf.R")
-#source(file = "src/createDfBundLandKreis.R")
-# source(file = "src/optimizerLoopingR0N0.R")
 source(file = "src/helperForCovid19.R")
-
-
-
 if(file.exists("data/createDfBundLandKreisOutput.RData")){
-  
-  load("data/createDfBundLandKreisOutput.RData") 
-  #  loads 
-  # dataframe RkiDataWithRoNoOpimizedUpToDate 
-  # from  file createDfBundLandKreisOutput.RData created by 
-  # cronjob running createDfBundLandKreis.R every day at 0.01am 
-  
-  
-  #### needs be to replace as soon as optimized values are available
+  load("data/RkiDataICU_BeatmetOpti.RData")
+
+  RkiDataWithSumsNested  <- RkiDataICU_BeatmetOpti  
   load("data/RkiReduzierungOptFrameDeutschland.RData")
-  #  loads 
-  # dataframe RkiDataWithRoNoAndReduzierungOpimized 
-  # from  file RkiReduzierungOpt.RData created by 
-  # cronjob running createRkiReduzierungOptFrame.R every day at 0.01am 
   
-  RkiDataWithSumsNested  <- RkiDataWithRoNoAndReduzierungOpimized  #
-  #browser()
-  # # load("data/RkiDataWithRoNoAndReduzierungOpimized.RData")
-  # #  loads 
-  # # dataframe RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized 
-  # # from  file RkiDataWithRoNoAndReduzierungOpimized.RData created by 
-  # # cronjob running createRescueTrackerKrankenhausOptFrame.R every day at 0.01am 
-  # 
-  # #  ########## needs to be inserted once data is available
-  # RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiDataWithRoNoOpimizedUpToDate %>% 
-  #                                               select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, 
-  #                                                         predictedValues, NotEnoughDataFlag)),
-  #                                             RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized %>% select(-c(data)))
-  # 
-  # 
-  # load("data/RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized.RData")
-  # 
-  # RkiDataWithSumsNested <-  RkiDataWithRoNoAndReduzierungAndKrankenhausOpimized
-  
-  
+  RkiDataWithSumsNested <- RkiDataWithRoNoAndReduzierungOpimized 
+ 
 } else{
   
   showModal("Fehler, Daten fehlen ")
@@ -131,7 +94,7 @@ ui <- function(request) {
                                            column(6,
                                                   
                                                   selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("---","Deutschland", RkiDataWithSumsNested %>% filter(groupedBy == "Bundesland") %>% 
-                                                                                                                            select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "Deutschland", multiple = FALSE,
+                                                                                                                            select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "Baden-Württemberg", multiple = FALSE,
                                                               selectize = TRUE, width = NULL, size = NULL)),
                                            column(6,
                                                   selectInput("LandkreiseSelected", "Landkeis", choices = c("---", RkiDataWithSumsNested %>% filter(groupedBy == "Landkreis") %>% 
@@ -141,14 +104,7 @@ ui <- function(request) {
                                        
                                        
                                        h3("Reduzierende Massnahmen"), 
-                                       wellPanel(
-                                         fluidRow(
-                                           column(5,
-                                                  
-                                                  actionButton("optimizeReduzierendeBtn", "Ermittlung Startwert für Reduzierung Rt")), 
-                                           column(7,
-                                                  helpText("Starwerte für die Reduzierung Rt für einen guten Fit werden ermittelt")
-                                           ))),
+       
                                        wellPanel(
                                          fluidRow(
                                            column(4,
@@ -187,7 +143,7 @@ ui <- function(request) {
                                                 wellPanel(
                                                   numericInput("ges_inf_rate", label = "Durchseuchung [%]", value = 70, min=1, max=100, step=1),
                                                   numericInput("ti", label = "Inkubationszeit [d]", value = 2, min=1, max=20, step=1),
-                                                  numericInput("tod_rate", label = "Sterblichkeit [%]", value = 2, min=0, max=100, step = 0.1))),
+                                                  numericInput("tod_rate", label = "Sterblichkeit [%]", value = 4, min=0, max=100, step = 0.1))),
                                          column(6,
                                                 wellPanel(
                                                   numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15, min=1, max=100, step=1),
@@ -255,7 +211,7 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.16", color = "blue"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.17", color = "blue"),
                                        tags$head(tags$style('h2 {color:blue;}')),
                                        tags$head(tags$style('h3 {color:blue;}')),
                                        
@@ -384,12 +340,13 @@ server <- function(input, output, session) {
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
       OptResultDf <- RkiDataWithSumsNested[[1,"optimizedInput"]]
       inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
+ 
       for (inputVarName in OptResultDf[[1]] %>% names) {
         if (inputVarName %in% (input %>% names)) {
           if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
             updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]])
           } else {
-            updateNumericInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]])
+            updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1))
           }
         }
       }
@@ -416,7 +373,7 @@ server <- function(input, output, session) {
           if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
             updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]])
           } else {
-            updateNumericInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]])
+            updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1))
           }
         }
       }
