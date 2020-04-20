@@ -20,6 +20,288 @@ library(plotly)
 library(readxl)
 library(scales)
 
+createDfBundLandKreis <- function() {
+  
+  historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
+  
+  
+  historyDf <- historyData[["features"]][["properties"]]
+  historyDf$MeldeDate <- as.Date(historyDf$Meldedatum)
+  
+  
+  ## read population file from thonmas
+  bundesLandPopulation <- read_excel("../data/bundesland_landkreis_200326_2.xlsx", "bundesland", col_names = c("Bundesland", "EinwohnerBundesland"))
+  landKreisPopulation <- read_excel("../data/bundesland_landkreis_200326_2.xlsx", "landkreis", col_names = c("Landkreis", "EinwohnerLandkreis"))
+  # browser()
+  BundFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% summarise(FirstMelde = min(MeldeDate))
+  historyDfBund <- historyDf %>% group_by(MeldeDate) %>% summarise_if(is.numeric, list(sum), na.rm = TRUE) %>% 
+    mutate(Bundesland = "NA", Landkreis = NA, SumAnzahl = cumsum(AnzahlFall), sumTote = cumsum(AnzahlTodesfall), whichRegion = "Deutschland",
+           Index = as.numeric(MeldeDate- min(MeldeDate))) %>% mutate(Einwohner = bundesLandPopulation %>% summarise(sum = sum(EinwohnerBundesland)) %>% unlist) 
+  historyDfBund$FirstMelde <- BundFirstMeldung %>% unlist %>% as.Date()
+  
+  
+  
+  BundesLandFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% group_by(Bundesland) %>% summarise(FirstMelde = min(MeldeDate))
+  historyDfBundesLand  <- historyDf %>% dplyr::ungroup() %>% group_by(Bundesland, MeldeDate)  %>% summarise_if(is.numeric, sum, na.rm = TRUE)  %>% 
+    mutate(Landkreis = NA, SumAnzahl = cumsum(AnzahlFall), sumTote = cumsum(AnzahlTodesfall),whichRegion = Bundesland,
+           SumAnzahl = ifelse(SumAnzahl <1, 0.1,SumAnzahl),
+           Index = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(BundesLandFirstMeldung) %>% left_join(bundesLandPopulation)  %>% 
+    rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) 
+  
+  
+  
+  
+  LandkreisFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% group_by(Landkreis) %>% summarise(FirstMelde = min(MeldeDate))
+  historyDfLandkreis <- historyDf  %>% dplyr::group_by(Bundesland,Landkreis, MeldeDate)%>% dplyr::summarise_if(is.numeric, sum, na.rm = TRUE)  %>%
+    mutate(SumAnzahl = cumsum(AnzahlFall), sumTote = cumsum(AnzahlTodesfall), whichRegion = Landkreis,
+           SumAnzahl = ifelse(SumAnzahl <1, 0.1,SumAnzahl),
+           Index = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(LandkreisFirstMeldung) %>%  left_join(landKreisPopulation)  %>% 
+    rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) 
+  ############# add krankenhaus daten
+  # LK_KH_Data <-  createDfBundLandKreis
+  load("../data/LK_KH_Data.RData")
+  tmp <- bind_rows(historyDfBund, historyDfBundesLand, historyDfLandkreis) %>%
+    left_join(LK_KH_Data, by = c("whichRegion" = "Landkreis", "MeldeDate" = "Date"))
+  
+  
+  RkiData <- tmp %>% group_by(whichRegion) %>% nest() %>% 
+    add_column("R0Start"= -1e7, "R0Opt"= -1e7, "n0Start" = -1e7, "n0Opt" = -1e7, "RegStartDate" = as.Date('1966-05-10'), 
+               "groupedBy" ="", "predictedValues" = "NULL", "NotEnoughDataFlag" = 0) %>% mutate( 
+                 groupedBy = ifelse(whichRegion == "Deutschland", "Deutschland", 
+                                    ifelse(whichRegion %in% historyDf$Bundesland, "Bundesland",
+                                           ifelse(whichRegion %in% historyDf$Landkreis, "Landkreis",""))))
+  
+  
+  load("../data/R0n0OptimizedStep0.0120200418.RData") 
+  #  loads 
+  # dataframe RkiDataWithRoNoOpimized 
+  # from  file R0n0OptimizedStep0.0120200418.RData created by 
+  #  running createRkiRegOptFrame.R on 2020.04.18
+  # join with up to date data from RKI and throwing old data away
+  RkiDataWithRoNoOpimizedUpToDate<- left_join(RkiData %>% 
+                                                select(-c(R0Start, R0Opt, n0Start, n0Opt,  RegStartDate, groupedBy, 
+                                                          predictedValues, NotEnoughDataFlag)),
+                                              RkiDataWithRoNoOpimized %>% select(-c(data)))
+  
+  
+  
+  save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/createDfBundLandKreisOutput.RData")
+  return(RkiDataWithRoNoOpimizedUpToDate)
+}
+
+### read krankenhaus data ######
+# reads data from rescuetracker api and stores data in data.frame
+readRescueTrackerData <- function() {
+  library(httr)
+  library(tidyverse)
+  library(lubridate)
+  library(readxl)
+  library(mefa4)
+  library(dplyr)
+  
+  
+  # get data from rescuetrack
+  rescuetrackData <- GET("https://apps.rescuetrack.com/rrb/api/v1/getCapacityDump", add_headers(Cookie = "rt-sso-sid=094eb893-5d4c-4640-9e92-5a795ede04d2"))
+  rescuetrackDataContent <- content(rescuetrackData)#  %>% as_tibble() %>% unnest()
+  foldersDf <- rescuetrackDataContent[["folders"]]  #%>% as_tibble(.name_repair = c("universal")) %>% transpose() %>% as_tibble() 
+  
+  # read structure file for Bundesland, RP and ILS
+  BL_names  <- read_excel("../data/struktur_BL_RP_ILS_KH.xlsx", "BL",  col_names = TRUE)
+  RP_names  <- read_excel("../data/struktur_BL_RP_ILS_KH.xlsx", "RP",  col_names = TRUE)
+  ILS_names <- read_excel("../data/struktur_BL_RP_ILS_KH.xlsx", "ILS", col_names = TRUE) %>% as_tibble()
+  LK_ILS    <- read_excel("../data/struktur_BL_RP_ILS_KH.xlsx", "LK_ILS", col_names = TRUE)
+  
+  
+  
+  # read out required data fields
+  index <- 0
+  krankenhausData <- tibble(id = double(),  
+                            folderId = character(), 
+                            folderName = character(), 
+                            parentId = character(), 
+                            resourceType = character(),
+                            free = double(),  
+                            total = double(), 
+                            timestamp = ymd_hms())
+  krankenhausDataLoop <- tibble(id = 1,  
+                                folderId = "character()", 
+                                folderName = "character()", 
+                                parentId = "character()", 
+                                resourceType = "character()",
+                                free = 1e7,  
+                                total = 1e7, 
+                                timestamp = ymd_hms('2020-04-17T12:12:56'))
+  
+  # Assign raw data on level "Krankenhaus"
+  print ("----- Assign raw data on level Krankenhaus -------")
+  for (folderIndex in seq(1,length(foldersDf))) {
+    folderIndex
+    # exclude higher levels BL, RP and ILS from data import
+    if ( (length(foldersDf[[folderIndex]][["resources"]])>0) 
+         && !str_detect(foldersDf[[folderIndex]][["folderName"]], c("ILS ", "RP ", "Baden-W")) %>% sum()
+    )  {
+      print(foldersDf[[folderIndex]][["folderName"]])
+      # browser()
+      for (resourceIndex in seq(1,length(foldersDf[[folderIndex]][["resources"]]))) {
+        for (capacitiesIndex in seq(1,length(foldersDf[[folderIndex]][["resources"]][[resourceIndex]][["capacities"]]))) {
+          index <- index + 1
+          krankenhausDataLoop$folderId[1]   <- foldersDf[[folderIndex]][["folderId"]]
+          krankenhausDataLoop$folderName[1] <- foldersDf[[folderIndex]][["folderName"]]
+          krankenhausDataLoop$parentId[1]   <- foldersDf[[folderIndex]][["parentId"]]
+          krankenhausDataLoop$resourceType  <- foldersDf[[folderIndex]][["resources"]][[resourceIndex]][["resourceTypeName"]]
+          krankenhausDataLoop$free          <- foldersDf[[folderIndex]][["resources"]][[resourceIndex]][["capacities"]][[capacitiesIndex]][["free"]]
+          krankenhausDataLoop$total         <- foldersDf[[folderIndex]][["resources"]][[resourceIndex]][["capacities"]][[capacitiesIndex]][["total"]]
+          krankenhausDataLoop$timestamp     <- ymd_hms(substr(foldersDf[[folderIndex]][["resources"]][[resourceIndex]][["capacities"]][[capacitiesIndex]][["timestamp"]], 1, 19))
+          krankenhausData <- bind_rows(krankenhausData,krankenhausDataLoop)
+          index
+        }
+      }  
+    }
+    
+  }
+  # fill up empty day with value of previous day(s) and delete multiple entries per day
+  kh_names=sort(unique(krankenhausData$folderName))
+  
+  for (KH_Index in seq(1,length(kh_names))) {
+    KH_Index
+    
+    tmp_filter_werte <- c("COVID-Patienten beatmet" , "COVID-Patienten gesamt")
+    
+    for (fi_index in seq(1,length(tmp_filter_werte))) {
+      act_filter_wert <- tmp_filter_werte[fi_index]
+      # entry of this kh
+      act_kh <- filter(krankenhausData, (krankenhausData$folderName==kh_names[[KH_Index]] &  krankenhausData$resourceType==act_filter_wert))
+      act_kh <- arrange(act_kh, timestamp)
+      
+      # time frame
+      start_date = min(date(act_kh$timestamp))
+      end_date   = max(date(act_kh$timestamp))
+      
+      # check for doubles and missing values in this time frame
+      for (day_index in seq(start_date, end_date , by = 1)) {
+        tmp_day <- filter(act_kh, as.numeric(date(act_kh$timestamp))==day_index )
+        nrow_tmp_day <- nrow(tmp_day)
+        if (nrow_tmp_day==0) {
+          # generate a new dataset entry with content of previous day and the actual date
+          print ("anlegen")
+          act_timestamp <- as_datetime(day_index*86400+36000)
+          krankenhausDataLoop            <- previous_day
+          krankenhausDataLoop$timestamp  <- act_timestamp
+          krankenhausData <- bind_rows(krankenhausData,krankenhausDataLoop)
+          
+        }  else if (nrow_tmp_day>1) {
+          #keep only newest entry (=last in act_kh) and delete others in krankenhausData
+          print (paste("Laenge krankenhausData vor Loeschen:", nrow(krankenhausData)))
+          # jetzt nur noch das letzte behalten
+          krankenhausData <- anti_join(krankenhausData, head(tmp_day,n=nrow_tmp_day-1))
+          print (paste("Laenge krankenhausData nach Loeschen sollte kleiner sein:", nrow(krankenhausData)))
+          previous_day=tail(tmp_day,n=1)
+        }  else {
+          # is ok as the first date is always populated
+          previous_day=tmp_day
+        }
+      }
+    }
+    # 
+    #break()                                           
+  }
+  
+  browser()
+  # combine data to landkreis, date
+  print ("----- Combine data to landkreis, date, ... -------")
+  start_date = min(date(krankenhausData$timestamp))
+  end_date   = max(date(krankenhausData$timestamp))
+  
+  index <- 0
+  # data for landkreise
+  LK_KH_Data <- tibble(id = double(),  
+                       Landkreis = character(), 
+                       Date = ymd(), 
+                       Stationaer  = double(),
+                       ICU_Beatmet = double())
+  # data for BW
+  Land_BW_Data <- LK_KH_Data                          
+  
+  LK_KH_DataLoop <- tibble(id = 1,  
+                           Landkreis = "character()", 
+                           Date = ymd('2020-04-17'), 
+                           Stationaer = 0,
+                           ICU_Beatmet = 0)
+  
+  # Loop through all Landkreises and dates
+  
+  for (LK_Index in seq(1,length(LK_ILS$Landkreis))) {
+    LK_Index
+    print(LK_ILS$Landkreis[[LK_Index]])
+    
+    day_index=0
+    for (day_index in seq(start_date, end_date, by = 1)) {
+      day_index
+      #print (day_index)
+      
+      targetId = LK_ILS$folderId[[LK_Index]]
+      anteil_resourcen = LK_ILS$Anteil_Resourcen[[LK_Index]]
+      
+      #kh_covid_beatmet
+      tmp_kh_covid_beatmet <- filter(krankenhausData, krankenhausData$parentId==targetId 
+                                     & as.numeric(date(krankenhausData$timestamp))==day_index 
+                                     & krankenhausData$resourceType=="COVID-Patienten beatmet")
+      tmp_sum_kh_covid_beatmet = round(anteil_resourcen * sum(tmp_kh_covid_beatmet$total), digits = 0)
+      
+      #kh_covid_gesamt
+      tmp_kh_covid_gesamt <- filter(krankenhausData, krankenhausData$parentId==targetId 
+                                    & as.numeric(date(krankenhausData$timestamp))==day_index 
+                                    & krankenhausData$resourceType=="COVID-Patienten gesamt")
+      tmp_sum_kh_covid_gesamt = round(anteil_resourcen * sum(tmp_kh_covid_gesamt$total), digits = 0)
+      
+      #kh_covid_stationaer
+      tmp_sum_kh_covid_stationaer=max(0,tmp_sum_kh_covid_gesamt-tmp_sum_kh_covid_beatmet)
+      
+      LK_KH_DataLoop$Landkreis   <- LK_ILS$Landkreis[[LK_Index]]
+      LK_KH_DataLoop$Date        <- as_date(day_index)
+      LK_KH_DataLoop$Stationaer  <- tmp_sum_kh_covid_stationaer
+      LK_KH_DataLoop$ICU_Beatmet <- tmp_sum_kh_covid_beatmet
+      LK_KH_Data <- bind_rows(LK_KH_Data,LK_KH_DataLoop)
+    }
+  }  
+  
+  # Loop all dates for baden-wuerttemberg
+  
+  
+  day_index=0
+  for (day_index in seq(start_date, end_date, by = 1)) {
+    day_index
+    
+    #kh_covid_beatmet
+    tmp_kh_covid_beatmet <- filter(krankenhausData, as.numeric(date(krankenhausData$timestamp))==day_index 
+                                   & krankenhausData$resourceType=="COVID-Patienten beatmet")
+    tmp_sum_kh_covid_beatmet = round(anteil_resourcen * sum(tmp_kh_covid_beatmet$total), digits = 0)
+    
+    #kh_covid_gesamt
+    tmp_kh_covid_gesamt <- filter(krankenhausData, as.numeric(date(krankenhausData$timestamp))==day_index 
+                                  & krankenhausData$resourceType=="COVID-Patienten gesamt")
+    tmp_sum_kh_covid_gesamt = round(anteil_resourcen * sum(tmp_kh_covid_gesamt$total), digits = 0)
+    
+    #kh_covid_stationaer
+    tmp_sum_kh_covid_stationaer=max(0,tmp_sum_kh_covid_gesamt-tmp_sum_kh_covid_beatmet)
+    
+    LK_KH_DataLoop$Landkreis   <- "Baden-W?rttemberg"
+    LK_KH_DataLoop$Date        <- as_date(day_index)
+    LK_KH_DataLoop$Stationaer  <- tmp_sum_kh_covid_stationaer
+    LK_KH_DataLoop$ICU_Beatmet <- tmp_sum_kh_covid_beatmet
+    Land_BW_Data <- bind_rows(Land_BW_Data,LK_KH_DataLoop)
+    
+  }  
+  browser()
+  return(Land_BW_Data)
+}
+
+
+
+
+
+
+
 calcPredictionsForOptimization = function(reduzierung_rt1, reduzierung_rt2, reduzierung_rt3, R0Opt, n0Opt, startDate, rechenDf_nom, input) {
   #browser()
   inputForOptimization <- isolate(reactiveValuesToList(input)) # to make setting reduzierung_rtx easy and fast
@@ -42,20 +324,47 @@ calcMetric <- function(dfRechenKern, data){
 }
 
 ################    optimizing reduzierung  #################
+appendOpt <- function(df, parameter_tibble, optFunction, resultColumnName, gaPara) {
+  index <- 0
+  for (regionSelected in df$whichRegion) {
+    index <- index +1
+    print(index)
+    print(regionSelected)#
+    tmp  <- df %>% filter(whichRegion == regionSelected)
+    inputForOptimization <- setInputAccordingToPreviousOpt(tmp) 
+    df <-   createRkiRegOptFrame(df, regionSelected, parameter_tibble, 
+                                 optFunction, resultColumnName, gaPara, inputForOptimization)
+    
+  }
+  return(df)
+}
 
-
+setInputAccordingToPreviousOpt <- function(tmp) {
+  OptResultDf <- tmp[[1,"optimizedInput"]]
+  inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
+  for (inputVarName in OptResultDf[[1]] %>% names) {
+    if (inputVarName %in% (input %>% names)) {
+      inputForOptimization[[inputVarName]]<- OptResultDf[[1]][[inputVarName]] 
+    }
+  }
+  return(inputForOptimization)
+}
 
 
 createRkiRegOptFrame <- function(dfNested, regionSelected, parameter_tibble, optFunction, resultColumnName,  gaPara, input){
-  # browser()
   dfUnNested <- dfNested %>%  filter(whichRegion == regionSelected) %>% unnest(data)
   res <- optimizerGeneticAlgorithmRedReduction(dfUnNested, parameter_tibble, optFunction,  gaPara, input)
   indexEntitiy <- which(dfNested$whichRegion == regionSelected)
- # dfNested$reduzierungsOptResult[indexEntitiy] <- list(res$OptResult)
-  #dfNested[[resultColumnName]][indexEntitiy]
   dfNested[[indexEntitiy, resultColumnName]] <- list(res$OptResult)
-  
-  return(list( "dfNested" = dfNested))
+  optimizedInput <- dfNested[[indexEntitiy, "optimizedInput"]][[1]]
+  # add optimzed values to list
+  for (parameter in parameter_tibble$var_name) {
+ 
+    optimizedInput[[parameter]] <- res[["OptResult"]][[parameter]][[1]]
+  }
+
+  dfNested[[indexEntitiy, "optimizedInput"]] <- list(optimizedInput)
+  return( "dfNested" = dfNested)
 }
 optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, optFunction,  gaPara, input) {
   # optimizer using genetic algorithm to optimize reduzierungsmaßnahmen und R0 n0
@@ -70,7 +379,7 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
   maxOpt           <- res[[4]]
   suggestions      <- res[[5]]
   parameter_tibble <- res[[6]]
-  
+  browser()
   GA <-  ga(type = "real-valued",
             suggestions = suggestions,
             fitness = optFunction,
@@ -80,7 +389,7 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
             maxiter = gaPara$maxiter,
             run = gaPara$run,
             seed = 2020,
-            allPara = allPara, parameter_tibble = parameter_tibble, dfUnNested = dfUnNested, input = input,
+            allPara = allPara, parameter_tibble = parameter_tibble, dfUnNested = dfUnNested, gaPara, input = input,
             keepBest = FALSE
   )
   
@@ -138,14 +447,13 @@ createOptParmeters <- function(parameter_tibble){
   # browser()
   return(list(allPara, optPara, minOpt, maxOpt, suggestions, parameter_tibble  ))
 }
-calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, dfUnNested,input) {   
+calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, dfUnNested, gaPara, input) {   
   # calculate the predictions for the optimzaition loop, i.e. GA algorithm
   denormPara <- denormalizePara(optPara, parameter_tibble)
   #  cat("para",unlist(denormPara,"\n"))
   for(i in 1 : length(optPara)){
     allPara[[i]] <- denormPara[[i]]
   }
-  
   inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
   inputVarNames <- names(allPara)
   for (inputVarName in   inputVarNames ) {
@@ -184,10 +492,54 @@ denormalizePara <- function(optPara, parameter_tibble, para) {
 }
 
 
-###############  error function for krankenhausdaten optimization ###################
 
-calcOptimizationKrankenhausDaten = function(optPara, allPara, parameter_tibble, dfUnNested,input) {   
-  # calculate the predictions for the optimzaition loop, i.e. GA algorithm
+
+createPlotReduOpt <- function(input) {
+  
+  load("../data/RkiReduzierungOptFrameDeutschland.RData")
+  RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%    as_tibble()  %>% add_column("dfRechenKern" = 0)
+  
+  
+  tictoc::tic()
+  dfRechenkernAndRki <- tibble()
+  for (regionSelected in RkiDataWithRoNoAndReduzierungOpimized$whichRegion %>% head(10)) {
+    RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>% filter(whichRegion == regionSelected) %>% unnest(data) %>% unnest(reduzierungsOptResult)
+    inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
+    inputForOptimization$reduzierung_rt1 <- RkiDataWithR0N0$reduzierung_rt1 %>% unique()
+    inputForOptimization$reduzierung_rt2 <- RkiDataWithR0N0$reduzierung_rt2 %>% unique()
+    inputForOptimization$reduzierung_rt3 <- RkiDataWithR0N0$reduzierung_rt3 %>% unique()
+    
+    tmp<-  Rechenkern(RkiDataWithR0N0, inputForOptimization) %>% mutate(whichRegion = regionSelected) %>% 
+      group_by(whichRegion) %>% nest()
+    dfRechenkernAndRki <- bind_rows(dfRechenkernAndRki,tmp)
+    
+    
+  }
+  
+  dfRechenkernAndRkiUnnest <-  dfRechenkernAndRki %>% unnest(data) 
+  redDate1 <- input$reduzierung_datum1
+  redDate2 <- input$reduzierung_datum2
+  redDate3 <- input$reduzierung_datum3
+  #maxMeldeDate <- max(dfRechenkernAndRkiUnnest$MeldeDate)
+  tmp <- dfRechenkernAndRkiUnnest %>%  filter(!is.na(SumAnzahl))
+  p <- tmp %>%  group_by(whichRegion)  %>% filter(Tag >= redDate1 & !is_na(SumAnzahl)) %>% ggplot(aes(Tag, SumAnzahl)) + geom_point() + 
+    geom_line(aes(Tag, ErfassteInfizierteBerechnet))  +
+    facet_wrap(vars(whichRegion), scales="free") +  scale_y_log10(label = label_number_si()) + 
+    geom_vline(xintercept = redDate1, color = "green") + 
+    geom_vline(xintercept = redDate2, color = "blue") +  
+    geom_vline(xintercept = redDate3, color = "red") +
+    annotate("text", x = redDate1, y = 300, label = "Reduzierungsmaßnahme 1", angle=90) 
+ return(p)
+}
+
+
+
+
+
+
+###############  error function for krankenhausdaten optimization ###################
+calcOptimizationStationaerDaten = function(optPara, allPara, parameter_tibble, dfUnNested, gaPara, input) {   
+  # calculate the predictions for krankenhaus data
   denormPara <- denormalizePara(optPara, parameter_tibble)
   #  cat("para",unlist(denormPara,"\n"))
   for(i in 1 : length(optPara)){
@@ -198,25 +550,83 @@ calcOptimizationKrankenhausDaten = function(optPara, allPara, parameter_tibble, 
   for (inputVarName in   inputVarNames ) {
     inputForOptimization[[inputVarName]]<- allPara[[inputVarName]]
   }
+  browser() 
   
   inputForOptimization$dateInput[2] = dfUnNested$MeldeDate %>% max() # set endDate to date of last MeldeDate
   dfRechenKern <-   Rechenkern(dfUnNested, inputForOptimization)
-  
+  # browser()
+  dfUnNested <- dfUnNested[!is.na(dfUnNested[[gaPara$ReportedVar]]),]
+  dfUnNested <- dfUnNested[dfUnNested[[gaPara$ReportedVar]] != 0,]
+ # dfUnNested <- dfUnNested %>% filter(!is.na(ICU_Beatmet))
   dfRechenKern <- dfRechenKern %>% filter(Tag  %in% dfUnNested$MeldeDate)
   dfUnNested <- dfUnNested %>% filter(MeldeDate  %in% dfRechenKern$Tag)
-  # res <- MPE(dfRechenKern$ErfassteInfizierteBerechnet,dfUnNested$SumAnzahl)
-  # browser()
-  #    res <- (
-  #      (sum(
-  #      (log10(dfUnNested$SumAnzahl)   - log10(dfRechenKern$ErfassteInfizierteBerechnet))^2)
-  #      )/(nrow(dfRechenKern)-1)
-  #      )^0.5
-  #  res <- sqrt(mean((log10(dfUnNested$SumAnzahl)-log10(dfRechenKern$ErfassteInfizierteBerechnet))^2))
-  res <- MAPE(log10(dfUnNested$SumAnzahl),log10(dfRechenKern$ErfassteInfizierteBerechnet))
-  # cat("res is :", res , "redu1 = ", reduzierung_rt1, "\n")
-  # res <- sqrt(mean((log10(dfRechenKern$ErfassteInfizierteBerechnet)-log10(dfUnNested$SumAnzahl))^2))
+  browser() 
+     res <- sqrt((((dfUnNested[[gaPara$ReportedVar]])-(dfRechenKern[[gaPara$CalculatedVar]]))^2)) %>% sum()
+
   return(-res)
 } 
+
+
+
+createPlotStationaerOpt <- function(input) {
+  
+   load("../data/RkiDataStationaerOpti.RData")
+  RkiDataStationaerOpti <- RkiDataStationaerOpti %>% 
+    as_tibble()  %>% add_column("dfRechenKern" = 0)
+  
+
+  dfRechenkernAndRki <- tibble()
+  for (regionSelected in RkiDataStationaerOpti$whichRegion %>% head(10)) {
+    
+   
+    ##### create input vector based on optimisaton results
+    inputForOptimization <- input
+    tmp  <- RkiDataStationaerOpti %>% filter(whichRegion == regionSelected)
+
+    inputForOptimization <- setInputAccordingToPreviousOpt(tmp)
+    
+    RkiDataWithR0N0 <- tmp %>% unnest(data)
+    
+    df_nom <-  Rechenkern(RkiDataWithR0N0, inputForOptimization)
+    tmp<-  Rechenkern(RkiDataWithR0N0, inputForOptimization) %>% mutate(whichRegion = regionSelected) %>% 
+      group_by(whichRegion) %>% nest()
+    dfRechenkernAndRki <- bind_rows(dfRechenkernAndRki,tmp)
+    
+    
+  }
+  
+  dfRechenkernAndRkiUnnest <-  dfRechenkernAndRki %>% unnest(data) 
+  redDate1 <- input$reduzierung_datum1
+  redDate2 <- input$reduzierung_datum2
+  redDate3 <- input$reduzierung_datum3
+  #maxMeldeDate <- max(dfRechenkernAndRkiUnnest$MeldeDate)
+  tmp <- dfRechenkernAndRkiUnnest %>%  filter(!is.na(SumAnzahl))
+ plotNeuInfizierteBerechnet<-  tmp %>%  group_by(whichRegion)  %>% filter(Tag >= redDate1 & !is_na(SumAnzahl)) %>% ggplot(aes(Tag, AnzahlFall)) + geom_point() + 
+    geom_line(aes(Tag, NeuInfizierteBerechnet))  +
+    facet_wrap(vars(whichRegion), scales="free") +  
+    geom_vline(xintercept = redDate1, color = "green") + 
+    geom_vline(xintercept = redDate2, color = "blue") +  
+    geom_vline(xintercept = redDate3, color = "red") +
+    annotate("text", x = redDate1, y = 5, label = "Reduzierungsmaßnahme 1", angle=90) 
+  
+  
+ plotStationaer <-  tmp %>%  group_by(whichRegion)  %>% filter(Tag >= redDate1 & !is_na(ICU_Beatmet)) %>% ggplot(aes(Tag, ICU_Beatmet)) + geom_point() + 
+    geom_line(aes(Tag, IntensivBerechnet))  +
+    facet_wrap(vars(whichRegion), scales="free") +  
+    geom_vline(xintercept = redDate1, color = "green") + 
+    geom_vline(xintercept = redDate2, color = "blue") +  
+    geom_vline(xintercept = redDate3, color = "red") +
+    annotate("text", x = redDate1, y = 5, label = "Reduzierungsmaßnahme 1", angle=90) 
+
+  return(list("plotNeuInfizierteBerechnet" = plotNeuInfizierteBerechnet, "plotStationaer" = plotStationaer ))
+}
+
+
+
+
+
+
+
 ############# ValidationsScriptBundeslaender ##############
 
 calcReduziertOptPredictions <- function(R0, n0, dfRoNoOpt, input, startDate){
