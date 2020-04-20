@@ -58,10 +58,10 @@ createDfBundLandKreis <- function() {
            Index = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(LandkreisFirstMeldung) %>%  left_join(landKreisPopulation)  %>% 
     rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) 
   ############# add krankenhaus daten
-  # LK_KH_Data <-  createDfBundLandKreis
-  load("../data/LK_KH_Data.RData")
+  Land_BW_Data <-  readRescueTrackerData()
+  # load("../data/LK_KH_Data.RData")
   tmp <- bind_rows(historyDfBund, historyDfBundesLand, historyDfLandkreis) %>%
-    left_join(LK_KH_Data, by = c("whichRegion" = "Landkreis", "MeldeDate" = "Date"))
+    left_join(Land_BW_Data, by = c("whichRegion" = "Landkreis", "MeldeDate" = "Date"))
   
   
   RkiData <- tmp %>% group_by(whichRegion) %>% nest() %>% 
@@ -99,9 +99,12 @@ readRescueTrackerData <- function() {
   library(mefa4)
   library(dplyr)
   
+  # tmp
+  #setwd("D:/thomas/Dropbox/Intern/LGA/R/app/kh_import/src")
+ # setwd("c:/Users/thomas.gneiting/Dropbox/Intern/LGA/R/app/kh_import/src")
   
   # get data from rescuetrack
-  rescuetrackData <- GET("https://apps.rescuetrack.com/rrb/api/v1/getCapacityDump", add_headers(Cookie = "rt-sso-sid=094eb893-5d4c-4640-9e92-5a795ede04d2"))
+  rescuetrackData <- GET("https://apps.rescuetrack.com/rrb/api/v1/getCapacityDump", add_headers(Cookie = Cookie))
   rescuetrackDataContent <- content(rescuetrackData)#  %>% as_tibble() %>% unnest()
   foldersDf <- rescuetrackDataContent[["folders"]]  #%>% as_tibble(.name_repair = c("universal")) %>% transpose() %>% as_tibble() 
   
@@ -157,8 +160,8 @@ readRescueTrackerData <- function() {
         }
       }  
     }
-    
   }
+  
   # fill up empty day with value of previous day(s) and delete multiple entries per day
   kh_names=sort(unique(krankenhausData$folderName))
   
@@ -178,35 +181,37 @@ readRescueTrackerData <- function() {
       end_date   = max(date(act_kh$timestamp))
       
       # check for doubles and missing values in this time frame
-      for (day_index in seq(start_date, end_date , by = 1)) {
-        tmp_day <- filter(act_kh, as.numeric(date(act_kh$timestamp))==day_index )
-        nrow_tmp_day <- nrow(tmp_day)
-        if (nrow_tmp_day==0) {
-          # generate a new dataset entry with content of previous day and the actual date
-          print ("anlegen")
-          act_timestamp <- as_datetime(day_index*86400+36000)
-          krankenhausDataLoop            <- previous_day
-          krankenhausDataLoop$timestamp  <- act_timestamp
-          krankenhausData <- bind_rows(krankenhausData,krankenhausDataLoop)
-          
-        }  else if (nrow_tmp_day>1) {
-          #keep only newest entry (=last in act_kh) and delete others in krankenhausData
-          print (paste("Laenge krankenhausData vor Loeschen:", nrow(krankenhausData)))
-          # jetzt nur noch das letzte behalten
-          krankenhausData <- anti_join(krankenhausData, head(tmp_day,n=nrow_tmp_day-1))
-          print (paste("Laenge krankenhausData nach Loeschen sollte kleiner sein:", nrow(krankenhausData)))
-          previous_day=tail(tmp_day,n=1)
-        }  else {
-          # is ok as the first date is always populated
-          previous_day=tmp_day
+      if (end_date > start_date) {
+        for (day_index in seq(start_date, end_date , by = 1)) {
+          tmp_day <- filter(act_kh, as.numeric(date(act_kh$timestamp))==day_index )
+          nrow_tmp_day <- nrow(tmp_day)
+          if (nrow_tmp_day==0) {
+            # generate a new dataset entry with content of previous day and the actual date
+            print ("anlegen")
+            act_timestamp <- as_datetime(day_index*86400+36000)
+            krankenhausDataLoop            <- previous_day
+            krankenhausDataLoop$timestamp  <- act_timestamp
+            krankenhausData <- bind_rows(krankenhausData,krankenhausDataLoop)
+            
+          }  else if (nrow_tmp_day>1) {
+            #keep only newest entry (=last in act_kh) and delete others in krankenhausData
+            print (paste("Laenge krankenhausData vor Loeschen:", nrow(krankenhausData)))
+            # jetzt nur noch das letzte behalten
+            krankenhausData <- anti_join(krankenhausData, head(tmp_day,n=nrow_tmp_day-1))
+            print (paste("Laenge krankenhausData nach Loeschen sollte kleiner sein:", nrow(krankenhausData)))
+            previous_day=tail(tmp_day,n=1)
+          }  else {
+            # is ok as the first date is always populated
+            previous_day=tmp_day
+          }
         }
       }
+      # 
+      #break()                                           
     }
-    # 
-    #break()                                           
   }
   
-  browser()
+  
   # combine data to landkreis, date
   print ("----- Combine data to landkreis, date, ... -------")
   start_date = min(date(krankenhausData$timestamp))
@@ -263,6 +268,7 @@ readRescueTrackerData <- function() {
       LK_KH_DataLoop$ICU_Beatmet <- tmp_sum_kh_covid_beatmet
       LK_KH_Data <- bind_rows(LK_KH_Data,LK_KH_DataLoop)
     }
+    return(LK_KH_Data)
   }  
   
   # Loop all dates for baden-wuerttemberg
@@ -291,8 +297,7 @@ readRescueTrackerData <- function() {
     LK_KH_DataLoop$ICU_Beatmet <- tmp_sum_kh_covid_beatmet
     Land_BW_Data <- bind_rows(Land_BW_Data,LK_KH_DataLoop)
     
-  }  
-  browser()
+  } 
   return(Land_BW_Data)
 }
 
@@ -379,7 +384,6 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
   maxOpt           <- res[[4]]
   suggestions      <- res[[5]]
   parameter_tibble <- res[[6]]
-  browser()
   GA <-  ga(type = "real-valued",
             suggestions = suggestions,
             fitness = optFunction,
@@ -494,7 +498,7 @@ denormalizePara <- function(optPara, parameter_tibble, para) {
 
 
 
-createPlotReduOpt <- function(input) {
+createPlotReduOpt <- function(RkiDataWithRoNoAndReduzierungOpimized,input) {
   
   load("../data/RkiReduzierungOptFrameDeutschland.RData")
   RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%    as_tibble()  %>% add_column("dfRechenKern" = 0)
@@ -550,8 +554,7 @@ calcOptimizationStationaerDaten = function(optPara, allPara, parameter_tibble, d
   for (inputVarName in   inputVarNames ) {
     inputForOptimization[[inputVarName]]<- allPara[[inputVarName]]
   }
-  browser() 
-  
+
   inputForOptimization$dateInput[2] = dfUnNested$MeldeDate %>% max() # set endDate to date of last MeldeDate
   dfRechenKern <-   Rechenkern(dfUnNested, inputForOptimization)
   # browser()
@@ -560,7 +563,6 @@ calcOptimizationStationaerDaten = function(optPara, allPara, parameter_tibble, d
  # dfUnNested <- dfUnNested %>% filter(!is.na(ICU_Beatmet))
   dfRechenKern <- dfRechenKern %>% filter(Tag  %in% dfUnNested$MeldeDate)
   dfUnNested <- dfUnNested %>% filter(MeldeDate  %in% dfRechenKern$Tag)
-  browser() 
      res <- sqrt((((dfUnNested[[gaPara$ReportedVar]])-(dfRechenKern[[gaPara$CalculatedVar]]))^2)) %>% sum()
 
   return(-res)

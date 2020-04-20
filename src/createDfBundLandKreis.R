@@ -14,7 +14,7 @@ library(DT)
 library(shinyalert)
 
 
-createDfBundLandKreis <- function() {
+createDfBundLandKreisOld <- function() {
  
   historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
 
@@ -52,9 +52,10 @@ createDfBundLandKreis <- function() {
            Index = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(LandkreisFirstMeldung) %>%  left_join(landKreisPopulation)  %>% 
      rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) 
   ############# add krankenhaus daten
-  load("../data/LK_KH_Data.RData")
+  Land_BW_Data <-  readRescueTrackerData()
+  # load("../data/LK_KH_Data.RData")
   tmp <- bind_rows(historyDfBund, historyDfBundesLand, historyDfLandkreis) %>%
-    left_join(LK_KH_Data, by = c("whichRegion" = "Landkreis", "MeldeDate" = "Date"))
+    left_join(Land_BW_Data, by = c("whichRegion" = "Landkreis", "MeldeDate" = "Date"))
   
   
   RkiData <- tmp %>% group_by(whichRegion) %>% nest() %>% 
@@ -82,8 +83,6 @@ createDfBundLandKreis <- function() {
   return(list(RkiDataWithRoNoOpimizedUpToDate))
 }
 
-
-createDfBundLandKreis()
 
 
 

@@ -11,7 +11,10 @@ load("../data/landkreiseBadenWuerttemberg.RData")
 
 input <- isolate(reactiveValuesToList(inputExample))
 #load("../data/createDfBundLandKreisOutput.RData") 
+######### needs work to implement krankenhaus data read in   #############
 RkiDataWithRoNoOpimizedUpToDate <- createDfBundLandKreis()
+
+save(RkiDataWithRoNoOpimizedUpToDate, file = "RkiDataWithRoNoOpimizedUpToDate.RData")
 #  loads 
 # dataframe RkiDataWithRoNoOpimizedUpToDate 
 # from  file createDfBundLandKreisOutput.RData created by 
@@ -43,10 +46,10 @@ RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibbl
 
 RkiDataWithRoNoAndReduzierungOpimized <- appendOpt(RkiDataWithRoNoOpimizedUpToDate, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
-# save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameDeutschland.RData")
+ save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameDeutschland.RData")
 
 if(plotCreate){
-  plotReduOpt <- createPlotReduOpt( input)
+  plotReduOpt <- createPlotReduOpt(RkiDataWithRoNoAndReduzierungOpimized, input)
   plotReduOpt
   
 }
@@ -75,7 +78,7 @@ RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %
 
 ################## only Baden-Württemberg   because we only have krankenhausdata for Baden-Württemberg #########
 RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
-  filter(whichRegion %in% c("Baden-Württemberg" ,landkreiseBadenWuerttemberg))
+  filter(whichRegion %in% c("Baden-Württemberg" ,landkreiseBadenWuerttemberg)) %>% head(1)
 
 #####################################################
 
@@ -110,12 +113,12 @@ parameter_tibble <- tribble(
 )
 
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
-resultColumnName <- "StationaerOptResult" # column where result of optimizer is stored
-gaPara <- list("popSize" = 14, "maxiter" = 20, run = 5, "ReportedVar" = "Stationaer", "CalculatedVar" = "StationaerBerechnet")
+resultColumnName <- "ICU_beatmetOptResult" # column where result of optimizer is stored
+gaPara <- list("popSize" = 14, "maxiter" = 20, run = 5, "ReportedVar" = "ICU_Beatmet", "CalculatedVar" = "IntensivBerechnet")
 load("../data/RkiDataStationaerOpti.RData")
 
 RkiDataStationaerOpti <- RkiDataStationaerOpti %>% 
-  as_tibble()  %>% add_column("ICU_beatmetOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
+  as_tibble()  %>% add_column("ICU_BeatmetOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
 
 
 ################## only Baden-Württemberg   because we only have krankenhausdata for Baden-Württemberg #########
@@ -128,11 +131,11 @@ RkiDataStationaerOpti <- RkiDataStationaerOpti %>%
 ############################## conduct optimization #######################
 
 
-RkiDataICU_beatmetOpti <- appendOpt(RkiDataStationaerOpti, parameter_tibble, optFunction, resultColumnName, gaPara) 
+RkiDataICU_BeatmetOpti <- appendOpt(RkiDataStationaerOpti, parameter_tibble, optFunction, resultColumnName, gaPara) 
 browser()
 
-toc()
-save(RkiDataICU_beatmetOpti, file  = "../data/RkiDataICU_beatmetOpti.RData")
+
+save(RkiDataICU_BeatmetOpti, file  = "../data/RkiDataICU_BeatmetOpti.RData")
 browser()
 
 plots <- createPlotStationaerOpt(input)
