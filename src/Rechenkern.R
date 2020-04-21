@@ -2,7 +2,6 @@
 # Files calculated the predicted values 
 
 Rechenkern <- function(RkiDataWithR0N0, input) {
-  browser()
   # Betroffene
   # US 31.03.2020: use only one value, before the whole column was used this lead to a init CalcDf with many rows instead of one which could screw up the rollapply later on
   Ygesamt	<- RkiDataWithR0N0$Einwohner %>% unique() # Gesamtmenge
