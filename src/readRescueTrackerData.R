@@ -11,7 +11,7 @@ library(dplyr)
 setwd("c:/Users/thomas.gneiting/Dropbox/Intern/LGA/R/app/kh_import/src")
 
 # get data from rescuetrack
-rescuetrackData <- GET("https://apps.rescuetrack.com/rrb/api/v1/getCapacityDump", add_headers(Cookie = "rt-sso-sid=094eb893-5d4c-4640-9e92-5a795ede04d2"))
+rescuetrackData <- GET("https://apps.rescuetrack.com/rrb/api/v1/getCapacityDump", add_headers(Cookie = Cookie))
 rescuetrackDataContent <- content(rescuetrackData)#  %>% as_tibble() %>% unnest()
 foldersDf <- rescuetrackDataContent[["folders"]]  #%>% as_tibble(.name_repair = c("universal")) %>% transpose() %>% as_tibble() 
 
@@ -197,14 +197,13 @@ for (day_index in seq(start_date, end_date, by = 1)) {
   #kh_covid_stationaer
   tmp_sum_kh_covid_stationaer=max(0,tmp_sum_kh_covid_gesamt-tmp_sum_kh_covid_beatmet)
     
-  LK_KH_DataLoop$Landkreis   <- "Baden-Württemberg"
+  LK_KH_DataLoop$Landkreis   <- "Baden-W?rttemberg"
   LK_KH_DataLoop$Date        <- as_date(day_index)
   LK_KH_DataLoop$Stationaer  <- tmp_sum_kh_covid_stationaer
   LK_KH_DataLoop$ICU_Beatmet <- tmp_sum_kh_covid_beatmet
   Land_BW_Data <- bind_rows(Land_BW_Data,LK_KH_DataLoop)
 
 }  
-
 
 
 

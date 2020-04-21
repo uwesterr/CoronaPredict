@@ -63,7 +63,6 @@ createDfBundLandKreis <- function() {
   tmp <- bind_rows(historyDfBund, historyDfBundesLand, historyDfLandkreis) %>%
     left_join(Land_BW_Data, by = c("whichRegion" = "Landkreis", "MeldeDate" = "Date"))
   
-  
   RkiData <- tmp %>% group_by(whichRegion) %>% nest() %>% 
     add_column("R0Start"= -1e7, "R0Opt"= -1e7, "n0Start" = -1e7, "n0Opt" = -1e7, "RegStartDate" = as.Date('1966-05-10'), 
                "groupedBy" ="", "predictedValues" = "NULL", "NotEnoughDataFlag" = 0) %>% mutate( 
@@ -101,10 +100,9 @@ readRescueTrackerData <- function() {
   
   # tmp
   #setwd("D:/thomas/Dropbox/Intern/LGA/R/app/kh_import/src")
- # setwd("c:/Users/thomas.gneiting/Dropbox/Intern/LGA/R/app/kh_import/src")
-  
+
   # get data from rescuetrack
-  rescuetrackData <- GET("https://apps.rescuetrack.com/rrb/api/v1/getCapacityDump", add_headers(Cookie = Cookie))
+  rescuetrackData <- GET("https://apps.rescuetrack.com/rrb/api/v1/getCapacityDump", add_headers(Cookie = "rt-sso-sid=094eb893-5d4c-4640-9e92-5a795ede04d2"))
   rescuetrackDataContent <- content(rescuetrackData)#  %>% as_tibble() %>% unnest()
   foldersDf <- rescuetrackDataContent[["folders"]]  #%>% as_tibble(.name_repair = c("universal")) %>% transpose() %>% as_tibble() 
   
@@ -268,7 +266,6 @@ readRescueTrackerData <- function() {
       LK_KH_DataLoop$ICU_Beatmet <- tmp_sum_kh_covid_beatmet
       LK_KH_Data <- bind_rows(LK_KH_Data,LK_KH_DataLoop)
     }
-    return(LK_KH_Data)
   }  
   
   # Loop all dates for baden-wuerttemberg
@@ -298,7 +295,10 @@ readRescueTrackerData <- function() {
     Land_BW_Data <- bind_rows(Land_BW_Data,LK_KH_DataLoop)
     
   } 
-  return(Land_BW_Data)
+  
+  Land_BW_Data <- Land_BW_Data %>% mutate(Landkreis = ifelse(Landkreis =="Baden-W?rttemberg", "Baden-Württemberg", Landkreis))
+  KrankenDaten <- bind_rows(Land_BW_Data,LK_KH_Data)
+  return(KrankenDaten)
 }
 
 
@@ -610,10 +610,11 @@ createPlotStationaerOpt <- function(input) {
     geom_vline(xintercept = redDate2, color = "blue") +  
     geom_vline(xintercept = redDate3, color = "red") +
     annotate("text", x = redDate1, y = 5, label = "Reduzierungsmaßnahme 1", angle=90) 
+
   
-  
- plotStationaer <-  tmp %>%  group_by(whichRegion)  %>% filter(Tag >= redDate1 & !is_na(ICU_Beatmet)) %>% ggplot(aes(Tag, ICU_Beatmet)) + geom_point() + 
-    geom_line(aes(Tag, IntensivBerechnet))  +
+ plotStationaer <-  tmp %>%  group_by(whichRegion)  %>% 
+   filter(Tag >= redDate1 & !is_na(KhBerechnet)) %>% ggplot(aes(Tag, Stationaer)) + geom_point() + 
+    geom_line(aes(Tag, KhBerechnet)) + scale_y_log10() +
     facet_wrap(vars(whichRegion), scales="free") +  
     geom_vline(xintercept = redDate1, color = "green") + 
     geom_vline(xintercept = redDate2, color = "blue") +  
@@ -623,7 +624,49 @@ createPlotStationaerOpt <- function(input) {
   return(list("plotNeuInfizierteBerechnet" = plotNeuInfizierteBerechnet, "plotStationaer" = plotStationaer ))
 }
 
+createPlotICU_BeatmetOpt <- function(input) {
+  load("../data/RkiDataICU_BeatmetOpti.RData")
+  RkiDataICU_BeatmetOpti <- RkiDataICU_BeatmetOpti %>% 
+    as_tibble()  %>% add_column("dfRechenKern" = 0)
+  
+  dfRechenkernAndRki <- tibble()
+  for (regionSelected in RkiDataICU_BeatmetOpti$whichRegion %>% head(10)) {
+    
+    
+    ##### create input vector based on optimisaton results
+    inputForOptimization <- input
+    tmp  <- RkiDataICU_BeatmetOpti %>% filter(whichRegion == regionSelected)
+    
+    inputForOptimization <- setInputAccordingToPreviousOpt(tmp)
+    
+    RkiDataWithR0N0 <- tmp %>% unnest(data)
+    
+    df_nom <-  Rechenkern(RkiDataWithR0N0, inputForOptimization)
+    tmp<-  Rechenkern(RkiDataWithR0N0, inputForOptimization) %>% mutate(whichRegion = regionSelected) %>% 
+      group_by(whichRegion) %>% nest()
+    dfRechenkernAndRki <- bind_rows(dfRechenkernAndRki,tmp)
+    
+    
+  }
+  
+  dfRechenkernAndRkiUnnest <-  dfRechenkernAndRki %>% unnest(data) 
+  redDate1 <- input$reduzierung_datum1
+  redDate2 <- input$reduzierung_datum2
+  redDate3 <- input$reduzierung_datum3
+  #maxMeldeDate <- max(dfRechenkernAndRkiUnnest$MeldeDate)
+  tmp <- dfRechenkernAndRkiUnnest %>%  filter(!is.na(SumAnzahl))
 
+  plotIntensivBerechnet <-  tmp %>%  group_by(whichRegion)  %>% 
+    filter(Tag >= redDate1 & !is_na(ICU_Beatmet)) %>% ggplot(aes(Tag, ICU_Beatmet)) + geom_point() + 
+    geom_line(aes(Tag, IntensivBerechnet))  +
+    facet_wrap(vars(whichRegion), scales="free") +  
+    geom_vline(xintercept = redDate1, color = "green") + 
+    geom_vline(xintercept = redDate2, color = "blue") +  
+    geom_vline(xintercept = redDate3, color = "red") +
+    annotate("text", x = redDate1, y = 5, label = "Reduzierungsmaßnahme 1", angle=90) 
+  
+  return(list("plotIntensivBerechnet" = plotIntensivBerechnet))
+}
 
 
 
