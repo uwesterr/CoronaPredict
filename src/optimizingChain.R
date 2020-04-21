@@ -103,7 +103,7 @@ plots
 parameter_tibble <- tribble(
   ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
   #"kh_normal",         0.5         ,  1,        20,        "TRUE", # Anteil an aktuellen Infizierten [%]
-   "kh_intensiv",       25          ,  10,       40,        "TRUE", # Anteil Intensivstation [%]
+   "kh_intensiv",       25          ,  10,       70,        "TRUE", # Anteil Intensivstation [%]
   #"t_kh",              10          ,  5,        30,        "TRUE", # Dauer in Krankenhaus
    "t_intensiv",        10          ,  5,        30,        "TRUE", # Dauer Intensivstation
   #"dt_inf_kh",          8          ,  3,        14,        "TRUE", # Versatz nach Infektion
