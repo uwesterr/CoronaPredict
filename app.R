@@ -330,7 +330,7 @@ server <- function(input, output, session) {
     
     if(input$BundeslandSelected =="---"){
     }else {
-      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+      isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
       vals$Flag  <- "Bundesland"
       regionSelected = 2
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
@@ -340,9 +340,9 @@ server <- function(input, output, session) {
       for (inputVarName in OptResultDf[[1]] %>% names) {
         if (inputVarName %in% (input %>% names)) {
           if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
-            updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]])
+            isolate(updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
           } else {
-            updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1))
+            isolate(updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
           }
         }
       }
@@ -358,7 +358,7 @@ server <- function(input, output, session) {
     if(input$LandkreiseSelected =="---"){
     }else {
       
-      updateSelectInput(session, "BundeslandSelected",  selected = "---")
+      isolate(updateSelectInput(session, "BundeslandSelected",  selected = "---"))
       vals$Flag  <- "Landkreis"
       regionSelected = 3
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$LandkreiseSelected)
@@ -367,9 +367,9 @@ server <- function(input, output, session) {
       for (inputVarName in OptResultDf[[1]] %>% names) {
         if (inputVarName %in% (input %>% names)) {
           if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
-            updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]])
+            isolate(updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
           } else {
-            updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1))
+            isolate(updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
           }
         }
       }
@@ -657,10 +657,12 @@ server <- function(input, output, session) {
     }else {
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-      RkiDataWithSumsNested  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
+      load("data/RkiDataICU_BeatmetOptiTotal.RData")
+      RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal  %>% filter(whichRegion == regionSelected)
+      browser()
       r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
-      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+      isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
     }
     
     if(input$LandkreiseSelected =="---"){
@@ -668,9 +670,10 @@ server <- function(input, output, session) {
     }else {
       vals$Flag  <- "Landkreis"
       regionSelected = 3
-      RkiDataWithSumsNested  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
+      load("data/RkiDataICU_BeatmetOptiTotal.RData")
+      RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal  %>% filter(whichRegion == regionSelected)
       r0_no_erfasstDf(RkiDataWithSumsNested)
-      updateSelectInput(session, "BundeslandSelected",  selected = "---")
+      isolate(updateSelectInput(session, "BundeslandSelected",  selected = "---"))
     }
     
   })
