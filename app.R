@@ -39,7 +39,6 @@ library(rlang)
 library(DT)
 library(modelr)
 library(tidyr)
-
 library(jsonlite)
 library(shiny)
 library(tidyverse)
@@ -49,23 +48,15 @@ library(plotly)
 library(readxl)
 library(scales)
 
-
-
 source(file = "src/Rechenkern.R")
-#source(file = "src/createLandkreisR0_no_erfasstDf.R")
-#source(file = "src/createDfBundLandKreis.R")
-# source(file = "src/optimizerLoopingR0N0.R")
 source(file = "src/helperForCovid19.R")
-
-
-
-if(file.exists("data/RkiReduzierungOptFrame.RData")){
-  
-  load("data/RkiReduzierungOptFrame.RData")
-  
+if(file.exists("data/createDfBundLandKreisOutput.RData")){
+ 
+  load("data/RkiDataICU_BeatmetOptiTotal.RData")
+  RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal
 } else{
   
-  RkiDataWithSumsNested <-  createDfBundLandKreis() # data are generated and stored so they are ready for next call 
+  showModal("Fehler, Daten fehlen ")
   
 }
 
@@ -99,24 +90,17 @@ ui <- function(request) {
                                            column(6,
                                                   
                                                   selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("---","Deutschland", RkiDataWithSumsNested %>% filter(groupedBy == "Bundesland") %>% 
-                                                                select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "Deutschland", multiple = FALSE,
+                                                                                                                            select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "Baden-Württemberg", multiple = FALSE,
                                                               selectize = TRUE, width = NULL, size = NULL)),
                                            column(6,
                                                   selectInput("LandkreiseSelected", "Landkeis", choices = c("---", RkiDataWithSumsNested %>% filter(groupedBy == "Landkreis") %>% 
-                                                               select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "LK Esslingen")
+                                                                                                              select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "LK Esslingen")
                                            ))),
                                        
                                        
                                        
                                        h3("Reduzierende Massnahmen"), 
-                                       wellPanel(
-                                         fluidRow(
-                                           column(5,
-                                                  
-                                                  actionButton("optimizeReduzierendeBtn", "Ermittlung Startwert für Reduzierung Rt")), 
-                                           column(7,
-                                                  helpText("Starwerte für die Reduzierung Rt für einen guten Fit werden ermittelt")
-                                           ))),
+                                       
                                        wellPanel(
                                          fluidRow(
                                            column(4,
@@ -155,7 +139,7 @@ ui <- function(request) {
                                                 wellPanel(
                                                   numericInput("ges_inf_rate", label = "Durchseuchung [%]", value = 70, min=1, max=100, step=1),
                                                   numericInput("ti", label = "Inkubationszeit [d]", value = 2, min=1, max=20, step=1),
-                                                  numericInput("tod_rate", label = "Sterblichkeit [%]", value = 2, min=0, max=100, step = 0.1))),
+                                                  numericInput("tod_rate", label = "Sterblichkeit [%]", value = 4, min=0, max=100, step = 0.1))),
                                          column(6,
                                                 wellPanel(
                                                   numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15, min=1, max=100, step=1),
@@ -223,7 +207,7 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.16", color = "blue"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.2", color = "blue"),
                                        tags$head(tags$style('h2 {color:blue;}')),
                                        tags$head(tags$style('h3 {color:blue;}')),
                                        
@@ -346,19 +330,25 @@ server <- function(input, output, session) {
     
     if(input$BundeslandSelected =="---"){
     }else {
-      showModal(modalDialog(title = "Daten werden berechnet"))
-      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+      isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-     #browser()
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
-    
-      updateSliderInput(session, "reduzierung_rt1", value = RkiDataWithSumsNested$reduzierung_rt1)
-      updateSliderInput(session, "reduzierung_rt2", value = RkiDataWithSumsNested$reduzierung_rt2)
-      updateSliderInput(session, "reduzierung_rt3", value = RkiDataWithSumsNested$reduzierung_rt3)
+      OptResultDf <- RkiDataWithSumsNested[[1,"optimizedInput"]]
+      inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
+      
+      for (inputVarName in OptResultDf[[1]] %>% names) {
+        if (inputVarName %in% (input %>% names)) {
+          if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
+            isolate(updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
+          } else {
+            isolate(updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
+          }
+        }
+      }
+      
       r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
-      removeModal()
       
     }
   })
@@ -367,24 +357,29 @@ server <- function(input, output, session) {
     
     if(input$LandkreiseSelected =="---"){
     }else {
-      showModal(modalDialog(title = "Daten werden berechnet"))
       
-      updateSelectInput(session, "BundeslandSelected",  selected = "---")
+      isolate(updateSelectInput(session, "BundeslandSelected",  selected = "---"))
       vals$Flag  <- "Landkreis"
       regionSelected = 3
-      # browser()
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$LandkreiseSelected)
-      updateSliderInput(session, "reduzierung_rt1", value = RkiDataWithSumsNested$reduzierung_rt1)
-      updateSliderInput(session, "reduzierung_rt2", value = RkiDataWithSumsNested$reduzierung_rt2)
-      updateSliderInput(session, "reduzierung_rt3", value = RkiDataWithSumsNested$reduzierung_rt3)
+      OptResultDf <- RkiDataWithSumsNested[[1,"optimizedInput"]]
+      inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
+      for (inputVarName in OptResultDf[[1]] %>% names) {
+        if (inputVarName %in% (input %>% names)) {
+          if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
+            isolate(updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
+          } else {
+            isolate(updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
+          }
+        }
+      }
       r0_no_erfasstDf(RkiDataWithSumsNested)
-      removeModal()
       
     }
   })
   
   rkiAndPredictData <- reactive({
-  #  browser()
+    #  browser()
     if (r0_no_erfasstDf()$NotEnoughDataFlag) {
       showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", 
                             "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. 
@@ -392,7 +387,7 @@ server <- function(input, output, session) {
       
     }
     RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest(data)
-  
+    
     df_nom <-  Rechenkern(RkiDataWithR0N0, input)
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
@@ -433,6 +428,7 @@ server <- function(input, output, session) {
   color3 = '#6ab84d'
   color4 = 'black'
   color5 = 'gray'
+  color6 = 'lightblue'
   perdictionHorizon <- Sys.Date()+21 # how far in the future confidance will be displayed
   alphaForConfidence <- 0.1 
   # more options at https://ggplot2.tidyverse.org/reference/theme.html
@@ -447,7 +443,7 @@ server <- function(input, output, session) {
     legend.text = element_text(color="blue", size=16, face="bold"),
     legend.position = "bottom"
   )
-  
+  #############  output$Kumuliert ################
   output$Kumuliert <- renderPlotly({
     
     
@@ -507,6 +503,9 @@ server <- function(input, output, session) {
     p
     
   })
+  
+  #########    output$Verlauf ############ 
+  
   output$Verlauf <- renderPlotly({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
@@ -552,6 +551,7 @@ server <- function(input, output, session) {
     
   }) 
   
+  #########     output$Krankenhaus ############  
   output$Krankenhaus <- renderPlotly({
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
@@ -568,16 +568,24 @@ server <- function(input, output, session) {
     
     tmp$Intensiv_berechnet <- as.integer(tmp$Intensiv_berechnet)
     tmp$Krankenhaus_berechnet <- as.integer(tmp$Krankenhaus_berechnet)
-    p <- ggplot(tmp, aes( color ="KH berechnet")) + geom_line(aes(x=Tag, y = Krankenhaus_berechnet)) + 
+    p <- ggplot(tmp, aes( color ="KH berechnet")) + 
+      geom_line(aes(x=Tag, y = Krankenhaus_berechnet))  + geom_point(aes(Tag, Stationaer, color = "KH erfasst")) +
+      geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) +
+      geom_point(aes(Tag, Stationaer, color = "KH erfasst")) +  geom_point(aes(Tag, ICU_Beatmet, color = "Intensiv erfasst")) +
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Krankenhaus_berechnet_min, ymax = Krankenhaus_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color1) + 
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Intensiv_berechnet_min, ymax = Intensiv_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
       
-      geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Plätze in Krankenhaus / Intensivstation, CI 95%", sep ="")  ,
-                                                         x = "Datum", y = "Anzahl",
-                                                         caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
-                                                           'KH berechnet' = color1,
-                                                           'Intensiv berechnet' = color2)) +
+      
+      scale_x_date(labels = date_format("%d.%m")) + 
+      labs(title = paste0(rkiAndPredictData() %>%  filter(!is.na(whichRegion)) %>% select(whichRegion) %>% 
+                            unique(), ": Plätze in Krankenhaus / Intensivstation, CI 95%", sep ="")  ,
+           x = "Datum", y = "Anzahl",
+           caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +  
+      scale_color_manual(values = c(
+        'KH berechnet' = color1,
+        'Intensiv berechnet' = color2,
+        'KH erfasst' = color6,
+        'Intensiv erfasst' = color3)) +
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
     
     
@@ -601,6 +609,7 @@ server <- function(input, output, session) {
     
   }) 
   
+  #########     output$Reproduktionsrate ############  
   output$Reproduktionsrate <- renderPlotly({
     paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
@@ -648,10 +657,12 @@ server <- function(input, output, session) {
     }else {
       vals$Flag  <- "Bundesland"
       regionSelected = 2
-      RkiDataWithSumsNested  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
+      load("data/RkiDataICU_BeatmetOptiTotal.RData")
+      RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal  %>% filter(whichRegion == regionSelected)
+      browser()
       r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
-      updateSelectInput(session, "LandkreiseSelected",  selected = "---")
+      isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
     }
     
     if(input$LandkreiseSelected =="---"){
@@ -659,9 +670,10 @@ server <- function(input, output, session) {
     }else {
       vals$Flag  <- "Landkreis"
       regionSelected = 3
-      RkiDataWithSumsNested  <- createLandkreisR0_no_erfasstDf(RkiDataWithSumsNested, regionSelected, vals, input,session)
+      load("data/RkiDataICU_BeatmetOptiTotal.RData")
+      RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal  %>% filter(whichRegion == regionSelected)
       r0_no_erfasstDf(RkiDataWithSumsNested)
-      updateSelectInput(session, "BundeslandSelected",  selected = "---")
+      isolate(updateSelectInput(session, "BundeslandSelected",  selected = "---"))
     }
     
   })
