@@ -399,7 +399,7 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
   )
   
   print(GA@solution)
-  #browser()
+  browser()
   # using always the first line of the solution output, TODO: understand why at times there are several 
   # output lines
   denormPara <- denormalizePara(GA@solution[1,], parameter_tibble, para)
@@ -466,6 +466,7 @@ calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, 
   }
   
   inputForOptimization$dateInput[2] = dfUnNested$MeldeDate %>% max() # set endDate to date of last MeldeDate
+
     dfRechenKern <-   Rechenkern(dfUnNested, inputForOptimization)
 
   dfRechenKern <- dfRechenKern %>% filter(Tag  %in% dfUnNested$MeldeDate)

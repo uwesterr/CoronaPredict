@@ -44,6 +44,7 @@ RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibbl
 #   filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg))
 #
 ############################## conduct optimization #######################
+source(file = "helperForCovid19.R")
 
 RkiDataWithRoNoAndReduzierungOpimized <- appendOpt(RkiDataWithRoNoOpimizedUpToDate, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
@@ -159,7 +160,6 @@ for (region in (nonBwRegions$whichRegion %>% unlist)) {
   }
   nonBwRegions[[indexEntitiy,"optimizedInput"]] <- ReduzierungOpt
   nonBwRegions[[indexEntitiy,"optimizedInput"]]
-  print(nonBwRegions[[indexEntitiy,"optimizedInput"]])
 }
 
 RkiDataICU_BeatmetOptiTotal <- bind_rows(nonBwRegions,RkiDataICU_BeatmetOpti)
