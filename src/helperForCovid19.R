@@ -399,7 +399,6 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
   )
   
   print(GA@solution)
-  browser()
   # using always the first line of the solution output, TODO: understand why at times there are several 
   # output lines
   denormPara <- denormalizePara(GA@solution[1,], parameter_tibble, para)

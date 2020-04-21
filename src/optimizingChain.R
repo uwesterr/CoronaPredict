@@ -30,8 +30,8 @@ parameter_tibble <- tribble(
   ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
   "reduzierung_rt1", 0         ,  0,        60,        "TRUE",
   "reduzierung_rt2", 0         ,  0,        60,        "TRUE",
-  "reduzierung_rt3", -20       ,  -40,      30,        "TRUE",
-  "reduzierung_rt4", -20       ,  -40,      30,        "TRUE")
+  "reduzierung_rt3", -20       ,  -40,      30,        "TRUE")
+  #"reduzierung_rt4", -20       ,  -40,      30,        "TRUE")
 # function to be used to calculate metric for optimizer
 optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
@@ -72,7 +72,7 @@ parameter_tibble <- tribble(
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 resultColumnName <- "StationaerOptResult" # column where result of optimizer is stored
 gaPara <- list("popSize" = 14, "maxiter" = 20, run = 5, "ReportedVar" = "Stationaer", "CalculatedVar" = "KhBerechnet")
-load("../data/RkiReduzierungOptFrameDeutschland.RData")
+# load("../data/RkiReduzierungOptFrameDeutschland.RData")
 
 RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
   as_tibble()  %>% add_column("StationaerOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
@@ -114,7 +114,7 @@ parameter_tibble <- tribble(
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 resultColumnName <- "ICU_beatmetOptResult" # column where result of optimizer is stored
 gaPara <- list("popSize" = 14, "maxiter" = 20, run = 5, "ReportedVar" = "ICU_Beatmet", "CalculatedVar" = "IntensivBerechnet")
-load("../data/RkiDataStationaerOpti.RData")
+# load("../data/RkiDataStationaerOpti.RData")
 
 RkiDataStationaerOpti <- RkiDataStationaerOpti %>% 
   as_tibble()  %>% add_column("ICU_BeatmetOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
@@ -133,7 +133,7 @@ RkiDataStationaerOpti <- RkiDataStationaerOpti %>%
 RkiDataICU_BeatmetOpti <- appendOpt(RkiDataStationaerOpti, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
 
-save(RkiDataICU_BeatmetOpti, file  = "../data/RkiDataICU_BeatmetOpti.RData")
+# save(RkiDataICU_BeatmetOpti, file  = "../data/RkiDataICU_BeatmetOpti.RData")
 
 plots <- createPlotICU_BeatmetOpt(input)
 plots
@@ -166,3 +166,26 @@ RkiDataICU_BeatmetOptiTotal <- bind_rows(nonBwRegions,RkiDataICU_BeatmetOpti)
 
 save(RkiDataICU_BeatmetOptiTotal, file  = "../data/RkiDataICU_BeatmetOptiTotal.RData")
 
+
+############ create statistic over optimized parameter
+
+optStat <- function(optStat){
+ list( as_tibble(optStat %>% t))
+
+}
+
+tmp <- bind_rows(RkiDataICU_BeatmetOpti,nonBwRegions) %>% select(whichRegion,optimizedInput) %>% mutate(optWide= map(optimizedInput, optStat))
+optWideDf <- tmp %>% unnest(optWide)%>% unnest(optWide)
+optLongDf <- optWideDf %>% select(-optimizedInput) %>% pivot_longer(-whichRegion, names_to = "OptParameter")  %>% 
+  filter(str_detect(OptParameter, c("red")))
+
+optLongDf %>% ggplot(aes(OptParameter, value, color = OptParameter)) +geom_boxplot() + 
+  coord_flip() + labs(title = "Optimised reduzierungs paramter", x = "Optimised parameter")  + theme(legend.position = "none")#+ facet_wrap(vars(OptParameter), scales = "free")
+
+
+
+tmp <- RkiDataICU_BeatmetOpti %>% select(whichRegion, optimizedInput) %>% mutate(optWide= map(optimizedInput, optStat))
+optWideDf <- tmp %>% unnest(optWide)%>% unnest(optWide)
+optLongDf <- optWideDf %>% select(-optimizedInput) %>% pivot_longer(-whichRegion, names_to = "OptParameter") %>% 
+    filter(str_detect(OptParameter, c("inten", "kh", "dt")))
+optLongDf %>% ggplot(aes(OptParameter, value)) +geom_boxplot() + coord_flip() + facet_wrap(vars(OptParameter), scales = "free")
