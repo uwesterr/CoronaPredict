@@ -51,11 +51,9 @@ library(scales)
 source(file = "src/Rechenkern.R")
 source(file = "src/helperForCovid19.R")
 if(file.exists("data/createDfBundLandKreisOutput.RData")){
-  load("data/RkiDataICU_BeatmetOpti.RData")
-  
-  RkiDataWithSumsNested  <- RkiDataICU_BeatmetOpti  
-  
-  
+ 
+  load("data/RkiDataICU_BeatmetOptiTotal.RData")
+  RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal
 } else{
   
   showModal("Fehler, Daten fehlen ")
@@ -209,7 +207,7 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.17", color = "blue"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.2", color = "blue"),
                                        tags$head(tags$style('h2 {color:blue;}')),
                                        tags$head(tags$style('h3 {color:blue;}')),
                                        
