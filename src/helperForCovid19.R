@@ -135,14 +135,14 @@ readRescueTrackerData <- function() {
                                 timestamp = ymd_hms('2020-04-17T12:12:56'))
   
   # Assign raw data on level "Krankenhaus"
-  print ("----- Assign raw data on level Krankenhaus -------")
+ # print ("----- Assign raw data on level Krankenhaus -------")
   for (folderIndex in seq(1,length(foldersDf))) {
     folderIndex
     # exclude higher levels BL, RP and ILS from data import
     if ( (length(foldersDf[[folderIndex]][["resources"]])>0) 
          && !str_detect(foldersDf[[folderIndex]][["folderName"]], c("ILS ", "RP ", "Baden-W")) %>% sum()
     )  {
-      print(foldersDf[[folderIndex]][["folderName"]])
+     #  print(foldersDf[[folderIndex]][["folderName"]])
       # browser()
       for (resourceIndex in seq(1,length(foldersDf[[folderIndex]][["resources"]]))) {
         for (capacitiesIndex in seq(1,length(foldersDf[[folderIndex]][["resources"]][[resourceIndex]][["capacities"]]))) {
@@ -186,7 +186,7 @@ readRescueTrackerData <- function() {
           nrow_tmp_day <- nrow(tmp_day)
           if (nrow_tmp_day==0) {
             # generate a new dataset entry with content of previous day and the actual date
-            print ("anlegen")
+           #  print ("anlegen")
             act_timestamp <- as_datetime(day_index*86400+36000)
             krankenhausDataLoop            <- previous_day
             krankenhausDataLoop$timestamp  <- act_timestamp
@@ -194,10 +194,10 @@ readRescueTrackerData <- function() {
             
           }  else if (nrow_tmp_day>1) {
             #keep only newest entry (=last in act_kh) and delete others in krankenhausData
-            print (paste("Laenge krankenhausData vor Loeschen:", nrow(krankenhausData)))
+           #  print (paste("Laenge krankenhausData vor Loeschen:", nrow(krankenhausData)))
             # jetzt nur noch das letzte behalten
             krankenhausData <- anti_join(krankenhausData, head(tmp_day,n=nrow_tmp_day-1))
-            print (paste("Laenge krankenhausData nach Loeschen sollte kleiner sein:", nrow(krankenhausData)))
+          #  print (paste("Laenge krankenhausData nach Loeschen sollte kleiner sein:", nrow(krankenhausData)))
             previous_day=tail(tmp_day,n=1)
           }  else {
             # is ok as the first date is always populated
@@ -212,7 +212,7 @@ readRescueTrackerData <- function() {
   
   
   # combine data to landkreis, date
-  print ("----- Combine data to landkreis, date, ... -------")
+ #  print ("----- Combine data to landkreis, date, ... -------")
   start_date = min(date(krankenhausData$timestamp))
   end_date   = max(date(krankenhausData$timestamp))
   
@@ -236,7 +236,7 @@ readRescueTrackerData <- function() {
   
   for (LK_Index in seq(1,length(LK_ILS$Landkreis))) {
     LK_Index
-    print(LK_ILS$Landkreis[[LK_Index]])
+  #   print(LK_ILS$Landkreis[[LK_Index]])
     
     day_index=0
     for (day_index in seq(start_date, end_date, by = 1)) {
