@@ -3,7 +3,7 @@
 # Stationaer
 # ICU_Beatmet
 
-setwd("~/CloudProjectsUnderWork/ProjectsUnderWork/PredCo/CoronaPredict/src")
+#setwd("~/CloudProjectsUnderWork/ProjectsUnderWork/PredCo/CoronaPredict/src")
 source(file = "Rechenkern.R")
 source(file = "helperForCovid19.R")
 load("../data/inputExample.RData")
@@ -14,7 +14,7 @@ input <- isolate(reactiveValuesToList(inputExample))
 ######### needs work to implement krankenhaus data read in   #############
 RkiDataWithRoNoOpimizedUpToDate <- createDfBundLandKreis()
 
-save(RkiDataWithRoNoOpimizedUpToDate, file = "RkiDataWithRoNoOpimizedUpToDate.RData")
+save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/RkiDataWithRoNoOpimizedUpToDate.RData")
 #  loads 
 # dataframe RkiDataWithRoNoOpimizedUpToDate 
 # from  file createDfBundLandKreisOutput.RData created by 
@@ -30,7 +30,8 @@ parameter_tibble <- tribble(
   ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
   "reduzierung_rt1", 0         ,  0,        60,        "TRUE",
   "reduzierung_rt2", 0         ,  0,        60,        "TRUE",
-  "reduzierung_rt3", -20       ,  -40,      30,        "TRUE")
+  "reduzierung_rt3", -20       ,  -40,      30,        "TRUE",
+  "reduzierung_rt4", -20       ,  -40,      30,        "TRUE")
 # function to be used to calculate metric for optimizer
 optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
@@ -39,9 +40,9 @@ RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibbl
                                            "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
 
 ################## for tests #########
- RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
-   filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) %>% head(2)
-
+# RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
+#   filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg))
+#
 ############################## conduct optimization #######################
 
 RkiDataWithRoNoAndReduzierungOpimized <- appendOpt(RkiDataWithRoNoOpimizedUpToDate, parameter_tibble, optFunction, resultColumnName, gaPara) 
@@ -69,7 +70,7 @@ parameter_tibble <- tribble(
 
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 resultColumnName <- "StationaerOptResult" # column where result of optimizer is stored
-gaPara <- list("popSize" = 14, "maxiter" = 20, run = 5, "ReportedVar" = "Stationaer", "CalculatedVar" = "StationaerBerechnet")
+gaPara <- list("popSize" = 14, "maxiter" = 20, run = 5, "ReportedVar" = "Stationaer", "CalculatedVar" = "KhBerechnet")
 load("../data/RkiReduzierungOptFrameDeutschland.RData")
 
 RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
@@ -78,7 +79,7 @@ RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %
 
 ################## only Baden-Württemberg   because we only have krankenhausdata for Baden-Württemberg #########
 RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
-  filter(whichRegion %in% c("Baden-Württemberg" ,landkreiseBadenWuerttemberg)) %>% head(1)
+  filter(whichRegion %in% c("Baden-Württemberg" ,landkreiseBadenWuerttemberg)) 
 
 #####################################################
 
@@ -87,11 +88,8 @@ RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %
 
 
 RkiDataStationaerOpti <- appendOpt(RkiDataWithRoNoAndReduzierungOpimized, parameter_tibble, optFunction, resultColumnName, gaPara) 
-browser()
 
-toc()
 save(RkiDataStationaerOpti, file  = "../data/RkiDataStationaerOpti.RData")
-browser()
 
 plots <- createPlotStationaerOpt(input)
 plots
@@ -132,12 +130,39 @@ RkiDataStationaerOpti <- RkiDataStationaerOpti %>%
 
 
 RkiDataICU_BeatmetOpti <- appendOpt(RkiDataStationaerOpti, parameter_tibble, optFunction, resultColumnName, gaPara) 
-browser()
 
 
 save(RkiDataICU_BeatmetOpti, file  = "../data/RkiDataICU_BeatmetOpti.RData")
-browser()
 
-plots <- createPlotStationaerOpt(input)
+plots <- createPlotICU_BeatmetOpt(input)
 plots
+
+
+
+############ write BW optimising results to all non BW entities  ############
+
+load("../data/RkiReduzierungOptFrameDeutschland.RData")
+load("../data/RkiDataICU_BeatmetOpti.RData")
+source(file = "helperForCovid19.R")
+load("../data/landkreiseBadenWuerttemberg.RData")
+
+nonBwRegions <-  RkiDataWithRoNoAndReduzierungOpimized %>% filter(!whichRegion %in% c("Baden-Württemberg" ,landkreiseBadenWuerttemberg)) 
+BwBeatmetOpt <- RkiDataICU_BeatmetOpti[[which(RkiDataICU_BeatmetOpti$whichRegion == "Baden-Württemberg"),"optimizedInput"]]
+BwBeatmetNames <- BwBeatmetOpt[[1]] %>% names
+for (region in (nonBwRegions$whichRegion %>% unlist)) {
+  indexEntitiy <- which(nonBwRegions$whichRegion == region)
+  ReduzierungOpt <- nonBwRegions[[indexEntitiy,"optimizedInput"]] 
+  redNames <- ReduzierungOpt[[1]] %>% names # get names of already optmised parameters
+  extraNames <-  BwBeatmetNames[!BwBeatmetNames %in% redNames] # get names which are not already optimised for non BW regions
+  for (extraName in extraNames) {
+    ReduzierungOpt[[1]][[extraName]]<- BwBeatmetOpt[[1]][[extraName]] 
+  }
+  nonBwRegions[[indexEntitiy,"optimizedInput"]] <- ReduzierungOpt
+  nonBwRegions[[indexEntitiy,"optimizedInput"]]
+  print(nonBwRegions[[indexEntitiy,"optimizedInput"]])
+}
+
+RkiDataICU_BeatmetOptiTotal <- bind_rows(nonBwRegions,RkiDataICU_BeatmetOpti)
+
+save(RkiDataICU_BeatmetOptiTotal, file  = "../data/RkiDataICU_BeatmetOptiTotal.RData")
 
