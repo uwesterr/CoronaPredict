@@ -52,12 +52,10 @@ source(file = "src/Rechenkern.R")
 source(file = "src/helperForCovid19.R")
 if(file.exists("data/createDfBundLandKreisOutput.RData")){
   load("data/RkiDataICU_BeatmetOpti.RData")
-
-  RkiDataWithSumsNested  <- RkiDataICU_BeatmetOpti  
-  load("data/RkiReduzierungOptFrameDeutschland.RData")
   
-  RkiDataWithSumsNested <- RkiDataWithRoNoAndReduzierungOpimized 
- 
+  RkiDataWithSumsNested  <- RkiDataICU_BeatmetOpti  
+  
+  
 } else{
   
   showModal("Fehler, Daten fehlen ")
@@ -104,7 +102,7 @@ ui <- function(request) {
                                        
                                        
                                        h3("Reduzierende Massnahmen"), 
-       
+                                       
                                        wellPanel(
                                          fluidRow(
                                            column(4,
@@ -340,7 +338,7 @@ server <- function(input, output, session) {
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
       OptResultDf <- RkiDataWithSumsNested[[1,"optimizedInput"]]
       inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
- 
+      
       for (inputVarName in OptResultDf[[1]] %>% names) {
         if (inputVarName %in% (input %>% names)) {
           if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
@@ -432,6 +430,7 @@ server <- function(input, output, session) {
   color3 = '#6ab84d'
   color4 = 'black'
   color5 = 'gray'
+  color6 = 'lightblue'
   perdictionHorizon <- Sys.Date()+21 # how far in the future confidance will be displayed
   alphaForConfidence <- 0.1 
   # more options at https://ggplot2.tidyverse.org/reference/theme.html
@@ -446,7 +445,7 @@ server <- function(input, output, session) {
     legend.text = element_text(color="blue", size=16, face="bold"),
     legend.position = "bottom"
   )
-  
+  #############  output$Kumuliert ################
   output$Kumuliert <- renderPlotly({
     
     
@@ -506,6 +505,9 @@ server <- function(input, output, session) {
     p
     
   })
+  
+  #########    output$Verlauf ############ 
+  
   output$Verlauf <- renderPlotly({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
@@ -551,6 +553,7 @@ server <- function(input, output, session) {
     
   }) 
   
+  #########     output$Krankenhaus ############  
   output$Krankenhaus <- renderPlotly({
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
@@ -567,16 +570,24 @@ server <- function(input, output, session) {
     
     tmp$Intensiv_berechnet <- as.integer(tmp$Intensiv_berechnet)
     tmp$Krankenhaus_berechnet <- as.integer(tmp$Krankenhaus_berechnet)
-    p <- ggplot(tmp, aes( color ="KH berechnet")) + geom_line(aes(x=Tag, y = Krankenhaus_berechnet)) + 
+    p <- ggplot(tmp, aes( color ="KH berechnet")) + 
+      geom_line(aes(x=Tag, y = Krankenhaus_berechnet))  + geom_point(aes(Tag, Stationaer, color = "KH erfasst")) +
+      geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) +
+      geom_point(aes(Tag, Stationaer, color = "KH erfasst")) +  geom_point(aes(Tag, ICU_Beatmet, color = "Intensiv erfasst")) +
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Krankenhaus_berechnet_min, ymax = Krankenhaus_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color1) + 
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Intensiv_berechnet_min, ymax = Intensiv_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
       
-      geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Plätze in Krankenhaus / Intensivstation, CI 95%", sep ="")  ,
-                                                         x = "Datum", y = "Anzahl",
-                                                         caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
-                                                           'KH berechnet' = color1,
-                                                           'Intensiv berechnet' = color2)) +
+      
+      scale_x_date(labels = date_format("%d.%m")) + 
+      labs(title = paste0(rkiAndPredictData() %>%  filter(!is.na(whichRegion)) %>% select(whichRegion) %>% 
+                            unique(), ": Plätze in Krankenhaus / Intensivstation, CI 95%", sep ="")  ,
+           x = "Datum", y = "Anzahl",
+           caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +  
+      scale_color_manual(values = c(
+        'KH berechnet' = color1,
+        'Intensiv berechnet' = color2,
+        'KH erfasst' = color6,
+        'Intensiv erfasst' = color3)) +
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
     
     
@@ -600,6 +611,7 @@ server <- function(input, output, session) {
     
   }) 
   
+  #########     output$Reproduktionsrate ############  
   output$Reproduktionsrate <- renderPlotly({
     paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
