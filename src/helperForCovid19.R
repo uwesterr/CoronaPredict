@@ -102,7 +102,8 @@ readRescueTrackerData <- function() {
   #setwd("D:/thomas/Dropbox/Intern/LGA/R/app/kh_import/src")
 
   # get data from rescuetrack
-  rescuetrackData <- GET("https://apps.rescuetrack.com/rrb/api/v1/getCapacityDump", add_headers(Cookie = "rt-sso-sid=094eb893-5d4c-4640-9e92-5a795ede04d2"))
+  load("../secure/cookieForReutlingerData.RData")
+  rescuetrackData <- GET("https://apps.rescuetrack.com/rrb/api/v1/getCapacityDump", add_headers(Cookie = Cookie))
   rescuetrackDataContent <- content(rescuetrackData)#  %>% as_tibble() %>% unnest()
   foldersDf <- rescuetrackDataContent[["folders"]]  #%>% as_tibble(.name_repair = c("universal")) %>% transpose() %>% as_tibble() 
   
