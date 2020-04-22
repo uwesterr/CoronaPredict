@@ -50,7 +50,7 @@ library(scales)
 
 source(file = "src/Rechenkern.R")
 source(file = "src/helperForCovid19.R")
-if(file.exists("data/createDfBundLandKreisOutput.RData")){
+if(file.exists("data/RkiDataICU_BeatmetOptiTotal.RData")){
  
   load("data/RkiDataICU_BeatmetOptiTotal.RData")
   RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal
@@ -79,9 +79,7 @@ ui <- function(request) {
                                      
                                      sidebarPanel(
                                        wellPanel(
-                                         h3("Speichern Einstellungen"),
-                                         bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten 
-                                                                                                           Werten aufgerufen werden.", "Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
+
                                        h3("Auswahl Region"),
                                        
                                        wellPanel(
@@ -167,6 +165,10 @@ ui <- function(request) {
                                                              choices = c("linear", "logarithmisch"),
                                                              selected =  "logarithmisch")
                                               )),
+                                       h3("Speichern Einstellungen"),
+                                       bookmarkButton(label = "Generiere Link mit Einstellungen"),
+                                       helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten Werten aufgerufen werden.", 
+                                                "Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
                                        column(8,
                                               #wellPanel(
                                               tags$a(
@@ -207,7 +209,7 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.2", color = "blue"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.21", color = "blue"),
                                        tags$head(tags$style('h2 {color:blue;}')),
                                        tags$head(tags$style('h3 {color:blue;}')),
                                        
