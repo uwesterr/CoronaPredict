@@ -602,7 +602,7 @@ server <- function(input, output, session) {
     }
     
     
-    p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag"))
+    p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag", "Stationaer", "ICU_Beatmet" ))
     
     
     p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  
