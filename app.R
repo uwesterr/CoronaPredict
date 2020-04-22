@@ -331,7 +331,7 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
-    
+    browser()
     if(input$BundeslandSelected =="---"){
     }else {
       isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
