@@ -50,10 +50,12 @@ library(scales)
 
 source(file = "src/Rechenkern.R")
 source(file = "src/helperForCovid19.R")
-if(file.exists("data/createDfBundLandKreisOutput.RData")){
- 
-  load("data/RkiDataICU_BeatmetOptiTotal.RData")
+inputFile <- list.files("data/InputFileForAppFolder/", full.names = TRUE)
+if(!is_empty(inputFile)){
+
+  load(inputFile)  
   RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal
+  
 } else{
   
   showModal("Fehler, Daten fehlen ")
@@ -79,9 +81,7 @@ ui <- function(request) {
                                      
                                      sidebarPanel(
                                        wellPanel(
-                                         h3("Speichern Einstellungen"),
-                                         bookmarkButton(label = "Generiere Link mit Einstellungen"),helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten 
-                                                                                                           Werten aufgerufen werden.", "Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
+
                                        h3("Auswahl Region"),
                                        
                                        wellPanel(
@@ -167,6 +167,10 @@ ui <- function(request) {
                                                              choices = c("linear", "logarithmisch"),
                                                              selected =  "logarithmisch")
                                               )),
+                                       h3("Speichern Einstellungen"),
+                                       bookmarkButton(label = "Generiere Link mit Einstellungen"),
+                                       helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten Werten aufgerufen werden.", 
+                                                "Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
                                        column(8,
                                               #wellPanel(
                                               tags$a(
@@ -207,7 +211,7 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.2", color = "blue"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.21", color = "blue"),
                                        tags$head(tags$style('h2 {color:blue;}')),
                                        tags$head(tags$style('h3 {color:blue;}')),
                                        
@@ -558,6 +562,8 @@ server <- function(input, output, session) {
     tmp <- rkiAndPredictData()
     colnames(tmp)[colnames(tmp) == "KhBerechnet"] <- "Krankenhaus_berechnet"
     colnames(tmp)[colnames(tmp) == "IntensivBerechnet"] <- "Intensiv_berechnet"
+    colnames(tmp)[colnames(tmp) == "Stationaer"] <- "Krankenhaus_erfasst"
+    colnames(tmp)[colnames(tmp) == "ICU_Beatmet"] <- "Intensiv_erfasst"
     
     #min
     colnames(tmp)[colnames(tmp) == "KhBerechnet_min"] <- "Krankenhaus_berechnet_min"
@@ -569,9 +575,8 @@ server <- function(input, output, session) {
     tmp$Intensiv_berechnet <- as.integer(tmp$Intensiv_berechnet)
     tmp$Krankenhaus_berechnet <- as.integer(tmp$Krankenhaus_berechnet)
     p <- ggplot(tmp, aes( color ="KH berechnet")) + 
-      geom_line(aes(x=Tag, y = Krankenhaus_berechnet))  + geom_point(aes(Tag, Stationaer, color = "KH erfasst")) +
-      geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) +
-      geom_point(aes(Tag, Stationaer, color = "KH erfasst")) +  geom_point(aes(Tag, ICU_Beatmet, color = "Intensiv erfasst")) +
+      geom_line(aes(x=Tag, y = Krankenhaus_berechnet))  + geom_point(aes(Tag, Krankenhaus_erfasst, color = "KH erfasst")) +
+      geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) + geom_point(aes(Tag, Intensiv_erfasst, color = "Intensiv erfasst")) +
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Krankenhaus_berechnet_min, ymax = Krankenhaus_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color1) + 
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Intensiv_berechnet_min, ymax = Intensiv_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
       
@@ -600,7 +605,7 @@ server <- function(input, output, session) {
     }
     
     
-    p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag"))
+    p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag", "Krankenhaus_erfasst", "Intensiv_erfasst" ))
     
     
     p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  

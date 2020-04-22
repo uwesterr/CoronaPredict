@@ -164,7 +164,15 @@ for (region in (nonBwRegions$whichRegion %>% unlist)) {
 
 RkiDataICU_BeatmetOptiTotal <- bind_rows(nonBwRegions,RkiDataICU_BeatmetOpti)
 
-save(RkiDataICU_BeatmetOptiTotal, file  = "../data/RkiDataICU_BeatmetOptiTotal.RData")
+path <- "../data/InputFileForAppFolder/"
+
+## remove old opt file and save new one
+do.call(file.remove, list(list.files(path, full.names = TRUE)))
+
+save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", Sys.time(), ".RData"))
+
+
+# save(RkiDataICU_BeatmetOptiTotal, file  = "../data/RkiDataICU_BeatmetOptiTotal.RData")
 
 
 ############ create statistic over optimized parameter
