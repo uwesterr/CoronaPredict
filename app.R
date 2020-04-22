@@ -617,23 +617,23 @@ server <- function(input, output, session) {
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
     tmp <- rkiAndPredictData()
-    colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt"] <- "Taegliche_Reproduktionsrate"
-    colnames(tmp)[colnames(tmp) == "ReduzierteRt"] <- "Reduzierte_Reproduktionsrate"
+    colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt"] <- "Reproduktionszahl_ohne_Massnahmen"
+    colnames(tmp)[colnames(tmp) == "ReduzierteRt"] <- "Aktuelle_Reproduktionszahl"
     
     
-    tmp$Taegliche_Reproduktionsrate <- round(tmp$Taegliche_Reproduktionsrate, digits = 3)
-    tmp$Reduzierte_Reproduktionsrate <- round(tmp$Reduzierte_Reproduktionsrate, digits = 3)
+    tmp$Reproduktionszahl_ohne_Massnahmen <- round(input$ta*(tmp$Reproduktionszahl_ohne_Massnahmen-1), digits = 3)
+    tmp$Aktuelle_Reproduktionszahl <- round(input$ta*(tmp$Aktuelle_Reproduktionszahl-1), digits = 3)
     
-    p <- ggplot(tmp, aes(color = "Rt ohne Maßnahmen")) + geom_line(aes(x=Tag, y = Taegliche_Reproduktionsrate), linetype = 2) +
+    p <- ggplot(tmp, aes(color = "R ohne Maßnahmen")) + geom_line(aes(x=Tag, y = Reproduktionszahl_ohne_Massnahmen), linetype = 2) +
       #geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Reduzierte_Reproduktionsrate_min, ymax = Reduzierte_Reproduktionsrate_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
-      geom_line(aes(x=Tag,y = Reduzierte_Reproduktionsrate, color = "Rt aktuell"))  +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Tägliche Reproduktionsrate Rt, CI 95%", sep ="")  , x = "Datum", y = "Wert",
+      geom_line(aes(x=Tag,y = Aktuelle_Reproduktionszahl, color = "R aktuell"))  +
+      scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionszahl R, CI 95%", sep ="")  , x = "Datum", y = "Wert",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
-                                                           'Rt ohne Maßnahmen' = color1,
-                                                           'Rt aktuell' = color2)) +
+                                                           'R ohne Maßnahmen' = color1,
+                                                           'R aktuell' = color2)) +
       
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
-    p <- ggplotly(p, tooltip = c("Taegliche_Reproduktionsrate","Reduzierte_Reproduktionsrate", "Tag"))
+    p <- ggplotly(p, tooltip = c("Reproduktionszahl_ohne_Massnahmen","Aktuelle_Reproduktionszahl", "Tag"))
     p <- p %>% layout(legend = list(x = 0.01, y = 0.01, font = list(size = 8))) 
     
     p
