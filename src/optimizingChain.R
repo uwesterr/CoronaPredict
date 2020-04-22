@@ -9,7 +9,7 @@ source(file = "helperForCovid19.R")
 load("../data/inputExample.RData")
 load("../data/landkreiseBadenWuerttemberg.RData")
 
-input <- isolate(reactiveValuesToList(inputExample))
+input <- isolate(reactiveValuesToList(inputExample20200422))
 #load("../data/createDfBundLandKreisOutput.RData") 
 ######### needs work to implement krankenhaus data read in   #############
 RkiDataWithRoNoOpimizedUpToDate <- createDfBundLandKreis()
@@ -30,8 +30,8 @@ parameter_tibble <- tribble(
   ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
   "reduzierung_rt1", 0         ,  0,        60,        "TRUE",
   "reduzierung_rt2", 0         ,  0,        60,        "TRUE",
-  "reduzierung_rt3", -20       ,  -40,      30,        "TRUE")
-  #"reduzierung_rt4", -20       ,  -40,      30,        "TRUE")
+  "reduzierung_rt3", -20       ,  -40,      30,        "TRUE",
+  "reduzierung_rt4", -20       ,  -40,      30,        "TRUE")
 # function to be used to calculate metric for optimizer
 optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
@@ -39,12 +39,13 @@ gaPara <- list("popSize" = 15, "maxiter" = 40, run = 5)
 RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>%   add_column("reduzierungsOptResult" = list("a"),
                                            "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
 
-################## for tests #########
-# RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
-#   filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg))
-#
-############################## conduct optimization #######################
+ ################# for tests #########
+  RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
+    filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) %>% 
+    head(2)
+ ############################# conduct optimization #######################
 source(file = "helperForCovid19.R")
+source(file = "Rechenkern.R")
 
 RkiDataWithRoNoAndReduzierungOpimized <- appendOpt(RkiDataWithRoNoOpimizedUpToDate, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
