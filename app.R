@@ -50,10 +50,12 @@ library(scales)
 
 source(file = "src/Rechenkern.R")
 source(file = "src/helperForCovid19.R")
-if(file.exists("data/RkiDataICU_BeatmetOptiTotal.RData")){
- 
-  load("data/RkiDataICU_BeatmetOptiTotal.RData")
+inputFile <- list.files("data/InputFileForAppFolder/", full.names = TRUE)
+if(!is_empty(inputFile)){
+
+  load(inputFile)  
   RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal
+  
 } else{
   
   showModal("Fehler, Daten fehlen ")
