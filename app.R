@@ -301,7 +301,13 @@ ui <- function(request) {
 
 server <- function(input, output, session) {
   
-  
+ # Avoid caching of app.R by updating timestamp of app.R
+  onStop(function() {
+    # File name
+    p <- paste0(getwd(), "/app.R")
+        # Update file 'date creation'
+    Sys.setFileTime(p, now())
+  }) 
   
   vals <- reactiveValues(Flag = "Bundesland")
   r0_no_erfasstDf <- reactiveVal(0) 
