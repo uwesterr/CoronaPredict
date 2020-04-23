@@ -186,7 +186,15 @@ RkiDataICU_BeatmetOptiTotal <- bind_rows(nonBwRegions,RkiDataICU_BeatmetOpti)
 
 path <- "../data/InputFileForAppFolder/"
 
-## remove old opt file and save new one
+## move old opt file and save new one
+
+
+newFolder <-  "../data/ArchieveInputFileForAppFolder/"
+oldFile <- list.files(path, full.names = TRUE)
+file.copy(list.of.files, new.folder)
+
+# copy the files to the new folder
+
 do.call(file.remove, list(list.files(path, full.names = TRUE)))
 
 save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", Sys.time(), ".RData"))
