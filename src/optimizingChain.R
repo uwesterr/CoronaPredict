@@ -196,7 +196,7 @@ path <- "../data/InputFileForAppFolder/"
 
 newFolder <-  "../data/ArchieveInputFileForAppFolder/"
 oldFile <- list.files(path, full.names = TRUE)
-file.copy(list.of.files, new.folder)
+file.copy(oldFile, newFolder, overwrite = TRUE)
 
 # copy the files to the new folder
 
