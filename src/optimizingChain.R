@@ -2,7 +2,25 @@
 # reduzierung
 # Stationaer
 # ICU_Beatmet
+library(tictoc)
+library(GA)
+library(staTools)
+library(shinyWidgets)
+library(shinyalert)
+library(writexl)
+library(rlang)
+library(DT)
+library(modelr)
+library(tidyr)
 
+library(jsonlite)
+library(shiny)
+library(tidyverse)
+library(lubridate)
+library(zoo)
+library(plotly)
+library(readxl)
+library(scales)
 #setwd("~/CloudProjectsUnderWork/ProjectsUnderWork/PredCo/CoronaPredict/src")
 source(file = "Rechenkern.R")
 source(file = "helperForCovid19.R")
@@ -35,15 +53,17 @@ parameter_tibble <- tribble(
 # function to be used to calculate metric for optimizer
 optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
-gaPara <- list("popSize" = 15, "maxiter" = 40, run = 5)
-RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>%   add_column("reduzierungsOptResult" = list("a"),
+gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8)
+if(!"reduzierungsOptResult" %in% colnames(RkiDataWithRoNoOpimizedUpToDate)){
+RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>% select(-reduzierungsOptResult) %>%  add_column("reduzierungsOptResult" = list("a"),
                                            "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
+}
 
- ################# for tests #########
-  RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
-    filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) %>% 
-    head(2)
- ############################# conduct optimization #######################
+################## for tests #########
+# RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
+#   filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) %>% 
+#   head(2)
+############################## conduct optimization #######################
 source(file = "helperForCovid19.R")
 source(file = "Rechenkern.R")
 
@@ -72,12 +92,14 @@ parameter_tibble <- tribble(
 
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 resultColumnName <- "StationaerOptResult" # column where result of optimizer is stored
-gaPara <- list("popSize" = 14, "maxiter" = 20, run = 5, "ReportedVar" = "Stationaer", "CalculatedVar" = "KhBerechnet")
+gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8, paralel = 4, errorFunc = "RMS",  "ReportedVar" = "Stationaer", "CalculatedVar" = "KhBerechnet")
 # load("../data/RkiReduzierungOptFrameDeutschland.RData")
 
-RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
-  as_tibble()  %>% add_column("StationaerOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
 
+if(!"StationaerOptResult" %in% colnames(RkiDataWithRoNoAndReduzierungOpimized)){
+RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%  
+  as_tibble()  %>% add_column("StationaerOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
+}
 
 ################## only Baden-Württemberg   because we only have krankenhausdata for Baden-Württemberg #########
 RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
@@ -88,7 +110,8 @@ RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %
 
 ############################## conduct optimization #######################
 
-
+  source(file = "helperForCovid19.R")
+  optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 RkiDataStationaerOpti <- appendOpt(RkiDataWithRoNoAndReduzierungOpimized, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
 save(RkiDataStationaerOpti, file  = "../data/RkiDataStationaerOpti.RData")
@@ -114,12 +137,14 @@ parameter_tibble <- tribble(
 
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 resultColumnName <- "ICU_beatmetOptResult" # column where result of optimizer is stored
-gaPara <- list("popSize" = 14, "maxiter" = 20, run = 5, "ReportedVar" = "ICU_Beatmet", "CalculatedVar" = "IntensivBerechnet")
+gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8,  paralel = 4, errorFunc = "RMS", "ReportedVar" = "ICU_Beatmet", "CalculatedVar" = "IntensivBerechnet")
 # load("../data/RkiDataStationaerOpti.RData")
 
+
+if(!"ICU_BeatmetOptResult" %in% colnames(RkiDataStationaerOpti)){
 RkiDataStationaerOpti <- RkiDataStationaerOpti %>% 
   as_tibble()  %>% add_column("ICU_BeatmetOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
-
+}
 
 ################## only Baden-Württemberg   because we only have krankenhausdata for Baden-Württemberg #########
 RkiDataStationaerOpti <- RkiDataStationaerOpti %>% 
@@ -134,7 +159,7 @@ RkiDataStationaerOpti <- RkiDataStationaerOpti %>%
 RkiDataICU_BeatmetOpti <- appendOpt(RkiDataStationaerOpti, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
 
-# save(RkiDataICU_BeatmetOpti, file  = "../data/RkiDataICU_BeatmetOpti.RData")
+ save(RkiDataICU_BeatmetOpti, file  = "../data/RkiDataICU_BeatmetOpti.RData")
 
 plots <- createPlotICU_BeatmetOpt(input)
 plots
@@ -167,7 +192,14 @@ RkiDataICU_BeatmetOptiTotal <- bind_rows(nonBwRegions,RkiDataICU_BeatmetOpti)
 
 path <- "../data/InputFileForAppFolder/"
 
-## remove old opt file and save new one
+## move old opt file and save new one #####
+
+newFolder <-  "../data/ArchieveInputFileForAppFolder/"
+oldFile <- list.files(path, full.names = TRUE)
+file.copy(list.of.files, new.folder)
+
+# copy the files to the new folder
+
 do.call(file.remove, list(list.files(path, full.names = TRUE)))
 
 save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", Sys.time(), ".RData"))
@@ -198,3 +230,4 @@ optWideDf <- tmp %>% unnest(optWide)%>% unnest(optWide)
 optLongDf <- optWideDf %>% select(-optimizedInput) %>% pivot_longer(-whichRegion, names_to = "OptParameter") %>% 
     filter(str_detect(OptParameter, c("inten", "kh", "dt")))
 optLongDf %>% ggplot(aes(OptParameter, value)) +geom_boxplot() + coord_flip() + facet_wrap(vars(OptParameter), scales = "free")
+

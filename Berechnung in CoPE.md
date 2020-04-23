@@ -122,7 +122,7 @@ Die Werte sind in `tidiedFit` abgelegt.
 
 Diese Werte werden an die Funktion `Rechenkern <- function(r0_no_erfasstDf, input)` übergeben
 
-## Einlesen der RKI date
+## Einlesen der RKI data
 Die RKI daten werden von dem Server "https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson" eingelesen
 
 ```r
