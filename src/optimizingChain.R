@@ -44,7 +44,7 @@ plotCreate <- 1
 ############ Optimize Reduzierung ##############################
 
 ############ define optimization parameters, optFunction and resultColumnName
-parameter_tibble <- tribble(
+parameter_tibble_total <- tribble(
   ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
   "reduzierung_rt1", 0         ,  0,        60,        "TRUE",
   "reduzierung_rt2", 0         ,  0,        60,        "TRUE",
@@ -53,23 +53,42 @@ parameter_tibble <- tribble(
 # function to be used to calculate metric for optimizer
 optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
-gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8)
+
 if(!"reduzierungsOptResult" %in% colnames(RkiDataWithRoNoOpimizedUpToDate)){
-RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>% select(-reduzierungsOptResult) %>%  add_column("reduzierungsOptResult" = list("a"),
-                                           "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
+  RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>% select(-reduzierungsOptResult) %>%  add_column("reduzierungsOptResult" = list("a"),
+                                                                                                                                         "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
 }
 
-################## for tests #########
-# RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
-#   filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) %>% 
-#   head(2)
-############################## conduct optimization #######################
+################# for tests #########
+RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
+  filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) %>% 
+  head(2)
+############################# conduct optimization #######################
 source(file = "helperForCovid19.R")
 source(file = "Rechenkern.R")
+namesOfInput <- input %>% names
+reduDatum <- namesOfInput[str_detect(namesOfInput, "datu")] %>% sort()
+indexBW <- which(RkiDataWithRoNoOpimizedUpToDate$whichRegion == "Baden-Württemberg")
+BWDataLastMelde <-  RkiDataWithRoNoOpimizedUpToDate[[indexBW, "data"]][[1]]$MeldeDate %>% max()
 
-RkiDataWithRoNoAndReduzierungOpimized <- appendOpt(RkiDataWithRoNoOpimizedUpToDate, parameter_tibble, optFunction, resultColumnName, gaPara) 
-
- save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameDeutschland.RData")
+calcDf$Tag[indexDay] <- dayOfCalculation
+#### loop over reduzierungen and consider onbly data for error calculation between reduzierungen
+for (index in seq(1, nrow(parameter_tibble_total))) {
+  parameter_tibble <-  parameter_tibble_total %>% filter(var_name == paste0("reduzierung_rt", index))
+  startOptDate <- input[[paste0("reduzierung_datum", index)]]
+  if (index  == nrow(parameter_tibble_total)) { # for last redu all remaining data are considered
+    endOptDate <- BWDataLastMelde
+  } else{
+   # endOptDate <- input[[paste0("reduzierung_datum", index+1)]]
+    endOptDate <- BWDataLastMelde
+  }
+  gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8,  errorFunc = "MAPE", startOptDate = startOptDate, endOptDate = endOptDate) 
+  endOptDate
+  gaPara$endOptDate
+  print(endOptDate)
+  RkiDataWithRoNoAndReduzierungOpimized <- appendOpt(RkiDataWithRoNoOpimizedUpToDate, parameter_tibble, optFunction, resultColumnName, gaPara) 
+}
+save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameDeutschland.RData")
 
 if(plotCreate){
   plotReduOpt <- createPlotReduOpt(RkiDataWithRoNoAndReduzierungOpimized, input)
@@ -83,11 +102,11 @@ if(plotCreate){
 parameter_tibble <- tribble(
   ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
   "kh_normal",         0.5         ,  1,        20,        "TRUE", # Anteil an aktuellen Infizierten [%]
- # "kh_intensiv",       25          ,  10,       40,        "TRUE", # Anteil Intensivstation [%]
+  # "kh_intensiv",       25          ,  10,       40,        "TRUE", # Anteil Intensivstation [%]
   "t_kh",              10          ,  5,        30,        "TRUE", # Dauer in Krankenhaus
- # "t_intensiv",        10          ,  5,        30,        "TRUE", # Dauer Intensivstation
+  # "t_intensiv",        10          ,  5,        30,        "TRUE", # Dauer Intensivstation
   "dt_inf_kh",          8          ,  3,        14,        "TRUE", # Versatz nach Infektion
- # "dt_kh_int",          1          ,  1,        15,        "TRUE", # Versatz Krankenhaus - Intensivstations
+  # "dt_kh_int",          1          ,  1,        15,        "TRUE", # Versatz Krankenhaus - Intensivstations
 )
 
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
@@ -97,8 +116,8 @@ gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8, paralel = 4, errorFunc =
 
 
 if(!"StationaerOptResult" %in% colnames(RkiDataWithRoNoAndReduzierungOpimized)){
-RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%  
-  as_tibble()  %>% add_column("StationaerOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
+  RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%  
+    as_tibble()  %>% add_column("StationaerOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
 }
 
 ################## only Baden-Württemberg   because we only have krankenhausdata for Baden-Württemberg #########
@@ -110,8 +129,8 @@ RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %
 
 ############################## conduct optimization #######################
 
-  source(file = "helperForCovid19.R")
-  optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
+source(file = "helperForCovid19.R")
+optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 RkiDataStationaerOpti <- appendOpt(RkiDataWithRoNoAndReduzierungOpimized, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
 save(RkiDataStationaerOpti, file  = "../data/RkiDataStationaerOpti.RData")
@@ -128,11 +147,11 @@ plots
 parameter_tibble <- tribble(
   ~var_name,         ~var_value, ~var_min,  ~var_max,  ~var_selected,
   #"kh_normal",         0.5         ,  1,        20,        "TRUE", # Anteil an aktuellen Infizierten [%]
-   "kh_intensiv",       25          ,  10,       70,        "TRUE", # Anteil Intensivstation [%]
+  "kh_intensiv",       25          ,  10,       70,        "TRUE", # Anteil Intensivstation [%]
   #"t_kh",              10          ,  5,        30,        "TRUE", # Dauer in Krankenhaus
-   "t_intensiv",        10          ,  5,        30,        "TRUE", # Dauer Intensivstation
+  "t_intensiv",        10          ,  5,        30,        "TRUE", # Dauer Intensivstation
   #"dt_inf_kh",          8          ,  3,        14,        "TRUE", # Versatz nach Infektion
-   "dt_kh_int",          1          ,  1,        15,        "TRUE", # Versatz Krankenhaus - Intensivstations
+  "dt_kh_int",          1          ,  1,        15,        "TRUE", # Versatz Krankenhaus - Intensivstations
 )
 
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
@@ -142,8 +161,8 @@ gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8,  paralel = 4, errorFunc 
 
 
 if(!"ICU_BeatmetOptResult" %in% colnames(RkiDataStationaerOpti)){
-RkiDataStationaerOpti <- RkiDataStationaerOpti %>% 
-  as_tibble()  %>% add_column("ICU_BeatmetOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
+  RkiDataStationaerOpti <- RkiDataStationaerOpti %>% 
+    as_tibble()  %>% add_column("ICU_BeatmetOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
 }
 
 ################## only Baden-Württemberg   because we only have krankenhausdata for Baden-Württemberg #########
@@ -159,7 +178,7 @@ RkiDataStationaerOpti <- RkiDataStationaerOpti %>%
 RkiDataICU_BeatmetOpti <- appendOpt(RkiDataStationaerOpti, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
 
- save(RkiDataICU_BeatmetOpti, file  = "../data/RkiDataICU_BeatmetOpti.RData")
+save(RkiDataICU_BeatmetOpti, file  = "../data/RkiDataICU_BeatmetOpti.RData")
 
 plots <- createPlotICU_BeatmetOpt(input)
 plots
@@ -196,7 +215,7 @@ path <- "../data/InputFileForAppFolder/"
 
 newFolder <-  "../data/ArchieveInputFileForAppFolder/"
 oldFile <- list.files(path, full.names = TRUE)
-file.copy(list.of.files, new.folder)
+file.copy(oldFile, newFolder, overwrite = TRUE)
 
 # copy the files to the new folder
 
@@ -211,8 +230,8 @@ save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTot
 ############ create statistic over optimized parameter
 
 optStat <- function(optStat){
- list( as_tibble(optStat %>% t))
-
+  list( as_tibble(optStat %>% t))
+  
 }
 
 tmp <- bind_rows(RkiDataICU_BeatmetOpti,nonBwRegions) %>% select(whichRegion,optimizedInput) %>% mutate(optWide= map(optimizedInput, optStat))
@@ -228,6 +247,6 @@ optLongDf %>% ggplot(aes(OptParameter, value, color = OptParameter)) +geom_boxpl
 tmp <- RkiDataICU_BeatmetOpti %>% select(whichRegion, optimizedInput) %>% mutate(optWide= map(optimizedInput, optStat))
 optWideDf <- tmp %>% unnest(optWide)%>% unnest(optWide)
 optLongDf <- optWideDf %>% select(-optimizedInput) %>% pivot_longer(-whichRegion, names_to = "OptParameter") %>% 
-    filter(str_detect(OptParameter, c("inten", "kh", "dt")))
+  filter(str_detect(OptParameter, c("inten", "kh", "dt")))
 optLongDf %>% ggplot(aes(OptParameter, value)) +geom_boxplot() + coord_flip() + facet_wrap(vars(OptParameter), scales = "free")
 

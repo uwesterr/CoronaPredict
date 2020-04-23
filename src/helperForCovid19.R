@@ -459,20 +459,19 @@ calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, 
   inputForOptimization$dateInput[2] = dfUnNested$MeldeDate %>% max() # set endDate to date of last MeldeDate
 
     dfRechenKern <-   Rechenkern(dfUnNested, inputForOptimization)
-
-  dfRechenKern <- dfRechenKern %>% filter(Tag  %in% dfUnNested$MeldeDate)
+   
+  dfRechenKern <- dfRechenKern %>% filter(Tag >= gaPara$startOptDate & Tag <= gaPara$endOptDate)
   dfUnNested <- dfUnNested %>% filter(MeldeDate  %in% dfRechenKern$Tag)
-  # res <- MPE(dfRechenKern$ErfassteInfizierteBerechnet,dfUnNested$SumAnzahl)
-  # browser()
-  #    res <- (
-  #      (sum(
-  #      (log10(dfUnNested$SumAnzahl)   - log10(dfRechenKern$ErfassteInfizierteBerechnet))^2)
-  #      )/(nrow(dfRechenKern)-1)
-  #      )^0.5
-  #  res <- sqrt(mean((log10(dfUnNested$SumAnzahl)-log10(dfRechenKern$ErfassteInfizierteBerechnet))^2))
-  res <- MAPE(log10(dfUnNested$SumAnzahl),log10(dfRechenKern$ErfassteInfizierteBerechnet))
-  # cat("res is :", res , "redu1 = ", reduzierung_rt1, "\n")
-  # res <- sqrt(mean((log10(dfRechenKern$ErfassteInfizierteBerechnet)-log10(dfUnNested$SumAnzahl))^2))
+ if (gaPara$errorFunc =="RMS") {
+   res <- sqrt(mean(log10(dfUnNested$SumAnzahl-log10(dfRechenKern$ErfassteInfizierteBerechnet))^2))
+ } else if (gaPara$errorFunc =="MAPE") {
+   res <- MAPE(log10(dfUnNested$SumAnzahl),log10(dfRechenKern$ErfassteInfizierteBerechnet))
+ } else {
+   print("Forgot to define error funciton for calcPredictionsForGaOptimization")
+ }
+
+  
+
   return(-res)
 } 
 denormalizePara <- function(optPara, parameter_tibble, para) {
