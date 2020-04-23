@@ -557,10 +557,18 @@ calcOptimizationStationaerDaten = function(optPara, allPara, parameter_tibble, d
     res= 0
     } else{
   dfRechenKern <- dfRechenKern %>% filter(Tag  %in% tmp$MeldeDate)
+  
+
   tmp <- tmp %>% filter(MeldeDate  %in% dfRechenKern$Tag)
-   #  res <- sqrt((((dfUnNested[[gaPara$ReportedVar]])-(dfRechenKern[[gaPara$CalculatedVar]]))^2)) %>% sum()
-     res <- MAPE(tmp[[gaPara$ReportedVar]],dfRechenKern[[gaPara$CalculatedVar]])
-}
+   #  
+  if (gaPara$errorFunc == "RMS") {
+    res <- sqrt(mean((tmp[[gaPara$ReportedVar]]-dfRechenKern[[gaPara$CalculatedVar]])^2)) 
+  } else if (gaPara$errorFunc == "MAPE") {
+    res <- MAPE(tmp[[gaPara$ReportedVar]],dfRechenKern[[gaPara$CalculatedVar]])
+  }  else{
+    print("Forgot to define errorfunction for GA calcOptimizationStationaerDaten")
+  }
+    }
   return(-res)
 } 
 
