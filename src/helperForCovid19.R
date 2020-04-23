@@ -1,25 +1,16 @@
 # helper functions for shiny app Covid19
 
-library(tictoc)
-library(GA)
-library(staTools)
-library(shinyWidgets)
-library(shinyalert)
-library(writexl)
-library(rlang)
-library(DT)
-library(modelr)
-library(tidyr)
-
-library(jsonlite)
-library(shiny)
+ library(httr)
+ library(tictoc)
+ library(GA)
+ library(jsonlite)
+ library(staTools)
+ library(writexl)
+ library(rlang)
+ library(DT)
+ library(modelr)
 library(tidyverse)
-library(lubridate)
-library(zoo)
-library(plotly)
-library(readxl)
-library(scales)
-
+ 
 createDfBundLandKreis <- function() {
   
   historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
@@ -392,6 +383,7 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
             upper = maxOpt,
             popSize =  gaPara$popSize, 
             maxiter = gaPara$maxiter,
+            parallel = gaPara$parallel,
             run = gaPara$run,
             seed = 2020,
             allPara = allPara, parameter_tibble = parameter_tibble, dfUnNested = dfUnNested, gaPara, input = input,
@@ -559,13 +551,16 @@ calcOptimizationStationaerDaten = function(optPara, allPara, parameter_tibble, d
   inputForOptimization$dateInput[2] = dfUnNested$MeldeDate %>% max() # set endDate to date of last MeldeDate
   dfRechenKern <-   Rechenkern(dfUnNested, inputForOptimization)
   # browser()
-  dfUnNested <- dfUnNested[!is.na(dfUnNested[[gaPara$ReportedVar]]),]
-  dfUnNested <- dfUnNested[dfUnNested[[gaPara$ReportedVar]] != 0,]
- # dfUnNested <- dfUnNested %>% filter(!is.na(ICU_Beatmet))
-  dfRechenKern <- dfRechenKern %>% filter(Tag  %in% dfUnNested$MeldeDate)
-  dfUnNested <- dfUnNested %>% filter(MeldeDate  %in% dfRechenKern$Tag)
-     res <- sqrt((((dfUnNested[[gaPara$ReportedVar]])-(dfRechenKern[[gaPara$CalculatedVar]]))^2)) %>% sum()
-
+  tmp <- dfUnNested[!is.na(dfUnNested[[gaPara$ReportedVar]]),]
+  tmp <- tmp[tmp[[gaPara$ReportedVar]] != 0,]
+  if(nrow(tmp) == 0){
+    res= 0
+    } else{
+  dfRechenKern <- dfRechenKern %>% filter(Tag  %in% tmp$MeldeDate)
+  tmp <- tmp %>% filter(MeldeDate  %in% dfRechenKern$Tag)
+   #  res <- sqrt((((dfUnNested[[gaPara$ReportedVar]])-(dfRechenKern[[gaPara$CalculatedVar]]))^2)) %>% sum()
+     res <- MAPE(tmp[[gaPara$ReportedVar]],dfRechenKern[[gaPara$CalculatedVar]])
+}
   return(-res)
 } 
 

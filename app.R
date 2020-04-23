@@ -28,22 +28,22 @@ if (!("tictoc" %in% rownames(installed.packages()))) install.packages("tictoc")
 if (!("httr" %in% rownames(installed.packages()))) install.packages("httr")
 
 
-library(httr)
-library(tictoc)
-library(GA)
-library(staTools)
+# library(httr)
+# library(tictoc)
+# library(GA)
+# library(jsonlite)
+# library(staTools)
+# library(writexl)
+# library(rlang)
+# library(DT)
+# library(modelr)
+library(zoo)
 library(shinyWidgets)
 library(shinyalert)
-library(writexl)
-library(rlang)
-library(DT)
-library(modelr)
 library(tidyr)
-library(jsonlite)
 library(shiny)
 library(tidyverse)
 library(lubridate)
-library(zoo)
 library(plotly)
 library(readxl)
 library(scales)
@@ -104,13 +104,16 @@ ui <- function(request) {
                                        wellPanel(
                                          fluidRow(
                                            column(4,
-                                                  dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                                  dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")),
+                                                  helpText("Schulschließung")), 
+                                           
                                            column(8,
                                                   sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 25)))),
                                        wellPanel(
                                          fluidRow(
                                            column(4,
-                                                  dateInput("reduzierung_datum2", label = "Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                                  dateInput("reduzierung_datum2", label = "Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")),
+                                                  helpText("Kontaktsperre")),
                                            column(8,
                                                   sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 30)))),
                                        wellPanel(
@@ -331,7 +334,6 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
-    browser()
     if(input$BundeslandSelected =="---"){
     }else {
       isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
@@ -391,7 +393,7 @@ server <- function(input, output, session) {
       
     }
     RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest(data)
-    
+
     df_nom <-  Rechenkern(RkiDataWithR0N0, input)
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
