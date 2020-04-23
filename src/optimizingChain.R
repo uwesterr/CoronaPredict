@@ -54,8 +54,10 @@ parameter_tibble <- tribble(
 optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
 gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8)
-RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>%   add_column("reduzierungsOptResult" = list("a"),
+if(!"reduzierungsOptResult" %in% colnames(RkiDataWithRoNoOpimizedUpToDate)){
+RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>% select(-reduzierungsOptResult) %>%  add_column("reduzierungsOptResult" = list("a"),
                                            "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
+}
 
 ################## for tests #########
 # RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
@@ -90,12 +92,14 @@ parameter_tibble <- tribble(
 
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 resultColumnName <- "StationaerOptResult" # column where result of optimizer is stored
-gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8, paralel = 4, "ReportedVar" = "Stationaer", "CalculatedVar" = "KhBerechnet")
+gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8, paralel = 4, errorFunc = "RMS",  "ReportedVar" = "Stationaer", "CalculatedVar" = "KhBerechnet")
 # load("../data/RkiReduzierungOptFrameDeutschland.RData")
 
-RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
-  as_tibble()  %>% add_column("StationaerOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
 
+if(!"StationaerOptResult" %in% colnames(RkiDataWithRoNoAndReduzierungOpimized)){
+RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%  
+  as_tibble()  %>% add_column("StationaerOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
+}
 
 ################## only Baden-Württemberg   because we only have krankenhausdata for Baden-Württemberg #########
 RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
@@ -133,12 +137,14 @@ parameter_tibble <- tribble(
 
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 resultColumnName <- "ICU_beatmetOptResult" # column where result of optimizer is stored
-gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8,  paralel = 4, "ReportedVar" = "ICU_Beatmet", "CalculatedVar" = "IntensivBerechnet")
+gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8,  paralel = 4, errorFunc = "RMS", "ReportedVar" = "ICU_Beatmet", "CalculatedVar" = "IntensivBerechnet")
 # load("../data/RkiDataStationaerOpti.RData")
 
+
+if(!"ICU_BeatmetOptResult" %in% colnames(RkiDataStationaerOpti)){
 RkiDataStationaerOpti <- RkiDataStationaerOpti %>% 
   as_tibble()  %>% add_column("ICU_BeatmetOptResult" = list("a")) # %>% filter(whichRegion == "Brandenburg")
-
+}
 
 ################## only Baden-Württemberg   because we only have krankenhausdata for Baden-Württemberg #########
 RkiDataStationaerOpti <- RkiDataStationaerOpti %>% 
@@ -186,8 +192,7 @@ RkiDataICU_BeatmetOptiTotal <- bind_rows(nonBwRegions,RkiDataICU_BeatmetOpti)
 
 path <- "../data/InputFileForAppFolder/"
 
-## move old opt file and save new one
-
+## move old opt file and save new one #####
 
 newFolder <-  "../data/ArchieveInputFileForAppFolder/"
 oldFile <- list.files(path, full.names = TRUE)
