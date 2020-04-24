@@ -59,11 +59,11 @@ if(!"reduzierungsOptResult" %in% colnames(RkiDataWithRoNoOpimizedUpToDate)){
                                                                                                                                          "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
 }
 
-################# for tests #########
-RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
-  filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) %>% 
-  head(2)
-############################# conduct optimization #######################
+################## for tests #########
+#RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
+#  filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) %>% 
+#  head(2)
+############################## conduct optimization #######################
 source(file = "helperForCovid19.R")
 source(file = "Rechenkern.R")
 namesOfInput <- input %>% names
@@ -71,11 +71,9 @@ reduDatum <- namesOfInput[str_detect(namesOfInput, "datu")] %>% sort()
 indexBW <- which(RkiDataWithRoNoOpimizedUpToDate$whichRegion == "Baden-Württemberg")
 BWDataLastMelde <-  RkiDataWithRoNoOpimizedUpToDate[[indexBW, "data"]][[1]]$MeldeDate %>% max()
 
-calcDf$Tag[indexDay] <- dayOfCalculation
 #### loop over reduzierungen and consider onbly data for error calculation between reduzierungen
 tmp <- RkiDataWithRoNoOpimizedUpToDate
-# for (index in seq(1, nrow(parameter_tibble_total))) {
-for (index in seq(1, 2)) {
+for (index in seq(1, nrow(parameter_tibble_total))) {
   parameter_tibble <-  parameter_tibble_total %>% filter(var_name == paste0("reduzierung_rt", index))
   startOptDate <- input[[paste0("reduzierung_datum", index)]]
   if (index  == nrow(parameter_tibble_total)) { # for last redu all remaining data are considered
@@ -84,7 +82,7 @@ for (index in seq(1, 2)) {
    # endOptDate <- input[[paste0("reduzierung_datum", index+1)]]
     endOptDate <- BWDataLastMelde
   }
-  gaPara <- list("popSize" = 5, "maxiter" = 1, run = 8,  pmutation = 1,
+  gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8,  pmutation = 0.8,
                  errorFunc = "MAPE", startOptDate = startOptDate, endOptDate = endOptDate) 
   endOptDate
   gaPara$endOptDate
