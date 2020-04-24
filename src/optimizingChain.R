@@ -73,7 +73,9 @@ BWDataLastMelde <-  RkiDataWithRoNoOpimizedUpToDate[[indexBW, "data"]][[1]]$Meld
 
 calcDf$Tag[indexDay] <- dayOfCalculation
 #### loop over reduzierungen and consider onbly data for error calculation between reduzierungen
-for (index in seq(1, nrow(parameter_tibble_total))) {
+tmp <- RkiDataWithRoNoOpimizedUpToDate
+# for (index in seq(1, nrow(parameter_tibble_total))) {
+for (index in seq(1, 2)) {
   parameter_tibble <-  parameter_tibble_total %>% filter(var_name == paste0("reduzierung_rt", index))
   startOptDate <- input[[paste0("reduzierung_datum", index)]]
   if (index  == nrow(parameter_tibble_total)) { # for last redu all remaining data are considered
@@ -82,12 +84,14 @@ for (index in seq(1, nrow(parameter_tibble_total))) {
    # endOptDate <- input[[paste0("reduzierung_datum", index+1)]]
     endOptDate <- BWDataLastMelde
   }
-  gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8,  errorFunc = "MAPE", startOptDate = startOptDate, endOptDate = endOptDate) 
+  gaPara <- list("popSize" = 5, "maxiter" = 1, run = 8,  pmutation = 1,
+                 errorFunc = "MAPE", startOptDate = startOptDate, endOptDate = endOptDate) 
   endOptDate
   gaPara$endOptDate
   print(endOptDate)
-  RkiDataWithRoNoAndReduzierungOpimized <- appendOpt(RkiDataWithRoNoOpimizedUpToDate, parameter_tibble, optFunction, resultColumnName, gaPara) 
+  tmp <- appendOpt(tmp, parameter_tibble, optFunction, resultColumnName, gaPara) 
 }
+RkiDataWithRoNoAndReduzierungOpimized <- tmp
 save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameDeutschland.RData")
 
 if(plotCreate){
@@ -111,7 +115,8 @@ parameter_tibble <- tribble(
 
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 resultColumnName <- "StationaerOptResult" # column where result of optimizer is stored
-gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8, paralel = 4, errorFunc = "RMS",  "ReportedVar" = "Stationaer", "CalculatedVar" = "KhBerechnet")
+gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8, paralel = 4,  pmutation = .2,
+               errorFunc = "RMS",  "ReportedVar" = "Stationaer", "CalculatedVar" = "KhBerechnet")
 # load("../data/RkiReduzierungOptFrameDeutschland.RData")
 
 
@@ -156,7 +161,7 @@ parameter_tibble <- tribble(
 
 optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 resultColumnName <- "ICU_beatmetOptResult" # column where result of optimizer is stored
-gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8,  paralel = 4, errorFunc = "RMS", "ReportedVar" = "ICU_Beatmet", "CalculatedVar" = "IntensivBerechnet")
+gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8,  paralel = 4,  pmutation = .2, errorFunc = "RMS", "ReportedVar" = "ICU_Beatmet", "CalculatedVar" = "IntensivBerechnet")
 # load("../data/RkiDataStationaerOpti.RData")
 
 
