@@ -384,6 +384,7 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
             popSize =  gaPara$popSize, 
             maxiter = gaPara$maxiter,
             parallel = gaPara$parallel,
+            pmutation = gaPara$pmutation,
             run = gaPara$run,
             seed = 2020,
             allPara = allPara, parameter_tibble = parameter_tibble, dfUnNested = dfUnNested, gaPara, input = input,
@@ -493,13 +494,15 @@ denormalizePara <- function(optPara, parameter_tibble, para) {
 createPlotReduOpt <- function(RkiDataWithRoNoAndReduzierungOpimized,input) {
   
   load("../data/RkiReduzierungOptFrameDeutschland.RData")
-  RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>%    as_tibble()  %>% add_column("dfRechenKern" = 0)
+  RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %>% 
+    as_tibble()  %>% add_column("dfRechenKern" = 0)
   
   
   tictoc::tic()
   dfRechenkernAndRki <- tibble()
   for (regionSelected in RkiDataWithRoNoAndReduzierungOpimized$whichRegion %>% head(10)) {
-    RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>% filter(whichRegion == regionSelected) %>% unnest(data) %>% unnest(reduzierungsOptResult)
+    RkiDataWithR0N0 <- RkiDataWithRoNoAndReduzierungOpimized %>% 
+      filter(whichRegion == regionSelected) %>% unnest(data) %>% unnest(optimizedInput)
     inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
     inputForOptimization$reduzierung_rt1 <- RkiDataWithR0N0$reduzierung_rt1 %>% unique()
     inputForOptimization$reduzierung_rt2 <- RkiDataWithR0N0$reduzierung_rt2 %>% unique()
