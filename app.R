@@ -147,7 +147,7 @@ ui <- function(request) {
                                                 wellPanel(
                                                   numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15, min=1, max=100, step=1),
                                                   numericInput("ta", label = "Infektiosität [d]", value = 6, min=1, max=20, step=1),
-                                                  numericInput("td_tod", label = "Dauer Infektion bis Tod", value = 4, min=1, max=20, step=1)))),
+                                                  numericInput("td_tod", label = "Dauer Infektion bis Tod [d]", value = 4, min=1, max=20, step=1)))),
                                        
                                        
                                        h3("Einstellen der Darstellung") ,
@@ -239,17 +239,17 @@ ui <- function(request) {
                                            
                                            column(4,
                                                   wellPanel(
-                                                    numericInput("kh_normal", label = "Anteil an aktuellen Infizierten [%]", value = 4.5, step = 0.1),
-                                                    numericInput("kh_intensiv", label = "Anteil Intensivstation [%]", value = 25))),
+                                                    numericInput("kh_normal", label = "Aktuell Infizierte, stationär aufgenommen [%]", value = 4.5, step = 0.1),
+                                                    numericInput("kh_intensiv", label = "davon Intensivstation [%]", value = 25))),
                                            column(4,  
                                                   wellPanel(
-                                                    numericInput("t_kh", label = "Dauer", value = 14),
-                                                    numericInput("t_intensiv", label = "Dauer Intensivstation", value = 10))),
+                                                    numericInput("t_kh", label = "Dauer stationäre Behandlung [d]", value = 14),
+                                                    numericInput("t_intensiv", label = "Dauer Intensivstation [d]", value = 10))),
                                            
                                            column(4,
                                                   wellPanel(
-                                                    numericInput("dt_inf_kh", label = "Versatz nach Infektion", value = 8),
-                                                    numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation", value = 1))))) , 
+                                                    numericInput("dt_inf_kh", label = "Versatz nach Infektion [d]", value = 8),
+                                                    numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation [d]", value = 1))))) , 
                                        fluidRow(
                                          wellPanel(
                                            splitLayout(
@@ -477,15 +477,15 @@ server <- function(input, output, session) {
     colnames(tmp)[colnames(tmp) == "sumTote_max"] <- "Erfasste_Todesfaelle_max"
     colnames(tmp)[colnames(tmp) == "ToteBerechnet_max"] <- "Berechnete_Todesfaelle_max"
     colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_max"] <- "Berechnete_Infizierte_max"
-    tmp$ErfassteInfizierte <- as.integer(tmp$Erfasste_Infizierte)
-    tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$Berechnete_Infizierte)
-    tmp$ErfassteInfizierte <- as.integer(tmp$Erfasste_Infizierte)
-    tmp$ErfassteInfizierteBerechnet <- as.integer(tmp$Berechnete_Infizierte)
+    tmp$Erfasste_Infizierte <- as.integer(tmp$Erfasste_Infizierte)
+    tmp$Berechnete_Infizierte <- as.integer(tmp$Berechnete_Infizierte)
+
     
     
-    p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) + geom_line(aes(x=Tag, y = Berechnete_Infizierte)) +   
+    p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) +
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon), 
                   aes( x= Tag, ymin = Berechnete_Infizierte_min, ymax = Berechnete_Infizierte_max), alpha =alphaForConfidence, outline.type = "full", fill = color1) + 
+      geom_line(aes(x=Tag, y = Berechnete_Infizierte)) +   
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon), 
                   aes( x= Tag, ymin = Berechnete_Todesfaelle_min, ymax = Berechnete_Todesfaelle_max), alpha =alphaForConfidence, outline.type = "full", fill = color4) + 
       
@@ -499,19 +499,15 @@ server <- function(input, output, session) {
                                                            'Erfasste Infizierte' = color2,
                                                            'Todesfälle berechnet' = color4,
                                                            'Todesfälle erfasst' = color5)) +
-      
-      labs(color = 'Daten') + scale_y_continuous(labels = scales::comma)
-    
+     labs(color = 'Daten')
+
     if(logy){
-      p <- p +  scale_y_log10(label = label_number_si())
-      
+      p <- p + scale_y_log10(labels = label_number_auto(), limits = c(1, NA))
     } else {
-      p
-      
+      p <- p + scale_y_continuous(labels = scales::comma)
     }
-    p <- ggplotly(p, tooltip = c("Berechnete_Infizierte", "Erfasste_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle"))
+    p <- ggplotly(p, tooltip = c("Erfasste_Infizierte", "Berechnete_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle"))
     p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
-    #p <- p %>% layout(legend = list(orientation = 'h'))
     p
     
   })
@@ -541,17 +537,12 @@ server <- function(input, output, session) {
                                                            'Neu Infizierte erfasst' = color3,
                                                            'Neue Todesfälle berechnet' = color4,
                                                            'Neue Todesfälle erfasst' = color5)) +
-      
-      labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
-    
-    
+      labs(color = 'Daten')
     
     if(logy){
-      p <- p +  scale_y_log10(label = label_number_si())
-      
+      p <- p +  scale_y_log10(label = label_number_auto())
     } else {
-      p
-      
+      p <- p +  scale_y_continuous(labels = scales::comma)
     }
     
     
@@ -583,11 +574,10 @@ server <- function(input, output, session) {
     tmp$Intensiv_berechnet <- as.integer(tmp$Intensiv_berechnet)
     tmp$Krankenhaus_berechnet <- as.integer(tmp$Krankenhaus_berechnet)
     p <- ggplot(tmp, aes( color ="KH berechnet")) + 
-      geom_line(aes(x=Tag, y = Krankenhaus_berechnet))  + geom_point(aes(Tag, Krankenhaus_erfasst, color = "KH erfasst")) +
-      geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) + geom_point(aes(Tag, Intensiv_erfasst, color = "Intensiv erfasst")) +
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Krankenhaus_berechnet_min, ymax = Krankenhaus_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color1) + 
+      geom_line(aes(x=Tag, y = Krankenhaus_berechnet))  + geom_point(aes(Tag, Krankenhaus_erfasst, color = "KH erfasst")) +
       geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Intensiv_berechnet_min, ymax = Intensiv_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
-      
+      geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) + geom_point(aes(Tag, Intensiv_erfasst, color = "Intensiv erfasst")) +
       
       scale_x_date(labels = date_format("%d.%m")) + 
       labs(title = paste0(rkiAndPredictData() %>%  filter(!is.na(whichRegion)) %>% select(whichRegion) %>% 
@@ -599,26 +589,18 @@ server <- function(input, output, session) {
         'Intensiv berechnet' = color2,
         'KH erfasst' = color6,
         'Intensiv erfasst' = color3)) +
-      labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
-    
-    
-    
+    labs(color = 'Daten')
     
     if(logy){
-      p <- p +  scale_y_log10(label = label_number_si())
-      
+      p <- p +  scale_y_log10(label = label_number_auto())
     } else {
-      p
-      
+      p <- p + scale_y_continuous(labels = scales::comma)
     }
-    
-    
+
     p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag", "Krankenhaus_erfasst", "Intensiv_erfasst" ))
-    
-    
     p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  
     p
-    
+  
     
   }) 
   
