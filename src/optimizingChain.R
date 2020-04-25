@@ -38,7 +38,8 @@ save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/RkiDataWithRoNoOpimizedUpT
 # from  file createDfBundLandKreisOutput.RData created by 
 # cronjob running createDfBundLandKreis.R every day at 0.01am 
 
-plotCreate <- 1
+plotCreate <- 0
+comment <- "IterativeReduzierungPmutation0_8_"
 
 
 ############ Optimize Reduzierung ##############################
@@ -55,15 +56,14 @@ optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
 
 if(!"reduzierungsOptResult" %in% colnames(RkiDataWithRoNoOpimizedUpToDate)){
-  RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>% select(-reduzierungsOptResult) %>%  add_column("reduzierungsOptResult" = list("a"),
-                                                                                                                                         "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
+  RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>% 
+    as_tibble()  %>%  add_column("reduzierungsOptResult" = list("a"),  "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
 }
 
-################## for tests #########
-#RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
-#  filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) %>% 
-#  head(2)
-############################## conduct optimization #######################
+ ################# for tests #########
+ RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
+   filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) # %>% head(2)
+ ############################# conduct optimization #######################
 source(file = "helperForCovid19.R")
 source(file = "Rechenkern.R")
 namesOfInput <- input %>% names
@@ -82,7 +82,7 @@ for (index in seq(1, nrow(parameter_tibble_total))) {
    # endOptDate <- input[[paste0("reduzierung_datum", index+1)]]
     endOptDate <- BWDataLastMelde
   }
-  gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8,  pmutation = 0.8,
+  gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8,  pmutation = .8,
                  errorFunc = "MAPE", startOptDate = startOptDate, endOptDate = endOptDate) 
   endOptDate
   gaPara$endOptDate
@@ -138,10 +138,11 @@ RkiDataStationaerOpti <- appendOpt(RkiDataWithRoNoAndReduzierungOpimized, parame
 
 save(RkiDataStationaerOpti, file  = "../data/RkiDataStationaerOpti.RData")
 
+if(plotCreate){
 plots <- createPlotStationaerOpt(input)
 plots
 
-
+}
 
 
 ################ optimize ICU_beatmet ###############################
@@ -183,9 +184,10 @@ RkiDataICU_BeatmetOpti <- appendOpt(RkiDataStationaerOpti, parameter_tibble, opt
 
 save(RkiDataICU_BeatmetOpti, file  = "../data/RkiDataICU_BeatmetOpti.RData")
 
+if(plotCreate){
 plots <- createPlotICU_BeatmetOpt(input)
 plots
-
+}
 
 
 ############ write BW optimising results to all non BW entities  ############
@@ -224,7 +226,7 @@ file.copy(oldFile, newFolder, overwrite = TRUE)
 
 do.call(file.remove, list(list.files(path, full.names = TRUE)))
 
-save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", Sys.time(), ".RData"))
+save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", comment, Sys.time(), ".RData"))
 
 
 # save(RkiDataICU_BeatmetOptiTotal, file  = "../data/RkiDataICU_BeatmetOptiTotal.RData")

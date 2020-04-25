@@ -463,6 +463,10 @@ calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, 
    
   dfRechenKern <- dfRechenKern %>% filter(Tag >= gaPara$startOptDate & Tag <= gaPara$endOptDate)
   dfUnNested <- dfUnNested %>% filter(MeldeDate  %in% dfRechenKern$Tag)
+  
+  if(nrow(dfUnNested) == 0){
+  res <- 0
+  } else{
  if (gaPara$errorFunc =="RMS") {
    res <- sqrt(mean(log10(dfUnNested$SumAnzahl-log10(dfRechenKern$ErfassteInfizierteBerechnet))^2))
  } else if (gaPara$errorFunc =="MAPE") {
@@ -470,7 +474,7 @@ calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, 
  } else {
    print("Forgot to define error funciton for calcPredictionsForGaOptimization")
  }
-
+}
   
 
   return(-res)
