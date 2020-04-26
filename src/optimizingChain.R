@@ -38,7 +38,7 @@ save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/RkiDataWithRoNoOpimizedUpT
 # from  file createDfBundLandKreisOutput.RData created by 
 # cronjob running createDfBundLandKreis.R every day at 0.01am 
 
-plotCreate <- 1
+plotCreate <- 0
 
 
 ############ Optimize Reduzierung ##############################
