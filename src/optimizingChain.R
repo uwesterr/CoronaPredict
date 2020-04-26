@@ -38,7 +38,7 @@ save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/RkiDataWithRoNoOpimizedUpT
 # from  file createDfBundLandKreisOutput.RData created by 
 # cronjob running createDfBundLandKreis.R every day at 0.01am 
 
-plotCreate <- 1
+plotCreate <- 0
 
 
 ############ Optimize Reduzierung ##############################
@@ -55,7 +55,7 @@ optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
 gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8)
 if(!"reduzierungsOptResult" %in% colnames(RkiDataWithRoNoOpimizedUpToDate)){
-RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>% select(-reduzierungsOptResult) %>%  add_column("reduzierungsOptResult" = list("a"),
+RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>%  add_column("reduzierungsOptResult" = list("a"),
                                            "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
 }
 
