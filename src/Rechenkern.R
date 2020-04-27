@@ -21,8 +21,8 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   # Expertenparameter für Infektionsverlauf
   ges_inf_rate <- 	input$ges_inf_rate/100 # Gesättige Infektionsrate [percent]
   faktor_n_inf <- 	input$faktor_n_inf # Faktor der nicht erfassten Infizierten
-  ta	<- input$ta # Infektiosit?t  [tage]
-  ti	<- input$ti # Inkubationszeit [tage]
+  ta	<- round(input$ta, 0) # Infektiosit?t  [tage], avoid fraction of day during optimisation
+  ti	<- round(input$ti,0) # Inkubationszeit [tage], avoid fraction of day during optimisation
   
   
   #TG: dieser Parameter wurde entfernt, kann intern aus ta und rt (extrahiert) berechnet werden
@@ -188,8 +188,8 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
     activeStartDay <- which(calcDf$Tag ==  dayOfCalculation - ende_inf+2)
     #   calcDf$GesamtAktuellInfizierteBerechnet[indexDay] <- calcDf %>% filter((Tag <= dayOfCalculation - ti+1) & (Tag > dayOfCalculation - ende_inf+1)) %>% 
     #     summarise(sum = sum(NeuGesamtInfizierteBerechnet)) %>% as.numeric()
-    
-    
+
+   # print(input)
    
     calcDf$GesamtAktuellInfizierteBerechnet[indexDay] <- calcDf$NeuGesamtInfizierteBerechnet[activeStartDay:activeEndDay] %>% sum
     calcDf$NeuGesamtInfizierteBerechnet[indexDay]<- round(calcNeuGesamtInfizierteBerechnet(calcDf[indexDay,]), digits = 0)
