@@ -39,7 +39,7 @@ save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/RkiDataWithRoNoOpimizedUpT
 # cronjob running createDfBundLandKreis.R every day at 0.01am 
 
 plotCreate <- 0
-
+comment <- "_addTiTaToOptimsation_AndOptKrankenStarting30stMarch_"
 
 ############ Optimize Reduzierung ##############################
 
@@ -49,7 +49,9 @@ parameter_tibble <- tribble(
   "reduzierung_rt1", 0         ,  0,        60,        "TRUE",
   "reduzierung_rt2", 0         ,  0,        60,        "TRUE",
   "reduzierung_rt3", -20       ,  -40,      30,        "TRUE",
-  "reduzierung_rt4", -20       ,  -40,      30,        "TRUE")
+  "reduzierung_rt4", -20       ,  -40,      30,        "TRUE",
+  "ti"             , 2,            1,        4,        "TRUE",
+  "ta"             , 6,            4,        8,        "TRUE",)
 # function to be used to calculate metric for optimizer
 optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
@@ -202,7 +204,7 @@ file.copy(oldFile, newFolder, overwrite = TRUE)
 
 do.call(file.remove, list(list.files(path, full.names = TRUE)))
 
-save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", Sys.time(), ".RData"))
+save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", comment, Sys.time(), ".RData"))
 
 
 # save(RkiDataICU_BeatmetOptiTotal, file  = "../data/RkiDataICU_BeatmetOptiTotal.RData")
