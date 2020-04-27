@@ -556,7 +556,7 @@ calcOptimizationStationaerDaten = function(optPara, allPara, parameter_tibble, d
   if(nrow(tmp) == 0){
     res= 0
     } else{
-  dfRechenKern <- dfRechenKern %>% filter(Tag  %in% tmp$MeldeDate)
+  dfRechenKern <- dfRechenKern %>% filter((Tag  %in% tmp$MeldeDate) & Tag > as.Date("2020-03-30"))
   
 
   tmp <- tmp %>% filter(MeldeDate  %in% dfRechenKern$Tag)
