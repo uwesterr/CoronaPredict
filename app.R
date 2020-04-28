@@ -214,7 +214,7 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.21", color = "blue"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.22", color = "blue"),
                                        tags$head(tags$style('h2 {color:blue;}')),
                                        tags$head(tags$style('h3 {color:blue;}')),
                                        
@@ -252,12 +252,12 @@ ui <- function(request) {
                                                     numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation [d]", value = 1))))) , 
                                        fluidRow(
                                          wellPanel(
-                                           splitLayout(
-                                             style = "border: 1px solid silver;",
-                                             cellWidths =  c("50%", "50%"),
-                                             cellHeight = "120%",
+                                         #  splitLayout(
+                                         #    style = "border: 1px solid silver;",
+                                          #   cellWidths =  c("50%", "50%"),
+                                          #   cellHeight = "120%",
                                              addSpinner(plotlyOutput(outputId ="Krankenhaus"), spin = "circle", color = "#E41A1C"),
-                                             addSpinner(plotlyOutput(outputId ="Reproduktionsrate"), spin = "circle", color = "#E41A1C"))                                             
+                                            # addSpinner(plotlyOutput(outputId ="Reproduktionsrate"), spin = "circle", color = "#E41A1C"))                                             
                                            # plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
                                          ),
                                          
