@@ -10,17 +10,38 @@
  library(DT)
  library(modelr)
 library(tidyverse)
+ library(lubridate)
  
 createDfBundLandKreis <- function() {
-  
+  # https://npgeo-corona-npgeo-de.hub.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0
   historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
   
   
   historyDf <- historyData[["features"]][["properties"]]
+  cat("Number of rows: ", nrow(historyDf))
+  maxTries <- 5  # number of tries to poll server and get at least minimum rows of data
+  waitingTime <- 600 # wait ten minutes before polling server again
+  minDataSize <- 123396 # minimum number of rows to be considered a full download
+  counter <- 0
+while ((nrow(historyDf) < minDataSize ) & (counter < maxTries) ) {
+  counter <- counter + 1
+  cat("Download too small: ", nrow(historyDf), " try again, counter: ", counter)
+  print("")
+  Sys.sleep(waitingTime)
+  historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
+  historyDf <- historyData[["features"]][["properties"]]
+ 
+}
+  
+if (counter == maxTries) {
+  abort(message = "Not enough data in download, abort")
+  
+}
+  
   historyDf$MeldeDate <- as.Date(historyDf$Meldedatum)
   
   
-  ## read population file from thonmas
+  ## read population file from thomas
   bundesLandPopulation <- read_excel("../data/bundesland_landkreis_200326_2.xlsx", "bundesland", col_names = c("Bundesland", "EinwohnerBundesland"))
   landKreisPopulation <- read_excel("../data/bundesland_landkreis_200326_2.xlsx", "landkreis", col_names = c("Landkreis", "EinwohnerLandkreis"))
   # browser()
@@ -556,8 +577,9 @@ calcOptimizationStationaerDaten = function(optPara, allPara, parameter_tibble, d
   if(nrow(tmp) == 0){
     res= 0
     } else{
+
       dfRechenKern <- dfRechenKern %>% filter((Tag  %in% tmp$MeldeDate)) # & (Tag > as.Date("2020-03-30")))
-      
+  
 
   tmp <- tmp %>% filter(MeldeDate  %in% dfRechenKern$Tag)
    #  

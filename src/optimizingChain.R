@@ -32,13 +32,15 @@ input <- isolate(reactiveValuesToList(inputExample20200422))
 ######### needs work to implement krankenhaus data read in   #############
 RkiDataWithRoNoOpimizedUpToDate <- createDfBundLandKreis()
 
-save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/RkiDataWithRoNoOpimizedUpToDate.RData")
+save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/RkiDataWithRoNoOpimizedUpToDate.RData", compress = TRUE)
 #  loads 
 # dataframe RkiDataWithRoNoOpimizedUpToDate 
 # from  file createDfBundLandKreisOutput.RData created by 
 # cronjob running createDfBundLandKreis.R every day at 0.01am 
 
 plotCreate <- 0
+Comment <- "Cronjob" # add comment to file name
+CopyToOfficialPage <- 0 # copy datafile to official webpage
 
 
 ############ Optimize Reduzierung ##############################
@@ -69,7 +71,7 @@ source(file = "Rechenkern.R")
 
 RkiDataWithRoNoAndReduzierungOpimized <- appendOpt(RkiDataWithRoNoOpimizedUpToDate, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
- save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameDeutschland.RData")
+ save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameDeutschland.RData", compress = TRUE)
 
 if(plotCreate){
   plotReduOpt <- createPlotReduOpt(RkiDataWithRoNoAndReduzierungOpimized, input)
@@ -114,7 +116,7 @@ RkiDataWithRoNoAndReduzierungOpimized <- RkiDataWithRoNoAndReduzierungOpimized %
   optFunction <- calcOptimizationStationaerDaten # function to be used to calculate metric for optimizer
 RkiDataStationaerOpti <- appendOpt(RkiDataWithRoNoAndReduzierungOpimized, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
-save(RkiDataStationaerOpti, file  = "../data/RkiDataStationaerOpti.RData")
+save(RkiDataStationaerOpti, file  = "../data/RkiDataStationaerOpti.RData", compress = TRUE)
 
 plots <- createPlotStationaerOpt(input)
 plots
@@ -159,7 +161,7 @@ RkiDataStationaerOpti <- RkiDataStationaerOpti %>%
 RkiDataICU_BeatmetOpti <- appendOpt(RkiDataStationaerOpti, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
 
- save(RkiDataICU_BeatmetOpti, file  = "../data/RkiDataICU_BeatmetOpti.RData")
+ save(RkiDataICU_BeatmetOpti, file  = "../data/RkiDataICU_BeatmetOpti.RData", compress = TRUE)
 
 plots <- createPlotICU_BeatmetOpt(input)
 plots
@@ -198,11 +200,30 @@ newFolder <-  "../data/ArchieveInputFileForAppFolder/"
 oldFile <- list.files(path, full.names = TRUE)
 file.copy(oldFile, newFolder, overwrite = TRUE)
 
-# copy the files to the new folder
-
+# delete current file
 do.call(file.remove, list(list.files(path, full.names = TRUE)))
 
-save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", Sys.time(), ".RData"))
+# save new file
+save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", Comment, Sys.time(),  ".RData"), compress = TRUE)
+
+####### copy data to offical page ##############
+if (CopyToOfficialPage) {
+  newFile <- list.files(path, full.names = TRUE)
+  officialDataFolder <- "../../myNewApp/data/InputFileForAppFolder/"  
+  officalArchieveFolder <- "../../myNewApp/data/ArchieveInputFileForAppFolder/" 
+  currentFileOfficial <-  list.files(officialDataFolder, full.names = TRUE)
+  # copy current offical file to archieve
+  file.copy(currentFileOfficial, officalArchieveFolder, overwrite = TRUE)
+  # delete current file
+  do.call(file.remove, list(list.files(officialDataFolder, full.names = TRUE)))
+  
+  # copy file from spielwiese to officical web site
+  file.copy(newFile, officialDataFolder, overwrite = TRUE)
+  
+  
+}
+
+
 
 
 # save(RkiDataICU_BeatmetOptiTotal, file  = "../data/RkiDataICU_BeatmetOptiTotal.RData")
