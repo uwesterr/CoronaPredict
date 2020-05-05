@@ -33,6 +33,21 @@ input <- isolate(reactiveValuesToList(inputExample20200422))
 RkiDataWithRoNoOpimizedUpToDate <- createDfBundLandKreis()
 
 save(RkiDataWithRoNoOpimizedUpToDate, file = "../data/RkiDataWithRoNoOpimizedUpToDate.RData", compress = TRUE)
+
+########### join old and new values #############
+# in order to set the optimized values of the last run those values will be joined with the new pulled values of RKI and rescue board
+
+path <- "../data/InputFileForAppFolder/"
+
+## move old opt file and save new one #####
+
+oldFile <- list.files(path, full.names = TRUE)
+load(oldFile)
+
+RkiDataWithOptimizedInputOfPreviousRun <- left_join(RkiDataWithRoNoOpimizedUpToDate, RkiDataICU_BeatmetOptiTotal %>% select(whichRegion, optimizedInput))
+
+############ 
+
 #  loads 
 # dataframe RkiDataWithRoNoOpimizedUpToDate 
 # from  file createDfBundLandKreisOutput.RData created by 
@@ -69,7 +84,7 @@ RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibbl
 source(file = "helperForCovid19.R")
 source(file = "Rechenkern.R")
 
-RkiDataWithRoNoAndReduzierungOpimized <- appendOpt(RkiDataWithRoNoOpimizedUpToDate, parameter_tibble, optFunction, resultColumnName, gaPara) 
+RkiDataWithRoNoAndReduzierungOpimized <- appendOpt(RkiDataWithOptimizedInputOfPreviousRun, parameter_tibble, optFunction, resultColumnName, gaPara) 
 
  save(RkiDataWithRoNoAndReduzierungOpimized, file  = "../data/RkiReduzierungOptFrameDeutschland.RData", compress = TRUE)
 

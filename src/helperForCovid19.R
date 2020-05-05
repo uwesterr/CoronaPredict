@@ -370,12 +370,23 @@ setInputAccordingToPreviousOpt <- function(tmp) {
 
 
 createRkiRegOptFrame <- function(dfNested, regionSelected, parameter_tibble, optFunction, resultColumnName,  gaPara, input){
-  dfUnNested <- dfNested %>%  filter(whichRegion == regionSelected) %>% unnest(data)
+  
+  # set suggestions values according to values of previous run
+  tmp <- dfNested %>%  filter(whichRegion == regionSelected) 
+  OptResultDf <- tmp[[1,"optimizedInput"]]
+  for (inputVarName in OptResultDf[[1]] %>% names) {
+    if (inputVarName %in% (parameter_tibble$var_name)) {
+      index <- which(parameter_tibble$var_name == inputVarName)
+      parameter_tibble[index,"var_value"] <- OptResultDf[[1]][[inputVarName]] 
+    }
+  }
+  dfUnNested <- tmp  %>% unnest(data)
   res <- optimizerGeneticAlgorithmRedReduction(dfUnNested, parameter_tibble, optFunction,  gaPara, input)
   indexEntitiy <- which(dfNested$whichRegion == regionSelected)
   dfNested[[indexEntitiy, resultColumnName]] <- list(res$OptResult)
   optimizedInput <- dfNested[[indexEntitiy, "optimizedInput"]][[1]]
-  # add optimzed values to list
+  # update optimized values to list
+
   for (parameter in parameter_tibble$var_name) {
  
     optimizedInput[[parameter]] <- res[["OptResult"]][[parameter]][[1]]
@@ -389,6 +400,7 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
   # dfRoNoOpt should be dataframe starting with reduzierung_datum1
   dateOfFirstAction <- input$reduzierung_datum1
   dfUnNested <- dfUnNested %>% filter(MeldeDate >= dateOfFirstAction) # only consider values after first reduction action
+
   
   res <- createOptParmeters(parameter_tibble)
   allPara          <- res[[1]]
