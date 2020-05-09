@@ -26,7 +26,15 @@ if (!("staTools" %in% rownames(installed.packages()))) install.packages("staTool
 if (!("GA" %in% rownames(installed.packages()))) install.packages("GA")
 if (!("tictoc" %in% rownames(installed.packages()))) install.packages("tictoc")
 if (!("httr" %in% rownames(installed.packages()))) install.packages("httr")
+if (!("leaflet" %in% rownames(installed.packages()))) install.packages("leaflet")
+if (!("rgeolocate" %in% rownames(installed.packages()))) install.packages("rgeolocate")
+#if (!("rgdal" %in% rownames(installed.packages()))) install.packages("rgdal")
+if (!("RColorBrewer" %in% rownames(installed.packages()))) install.packages("RColorBrewer")
 
+library(leaflet)
+library(rgeolocate)
+#library(rgdal)
+library(RColorBrewer)
 
 # library(httr)
 # library(tictoc)
@@ -52,7 +60,7 @@ source(file = "src/Rechenkern.R")
 source(file = "src/helperForCovid19.R")
 inputFile <- list.files("data/InputFileForAppFolder/", full.names = TRUE)
 if(!is_empty(inputFile)){
-
+  
   load(inputFile)  
   RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal
   
@@ -81,99 +89,99 @@ ui <- function(request) {
                                      
                                      sidebarPanel(
                                        wellPanel(
-
-                                       h3("Auswahl Region"),
-                                       
-                                       wellPanel(
+                                         
+                                         h3("Auswahl Region"),
+                                         
+                                         wellPanel(
+                                           fluidRow(
+                                             
+                                             column(6,
+                                                    
+                                                    selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("---","Deutschland", RkiDataWithSumsNested %>% filter(groupedBy == "Bundesland") %>% 
+                                                                                                                              select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "Baden-Württemberg", multiple = FALSE,
+                                                                selectize = TRUE, width = NULL, size = NULL)),
+                                             column(6,
+                                                    selectInput("LandkreiseSelected", "Landkeis", choices = c("---", RkiDataWithSumsNested %>% filter(groupedBy == "Landkreis") %>% 
+                                                                                                                select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "LK Esslingen")
+                                             ))),
+                                         
+                                         
+                                         
+                                         h3("Reduzierende Massnahmen"), 
+                                         
+                                         wellPanel(
+                                           fluidRow(
+                                             column(4,
+                                                    dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")),
+                                                    helpText("Schulschließung")), 
+                                             
+                                             column(8,
+                                                    sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 25)))),
+                                         wellPanel(
+                                           fluidRow(
+                                             column(4,
+                                                    dateInput("reduzierung_datum2", label = "Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")),
+                                                    helpText("Kontaktsperre")),
+                                             column(8,
+                                                    sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 30)))),
+                                         wellPanel(
+                                           fluidRow(
+                                             column(4,
+                                                    dateInput("reduzierung_datum3", label = "Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                             column(8,
+                                                    sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 40)))),
+                                         wellPanel(
+                                           fluidRow(
+                                             column(4,
+                                                    dateInput("reduzierung_datum4", label = "Datum", value = "2020-04-20", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                             column(8,
+                                                    sliderInput("reduzierung_rt4",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
+                                         wellPanel(
+                                           fluidRow(
+                                             column(4,
+                                                    dateInput("reduzierung_datum5", label = "Datum", value = "2020-05-15", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
+                                             column(8,
+                                                    sliderInput("reduzierung_rt5",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
+                                         
+                                         
+                                         h3("Expertenparameter Infektionsverlauf"),  
                                          fluidRow(
-                                           
                                            column(6,
-                                                  
-                                                  selectInput("BundeslandSelected", "Deutschland/Bundesland", choices = c("---","Deutschland", RkiDataWithSumsNested %>% filter(groupedBy == "Bundesland") %>% 
-                                                                                                                            select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "Baden-Württemberg", multiple = FALSE,
-                                                              selectize = TRUE, width = NULL, size = NULL)),
+                                                  wellPanel(
+                                                    numericInput("ges_inf_rate", label = "Durchseuchung [%]", value = 70, min=1, max=100, step=1),
+                                                    numericInput("ti", label = "Inkubationszeit [d]", value = 2, min=1, max=20, step=1),
+                                                    numericInput("tod_rate", label = "Sterblichkeit [%]", value = 4, min=0, max=100, step = 0.1))),
                                            column(6,
-                                                  selectInput("LandkreiseSelected", "Landkeis", choices = c("---", RkiDataWithSumsNested %>% filter(groupedBy == "Landkreis") %>% 
-                                                                                                              select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "LK Esslingen")
-                                           ))),
-                                       
-                                       
-                                       
-                                       h3("Reduzierende Massnahmen"), 
-                                       
-                                       wellPanel(
-                                         fluidRow(
-                                           column(4,
-                                                  dateInput("reduzierung_datum1", label = "Datum", value = "2020-03-16", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")),
-                                                  helpText("Schulschließung")), 
-                                           
-                                           column(8,
-                                                  sliderInput("reduzierung_rt1", label = "Reduzierung Rt [%]", min = 00, max = 100, post  = " %", value = 25)))),
-                                       wellPanel(
-                                         fluidRow(
-                                           column(4,
-                                                  dateInput("reduzierung_datum2", label = "Datum", value = "2020-03-23", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de")),
-                                                  helpText("Kontaktsperre")),
-                                           column(8,
-                                                  sliderInput("reduzierung_rt2",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 30)))),
-                                       wellPanel(
-                                         fluidRow(
-                                           column(4,
-                                                  dateInput("reduzierung_datum3", label = "Datum", value = "2020-04-01", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                           column(8,
-                                                  sliderInput("reduzierung_rt3",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 40)))),
-                                       wellPanel(
-                                         fluidRow(
-                                           column(4,
-                                                  dateInput("reduzierung_datum4", label = "Datum", value = "2020-04-20", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                           column(8,
-                                                  sliderInput("reduzierung_rt4",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
-                                       wellPanel(
-                                         fluidRow(
-                                           column(4,
-                                                  dateInput("reduzierung_datum5", label = "Datum", value = "2020-05-15", min=as.Date('2020-03-01'), max=as.Date('2020-12-31', language="de"))),
-                                           column(8,
-                                                  sliderInput("reduzierung_rt5",label="Reduzierung Rt [%]", min = -100, max = 100, post  = " %", value = 0)))),
-                                       
-                                       
-                                       h3("Expertenparameter Infektionsverlauf"),  
-                                       fluidRow(
-                                         column(6,
+                                                  wellPanel(
+                                                    numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15, min=1, max=100, step=1),
+                                                    numericInput("ta", label = "Infektiosität [d]", value = 6, min=1, max=20, step=1),
+                                                    numericInput("td_tod", label = "Dauer Infektion bis Tod [d]", value = 4, min=1, max=20, step=1)))),
+                                         
+                                         
+                                         h3("Einstellen der Darstellung") ,
+                                         column(7,   
                                                 wellPanel(
-                                                  numericInput("ges_inf_rate", label = "Durchseuchung [%]", value = 70, min=1, max=100, step=1),
-                                                  numericInput("ti", label = "Inkubationszeit [d]", value = 2, min=1, max=20, step=1),
-                                                  numericInput("tod_rate", label = "Sterblichkeit [%]", value = 4, min=0, max=100, step = 0.1))),
-                                         column(6,
+                                                  dateRangeInput(inputId = "dateInput",
+                                                                 label = "Datum",
+                                                                 start = as.Date('2020-03-01'),
+                                                                 end = as.Date('2020-06-01'),
+                                                                 min = as.Date('2020-03-01'),
+                                                                 max = as.Date('2020-12-31'),
+                                                                 format = "yyyy-mm-dd",
+                                                                 startview = "month",
+                                                                 weekstart = 1
+                                                  ))),
+                                         column(5,
                                                 wellPanel(
-                                                  numericInput("faktor_n_inf", label = "Dunkelziffer Infizierte", value = 15, min=1, max=100, step=1),
-                                                  numericInput("ta", label = "Infektiosität [d]", value = 6, min=1, max=20, step=1),
-                                                  numericInput("td_tod", label = "Dauer Infektion bis Tod [d]", value = 4, min=1, max=20, step=1)))),
-                                       
-                                       
-                                       h3("Einstellen der Darstellung") ,
-                                       column(7,   
-                                              wellPanel(
-                                                dateRangeInput(inputId = "dateInput",
-                                                               label = "Datum",
-                                                               start = as.Date('2020-03-01'),
-                                                               end = as.Date('2020-06-01'),
-                                                               min = as.Date('2020-03-01'),
-                                                               max = as.Date('2020-12-31'),
-                                                               format = "yyyy-mm-dd",
-                                                               startview = "month",
-                                                               weekstart = 1
-                                                ))),
-                                       column(5,
-                                              wellPanel(
-                                                radioButtons(inputId = "logyInput",
-                                                             label = "Y-Achse",
-                                                             choices = c("linear", "logarithmisch"),
-                                                             selected =  "logarithmisch")
-                                              )),
-                                       h3("Speichern Einstellungen"),
-                                       bookmarkButton(label = "Generiere Link mit Einstellungen"),
-                                       helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten Werten aufgerufen werden.", 
-                                                "Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
+                                                  radioButtons(inputId = "logyInput",
+                                                               label = "Y-Achse",
+                                                               choices = c("linear", "logarithmisch"),
+                                                               selected =  "logarithmisch")
+                                                )),
+                                         h3("Speichern Einstellungen"),
+                                         bookmarkButton(label = "Generiere Link mit Einstellungen"),
+                                         helpText("Mit dem Link kann die Applikation jederzeit wieder mit den jetzt eingestellten Werten aufgerufen werden.", 
+                                                  "Sie können den Link in den Browserfavoriten durch die Tastenkombination CTRL+D zur späteren Wiederverwendung speichern.")),
                                        column(8,
                                               #wellPanel(
                                               tags$a(
@@ -214,23 +222,17 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.22", color = "blue"),
+                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.24", color = "blue"),
                                        tags$head(tags$style('h2 {color:blue;}')),
                                        tags$head(tags$style('h3 {color:blue;}')),
                                        
                                        fluidRow(
-                                         
-                                         wellPanel(
-                                           splitLayout(
-                                             style = "border: 1px solid silver;",
-                                             cellWidths =  c("50%", "50%"),
-                                             cellHeight = "120%",
-                                             cellArgs = list(style = "padding: 6px"), 
-                                             addSpinner(plotlyOutput(outputId ="Kumuliert"), spin = "circle", color = "#E41A1C"),
-                                             addSpinner(plotlyOutput(outputId ="Verlauf"), spin = "circle", color = "#E41A1C"))
-                                           #addSpinner(plotOutput("plot1"), spin = "circle", color = "#E41A1C"),                                           
-                                         )
-                                       ),
+                                         column(6,
+                                                leafletOutput("mymap")),
+                                         column(6,
+                                                addSpinner(plotlyOutput(outputId ="MeldungenProWoche"), spin = "circle", color = "#E41A1C"))),   
+                                       
+                                       
                                        
                                        wellPanel(
                                          h3("Krankenhausaufenthalt"), 
@@ -252,16 +254,28 @@ ui <- function(request) {
                                                     numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation [d]", value = 1))))) , 
                                        fluidRow(
                                          wellPanel(
-                                         #  splitLayout(
-                                         #    style = "border: 1px solid silver;",
-                                          #   cellWidths =  c("50%", "50%"),
-                                          #   cellHeight = "120%",
-                                             addSpinner(plotlyOutput(outputId ="Krankenhaus"), spin = "circle", color = "#E41A1C"),
-                                            # addSpinner(plotlyOutput(outputId ="Reproduktionsrate"), spin = "circle", color = "#E41A1C"))                                             
-                                           # plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
-                                         ),
+                                           #           splitLayout(
+                                           #             style = "border: 1px solid silver;",
+                                           #             cellWidths =  c("50%", "50%"),
+                                           #             cellHeight = "120%",
+                                           addSpinner(plotlyOutput(outputId ="Krankenhaus"), spin = "circle", color = "#E41A1C")),
+                                         #             addSpinner(plotlyOutput(outputId ="MeldungenProWoche"), spin = "circle", color = "#E41A1C"))                                             
+                                         # plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
+                                         #        ),
                                          
-                                       )       
+                                       ),
+                                       fluidRow(
+                                         wellPanel(
+                                           splitLayout(
+                                             style = "border: 1px solid silver;",
+                                             cellWidths =  c("50%", "50%"),
+                                             cellHeight = "120%",
+                                             cellArgs = list(style = "padding: 6px"), 
+                                             addSpinner(plotlyOutput(outputId ="Kumuliert"), spin = "circle", color = "#E41A1C"),
+                                             addSpinner(plotlyOutput(outputId ="Verlauf"), spin = "circle", color = "#E41A1C"))
+                                           #addSpinner(plotOutput("plot1"), spin = "circle", color = "#E41A1C"),                                           
+                                         )
+                                       )
                                        
                                      ) # end main panel
                       )
@@ -301,13 +315,30 @@ ui <- function(request) {
 
 server <- function(input, output, session) {
   
- # Avoid caching of app.R by updating timestamp of app.R
+  # Avoid caching of app.R by updating timestamp of app.R
   onStop(function() {
     # File name
     p <- paste0(getwd(), "/app.R")
-        # Update file 'date creation'
+    # Update file 'date creation'
     Sys.setFileTime(p, now())
   }) 
+  
+  
+  points <- eventReactive(input$recalc, {
+    cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
+  }, ignoreNULL = FALSE)
+  observeEvent(input$mymap_shape_click, { # update the location selectInput on map clicks
+    p <- input$mymap_shape_click
+    updateSelectInput(session, "LandkreiseSelected",  selected = input$mymap_shape_click[["id"]])
+    # browser()
+    
+    print(p)
+  })
+  output$mymap <- renderLeaflet({
+    load("data/meldeMap.RData")
+   return(MeldeMap)
+  })
+  
   
   vals <- reactiveValues(Flag = "Bundesland")
   r0_no_erfasstDf <- reactiveVal(0) 
@@ -399,7 +430,7 @@ server <- function(input, output, session) {
       
     }
     RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest(data)
-
+    
     df_nom <-  Rechenkern(RkiDataWithR0N0, input)
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
@@ -479,7 +510,7 @@ server <- function(input, output, session) {
     colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_max"] <- "Berechnete_Infizierte_max"
     tmp$Erfasste_Infizierte <- as.integer(tmp$Erfasste_Infizierte)
     tmp$Berechnete_Infizierte <- as.integer(tmp$Berechnete_Infizierte)
-
+    
     
     
     p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) +
@@ -499,8 +530,8 @@ server <- function(input, output, session) {
                                                            'Erfasste Infizierte' = color2,
                                                            'Todesfälle berechnet' = color4,
                                                            'Todesfälle erfasst' = color5)) +
-     labs(color = 'Daten')
-
+      labs(color = 'Daten')
+    
     if(logy){
       p <- p + scale_y_log10(labels = label_number_auto(), limits = c(1, NA))
     } else {
@@ -589,44 +620,47 @@ server <- function(input, output, session) {
         'Intensiv berechnet' = color2,
         'KH erfasst' = color6,
         'Intensiv erfasst' = color3)) +
-    labs(color = 'Daten')
+      labs(color = 'Daten')
     
     if(logy){
       p <- p +  scale_y_log10(label = label_number_auto())
     } else {
       p <- p + scale_y_continuous(labels = scales::comma)
     }
-
+    
     p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag", "Krankenhaus_erfasst", "Intensiv_erfasst" ))
     p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  
     p
-  
+    
     
   }) 
   
-  #########     output$Reproduktionsrate ############  
-  output$Reproduktionsrate <- renderPlotly({
+  #########     output$MeldungenProWoche ############  
+  output$MeldungenProWoche <- renderPlotly({
     paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
     tmp <- rkiAndPredictData()
-    colnames(tmp)[colnames(tmp) == "TaeglichReproduktionsRateRt"] <- "Reproduktionszahl_ohne_Massnahmen"
-    colnames(tmp)[colnames(tmp) == "ReduzierteRt"] <- "Aktuelle_Reproduktionszahl"
+    # browser()
+    colnames(tmp)[colnames(tmp) == "MeldeWithinWeekPer100kInhabitantsBerechnet"] <- "Berechnet"
+    colnames(tmp)[colnames(tmp) == "MeldeWithinWeekPer100kInhabitants"] <- "Gemeldet"
     
+    tmp$Berechnet <- round(tmp$Berechnet, digits = 0)
+    tmp$Gemeldet <- round(tmp$Gemeldet, digits = 0)
+    # browser()
+    #   tmp$Reproduktionszahl_ohne_Massnahmen <- round(input$ta*(tmp$Reproduktionszahl_ohne_Massnahmen-1), digits = 3)
+    #   tmp$Aktuelle_Reproduktionszahl <- round(input$ta*(tmp$Aktuelle_Reproduktionszahl-1), digits = 3)
     
-    tmp$Reproduktionszahl_ohne_Massnahmen <- round(input$ta*(tmp$Reproduktionszahl_ohne_Massnahmen-1), digits = 3)
-    tmp$Aktuelle_Reproduktionszahl <- round(input$ta*(tmp$Aktuelle_Reproduktionszahl-1), digits = 3)
-    
-    p <- ggplot(tmp, aes(color = "R ohne Maßnahmen")) + geom_line(aes(x=Tag, y = Reproduktionszahl_ohne_Massnahmen), linetype = 2) +
-      #geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Reduzierte_Reproduktionsrate_min, ymax = Reduzierte_Reproduktionsrate_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
-      geom_line(aes(x=Tag,y = Aktuelle_Reproduktionszahl, color = "R aktuell"))  +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionszahl R, CI 95%", sep ="")  , x = "Datum", y = "Wert",
+    p <- ggplot(tmp, aes(color = "Berechnet")) + geom_line(aes(x=Tag, y = Berechnet), linetype = 2) + geom_point(aes(x = Tag, y = Gemeldet, color = "Gemeldet")) +
+      # geom_line(aes(x=Tag,y = Aktuelle_Reproduktionszahl, color = "R aktuell"))  +
+      scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Meldungen der letzen Woche pro 100.000 Einwohner", sep ="")  , 
+                                                         x = "Datum", y = "Meldungen der letzen Woche / 100.000 Einwohner",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
-                                                           'R ohne Maßnahmen' = color1,
-                                                           'R aktuell' = color2)) +
+                                                           'Berechnet' = color1,
+                                                           'Gemeldet' = color2)) + geom_hline( yintercept = 50) +
       
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
-    p <- ggplotly(p, tooltip = c("Reproduktionszahl_ohne_Massnahmen","Aktuelle_Reproduktionszahl", "Tag"))
+    p <- ggplotly(p, tooltip = c("Berechnet","Gemeldet", "Tag"))
     p <- p %>% layout(legend = list(x = 0.01, y = 0.01, font = list(size = 8))) 
     
     p
