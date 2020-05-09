@@ -102,7 +102,7 @@ ui <- function(request) {
                                                                 selectize = TRUE, width = NULL, size = NULL)),
                                              column(6,
                                                     selectInput("LandkreiseSelected", "Landkeis", choices = c("---", RkiDataWithSumsNested %>% filter(groupedBy == "Landkreis") %>% 
-                                                                                                                select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "LK Esslingen")
+                                                                                                                select(whichRegion) %>% unlist %>% unique() %>% str_sort), selected = "---")
                                              ))),
                                          
                                          
@@ -343,53 +343,19 @@ server <- function(input, output, session) {
   vals <- reactiveValues(Flag = "Bundesland")
   r0_no_erfasstDf <- reactiveVal(0) 
   
-  
-  
-  observeEvent(input$optimizeReduzierendeBtn, {
-    showModal(modalDialog(title = "Optimierung läuft"))
-    
-    if(vals$Flag  == "Bundesland"){
-      regionSelected = 2
-    } else {
-      regionSelected = 3
-    }
-    dfRoNo <- r0_no_erfasstDf()[[1]]
-    n0_erfasst_nom_min_max <- r0_no_erfasstDf()[[2]]
-    R0_conf_nom_min_max <- r0_no_erfasstDf()[[3]]
-    startDate <- r0_no_erfasstDf()[[4]]
-    rechenDf_nom <- cbind(dfRoNo,n0_erfasst=n0_erfasst_nom_min_max$n0_erfasst_nom, R0 =R0_conf_nom_min_max$R0_nom)
-    GA <- ga(type = "real-valued", 
-             fitness =  function(x) calcPredictionsForOptimization(x[1], x[2], x[3], R0_conf_nom_min_max,  n0_erfasst_nom_min_max, startDate, rechenDf_nom, input),
-             seed = 2020,
-             lower = c(0, 0,-100 ), upper = c(100, 100, 100), 
-             popSize = 10, maxiter = 30, run = 5)
-    # browser()
-    updateSliderInput(session, "reduzierung_rt1", value = GA@solution[[1]])
-    updateSliderInput(session, "reduzierung_rt2", value = GA@solution[[2]])
-    updateSliderInput(session, "reduzierung_rt3", value = GA@solution[[3]])
-    removeModal()
-  })
-  
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
+
+   
+     print("observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{")
+    req(input)
     if(input$BundeslandSelected =="---"){
     }else {
-      isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
+      (updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
       vals$Flag  <- "Bundesland"
       regionSelected = 2
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
-      OptResultDf <- RkiDataWithSumsNested[[1,"optimizedInput"]]
-      inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
-      
-      for (inputVarName in OptResultDf[[1]] %>% names) {
-        if (inputVarName %in% (input %>% names)) {
-          if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
-            isolate(updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
-          } else {
-            isolate(updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
-          }
-        }
-      }
-      
+
+      req(input)
       r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
       
@@ -397,7 +363,7 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
-    
+    print("observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{")
     if(input$LandkreiseSelected =="---"){
     }else {
       
@@ -405,17 +371,6 @@ server <- function(input, output, session) {
       vals$Flag  <- "Landkreis"
       regionSelected = 3
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$LandkreiseSelected)
-      OptResultDf <- RkiDataWithSumsNested[[1,"optimizedInput"]]
-      inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
-      for (inputVarName in OptResultDf[[1]] %>% names) {
-        if (inputVarName %in% (input %>% names)) {
-          if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
-            isolate(updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
-          } else {
-            isolate(updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
-          }
-        }
-      }
       r0_no_erfasstDf(RkiDataWithSumsNested)
       
     }
@@ -423,15 +378,40 @@ server <- function(input, output, session) {
   
   rkiAndPredictData <- reactive({
     #  browser()
+    print("################rkiAndPredictData <- reactive({")
     if (r0_no_erfasstDf()$NotEnoughDataFlag) {
       showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", 
                             "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. 
                             Hierdurch ist aber auch keine valide Zukunftsschätzung möglich.",  footer = modalButton("Ok")))
       
     }
+    ###### set values according to optimized values ############ 
     RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest(data)
+    OptResultDf <- RkiDataWithR0N0[[1,"optimizedInput"]]
+    isolate(inputForOptimization <- input) # to make setting reduzierung_rtx easy and fast
     
-    df_nom <-  Rechenkern(RkiDataWithR0N0, input)
+    for (inputVarName in OptResultDf[[1]] %>% names) {
+      print("for (inputVarName in OptResultDf[[1]] %>% names) {")
+      
+      if (inputVarName %in% (isolate(inputForOptimization %>% names))) {
+        if (inputVarName %in% (str_subset(isolate(inputForOptimization %>% names), "reduzierung"))) {
+          (updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
+        } else {
+          (updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
+        }
+      }
+    }
+    ### set input values since update function send data only after plots are generated
+    #browser()
+    OptResultDf <- RkiDataWithR0N0[[1,"optimizedInput"]]
+    inputForOptimization <-  isolate(reactiveValuesToList(input)) # to make setting reduzierung_rtx easy and fast
+    for (inputVarName in OptResultDf[[1]] %>% names) {
+      if (inputVarName %in% (inputForOptimization %>% names)) {
+        inputForOptimization[[inputVarName]]<- OptResultDf[[1]][[inputVarName]] 
+      }
+    }
+    
+    df_nom <-  Rechenkern(RkiDataWithR0N0, inputForOptimization)
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
     konfidenz_je_tag <- mean(c(0.023, 0.029/2)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
@@ -453,18 +433,18 @@ server <- function(input, output, session) {
     df_nom$ErfassteInfizierteBerechnet_max <- KonfidenzVektor(df_nom$ErfassteInfizierteBerechnet, df_nom$Tag,0, +konfidenz_je_tag, letzter_Tag, 0)
     
     konfidenz <- log10(1.1)
-    df_nom$ToteBerechnet_min <- KonfidenzVektor(df_nom$ToteBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$td_tod)
-    df_nom$ToteBerechnet_max <- KonfidenzVektor(df_nom$ToteBerechnet, df_nom$Tag,konfidenz, +konfidenz_je_tag, letzter_Tag, input$td_tod)
+    df_nom$ToteBerechnet_min <- KonfidenzVektor(df_nom$ToteBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, inputForOptimization$td_tod)
+    df_nom$ToteBerechnet_max <- KonfidenzVektor(df_nom$ToteBerechnet, df_nom$Tag,konfidenz, +konfidenz_je_tag, letzter_Tag, inputForOptimization$td_tod)
     
-    df_nom$KhBerechnet_min <- KonfidenzVektor(df_nom$KhBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$dt_inf_kh)
-    df_nom$KhBerechnet_max <- KonfidenzVektor(df_nom$KhBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, input$dt_inf_kh)
+    df_nom$KhBerechnet_min <- KonfidenzVektor(df_nom$KhBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, inputForOptimization$dt_inf_kh)
+    df_nom$KhBerechnet_max <- KonfidenzVektor(df_nom$KhBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, inputForOptimization$dt_inf_kh)
     
-    df_nom$IntensivBerechnet_min <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
-    df_nom$IntensivBerechnet_max <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
+    df_nom$IntensivBerechnet_min <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, inputForOptimization$dt_kh_int+inputForOptimization$dt_inf_kh)
+    df_nom$IntensivBerechnet_max <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, inputForOptimization$dt_kh_int+inputForOptimization$dt_inf_kh)
     
     
-    df <- df_nom %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
-                            Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
+    df <- df_nom %>% filter(Tag >=as.Date(strptime(inputForOptimization$dateInput[1], format="%Y-%m-%d")),
+                            Tag <=as.Date(strptime(inputForOptimization$dateInput[2], format="%Y-%m-%d")))
   }) 
   color1 = 'blue'
   color2 = 'green'
@@ -488,12 +468,11 @@ server <- function(input, output, session) {
   )
   #############  output$Kumuliert ################
   output$Kumuliert <- renderPlotly({
-    
-    
-    
-    logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
-    
-    tmp <- rkiAndPredictData()
+   print("output$Kumuliert <- renderPlotly({") 
+
+  #  (logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE))
+    logy <- TRUE
+    (tmp <- rkiAndPredictData())
     colnames(tmp)[colnames(tmp) == "SumAnzahl"] <- "Erfasste_Infizierte"
     colnames(tmp)[colnames(tmp) == "sumTote"] <- "Erfasste_Todesfaelle"
     colnames(tmp)[colnames(tmp) == "ToteBerechnet"] <- "Berechnete_Todesfaelle"
@@ -523,7 +502,7 @@ server <- function(input, output, session) {
       geom_point(data = tmp, aes(x = Tag, y = Erfasste_Infizierte, color = "Erfasste Infizierte")) +
       geom_line(data = tmp, aes(x = Tag, y = Berechnete_Todesfaelle, color = "Todesfälle berechnet")) + 
       geom_point(data = tmp, aes(x = Tag, y = Erfasste_Todesfaelle, color = "Todesfälle erfasst")) +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte / Todesfälle, CI 95%", sep =""),
+      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(tmp %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte / Todesfälle, CI 95%", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Erfasste Infizierte berechnet' = color1,
@@ -546,10 +525,11 @@ server <- function(input, output, session) {
   #########    output$Verlauf ############ 
   
   output$Verlauf <- renderPlotly({
+    print("  output$Verlauf <- renderPlotly({")
+    logy <- TRUE
+  #  (logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE))
     
-    logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
-    
-    tmp <- rkiAndPredictData()
+    (tmp <- rkiAndPredictData())
     colnames(tmp)[colnames(tmp) == "AnzahlTodesfall"] <- "NeueToteErfasst"
     tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
     tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
@@ -560,7 +540,7 @@ server <- function(input, output, session) {
       geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y=NeueToteErfasst, color = "Neue Todesfälle erfasst")) +
       geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
       
-      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte / Todesfälle, CI 95%", sep =""),
+      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(tmp %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte / Todesfälle, CI 95%", sep =""),
                                                          x = "Datum", y = "Anzahl",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Aktuell Infizierte berechnet' = color1,
@@ -587,9 +567,10 @@ server <- function(input, output, session) {
   
   #########     output$Krankenhaus ############  
   output$Krankenhaus <- renderPlotly({
-    logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
-    
-    tmp <- rkiAndPredictData()
+    print("  output$Krankenhaus <- renderPlotly({")
+ #   (logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE))
+    logy <- TRUE
+    (tmp <- rkiAndPredictData())
     colnames(tmp)[colnames(tmp) == "KhBerechnet"] <- "Krankenhaus_berechnet"
     colnames(tmp)[colnames(tmp) == "IntensivBerechnet"] <- "Intensiv_berechnet"
     colnames(tmp)[colnames(tmp) == "Stationaer"] <- "Krankenhaus_erfasst"
@@ -611,7 +592,7 @@ server <- function(input, output, session) {
       geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) + geom_point(aes(Tag, Intensiv_erfasst, color = "Intensiv erfasst")) +
       
       scale_x_date(labels = date_format("%d.%m")) + 
-      labs(title = paste0(rkiAndPredictData() %>%  filter(!is.na(whichRegion)) %>% select(whichRegion) %>% 
+      labs(title = paste0(tmp %>%  filter(!is.na(whichRegion)) %>% select(whichRegion) %>% 
                             unique(), ": Plätze in Krankenhaus / Intensivstation, CI 95%", sep ="")  ,
            x = "Datum", y = "Anzahl",
            caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +  
@@ -637,10 +618,13 @@ server <- function(input, output, session) {
   
   #########     output$MeldungenProWoche ############  
   output$MeldungenProWoche <- renderPlotly({
-    paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  
-    logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
+    print("  output$MeldungenProWoche <- renderPlotly({")
     
-    tmp <- rkiAndPredictData()
+ 
+ #   logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
+    logy <- TRUE
+    (tmp <- rkiAndPredictData())
+    paste0(tmp %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  
     # browser()
     colnames(tmp)[colnames(tmp) == "MeldeWithinWeekPer100kInhabitantsBerechnet"] <- "Berechnet"
     colnames(tmp)[colnames(tmp) == "MeldeWithinWeekPer100kInhabitants"] <- "Gemeldet"
@@ -653,7 +637,7 @@ server <- function(input, output, session) {
     
     p <- ggplot(tmp, aes(color = "Berechnet")) + geom_line(aes(x=Tag, y = Berechnet), linetype = 2) + geom_point(aes(x = Tag, y = Gemeldet, color = "Gemeldet")) +
       # geom_line(aes(x=Tag,y = Aktuelle_Reproduktionszahl, color = "R aktuell"))  +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Meldungen der letzen Woche pro 100.000 Einwohner", sep ="")  , 
+      scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(tmp %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Meldungen der letzen Woche pro 100.000 Einwohner", sep ="")  , 
                                                          x = "Datum", y = "Meldungen der letzen Woche / 100.000 Einwohner",
                                                          caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
                                                            'Berechnet' = color1,
@@ -687,8 +671,7 @@ server <- function(input, output, session) {
       vals$Flag  <- "Bundesland"
       regionSelected = 2
       load("data/RkiDataICU_BeatmetOptiTotal.RData")
-      RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal  %>% filter(whichRegion == regionSelected)
-      browser()
+      RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal  %>% filter(whichRegion == input$BundeslandSelected)
       r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
       isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
@@ -700,7 +683,7 @@ server <- function(input, output, session) {
       vals$Flag  <- "Landkreis"
       regionSelected = 3
       load("data/RkiDataICU_BeatmetOptiTotal.RData")
-      RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal  %>% filter(whichRegion == regionSelected)
+      RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal  %>% filter(whichRegion == input$LandkreiseSelected)
       r0_no_erfasstDf(RkiDataWithSumsNested)
       isolate(updateSelectInput(session, "BundeslandSelected",  selected = "---"))
     }
