@@ -226,6 +226,10 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   calcDf <- calcDf %>% mutate(NeueToteBerechnet = round(tod_rate* lag(NeuInfizierteBerechnet, td_tod, default = 0),digits=0)) %>% 
     mutate(ToteBerechnet = cumsum(NeueToteBerechnet)) %>% filter(Tag >= RegStartDate)
   
+  ######## calculate all meldungen within week per 100.000 inhabitants
+  calcDf <- calcDf  %>% arrange(Tag) %>% mutate(MeldeWithinWeekBerechnet = map_dbl(Tag, sumFallForWeekForecast, calcDf),
+                                                                                                         MeldeWithinWeekPer100kInhabitantsBerechnet = MeldeWithinWeekBerechnet/Ygesamt*1e5 )
+  
   # browser()
   df <- left_join(calcDf,RkiDataWithR0N0, by =c("Tag" = "MeldeDate")) %>% 
     select(Tag, TaeglichReproduktionsRateRt, ReduzierteRt, AktuellInfizierteBerechnet, NeuInfizierteBerechnet, ErfassteInfizierteBerechnet, 
