@@ -163,7 +163,7 @@ ui <- function(request) {
                                                 wellPanel(
                                                   dateRangeInput(inputId = "dateInput",
                                                                  label = "Datum",
-                                                                 start = as.Date('2020-03-01'),
+                                                                 start = as.Date('2020-04-01'),
                                                                  end = as.Date('2020-06-01'),
                                                                  min = as.Date('2020-03-01'),
                                                                  max = as.Date('2020-12-31'),
