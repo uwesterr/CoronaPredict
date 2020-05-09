@@ -230,7 +230,7 @@ ui <- function(request) {
                                          column(6,
                                                 leafletOutput("mymap")),
                                          column(6,
-                                                addSpinner(plotlyOutput(outputId ="MeldungenProWoche"), spin = "circle", color = "#E41A1C"))),   
+                                                addSpinner(plotOutput(outputId ="MeldungenProWoche"), spin = "circle", color = "#E41A1C"))),   
                                        
                                        
                                        
@@ -258,7 +258,7 @@ ui <- function(request) {
                                            #             style = "border: 1px solid silver;",
                                            #             cellWidths =  c("50%", "50%"),
                                            #             cellHeight = "120%",
-                                           addSpinner(plotlyOutput(outputId ="Krankenhaus"), spin = "circle", color = "#E41A1C")),
+                                           addSpinner(plotOutput(outputId ="Krankenhaus"), spin = "circle", color = "#E41A1C")),
                                          #             addSpinner(plotlyOutput(outputId ="MeldungenProWoche"), spin = "circle", color = "#E41A1C"))                                             
                                          # plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
                                          #        ),
@@ -271,8 +271,8 @@ ui <- function(request) {
                                              cellWidths =  c("50%", "50%"),
                                              cellHeight = "120%",
                                              cellArgs = list(style = "padding: 6px"), 
-                                             addSpinner(plotlyOutput(outputId ="Kumuliert"), spin = "circle", color = "#E41A1C"),
-                                             addSpinner(plotlyOutput(outputId ="Verlauf"), spin = "circle", color = "#E41A1C"))
+                                             addSpinner(plotOutput(outputId ="Kumuliert"), spin = "circle", color = "#E41A1C"),
+                                             addSpinner(plotOutput(outputId ="Verlauf"), spin = "circle", color = "#E41A1C"))
                                            #addSpinner(plotOutput("plot1"), spin = "circle", color = "#E41A1C"),                                           
                                          )
                                        )
@@ -487,7 +487,7 @@ server <- function(input, output, session) {
     legend.position = "bottom"
   )
   #############  output$Kumuliert ################
-  output$Kumuliert <- renderPlotly({
+  output$Kumuliert <- renderPlot({
     
     
     
@@ -537,15 +537,15 @@ server <- function(input, output, session) {
     } else {
       p <- p + scale_y_continuous(labels = scales::comma)
     }
-    p <- ggplotly(p, tooltip = c("Erfasste_Infizierte", "Berechnete_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle"))
-    p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
+#    p <- ggplotly(p, tooltip = c("Erfasste_Infizierte", "Berechnete_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle"))
+#    p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     p
     
   })
   
   #########    output$Verlauf ############ 
   
-  output$Verlauf <- renderPlotly({
+  output$Verlauf <- renderPlot({
     
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
@@ -577,16 +577,16 @@ server <- function(input, output, session) {
     }
     
     
-    p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag", "NeueToteErfasst", "NeueToteBerechnet","AnzahlFall"))
+#    p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag", "NeueToteErfasst", "NeueToteBerechnet","AnzahlFall"))
     
     
-    p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
+#    p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
     p
     
   }) 
   
   #########     output$Krankenhaus ############  
-  output$Krankenhaus <- renderPlotly({
+  output$Krankenhaus <- renderPlot({
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
     tmp <- rkiAndPredictData()
@@ -628,15 +628,15 @@ server <- function(input, output, session) {
       p <- p + scale_y_continuous(labels = scales::comma)
     }
     
-    p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag", "Krankenhaus_erfasst", "Intensiv_erfasst" ))
-    p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  
+ #   p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag", "Krankenhaus_erfasst", "Intensiv_erfasst" ))
+#    p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  
     p
     
     
   }) 
   
   #########     output$MeldungenProWoche ############  
-  output$MeldungenProWoche <- renderPlotly({
+  output$MeldungenProWoche <- renderPlot({
     paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  
     logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
     
@@ -660,8 +660,8 @@ server <- function(input, output, session) {
                                                            'Gemeldet' = color2)) + geom_hline( yintercept = 50) +
       
       labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
-    p <- ggplotly(p, tooltip = c("Berechnet","Gemeldet", "Tag"))
-    p <- p %>% layout(legend = list(x = 0.01, y = 0.01, font = list(size = 8))) 
+ #   p <- ggplotly(p, tooltip = c("Berechnet","Gemeldet", "Tag"))
+#    p <- p %>% layout(legend = list(x = 0.01, y = 0.01, font = list(size = 8))) 
     
     p
     
