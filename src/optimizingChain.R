@@ -71,16 +71,15 @@ parameter_tibble <- tribble(
 optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
 gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8)
-if(!"reduzierungsOptResult" %in% colnames(RkiDataWithRoNoOpimizedUpToDate)){
-RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>%  add_column("reduzierungsOptResult" = list("a"),
-                                           "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
-}
+# if(!"reduzierungsOptResult" %in% colnames(RkiDataWithOptimizedInputOfPreviousRun)){
+#   RkiDataWithOptimizedInputOfPreviousRun <- RkiDataWithOptimizedInputOfPreviousRun %>%  as_tibble() %>%  add_column("reduzierungsOptResult" = list("a"),
+#                                            "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
+# }
 
-################## for tests #########
-# RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
-#   filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) %>% 
-#   head(2)
-############################## conduct optimization #######################
+#  ################# for tests #########
+# RkiDataWithOptimizedInputOfPreviousRun <- RkiDataWithOptimizedInputOfPreviousRun %>%
+#     filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) # %>%   head(2)
+#  ############################# conduct optimization #######################
 source(file = "helperForCovid19.R")
 source(file = "Rechenkern.R")
 
@@ -194,10 +193,14 @@ nonBwRegions <-  RkiDataWithRoNoAndReduzierungOpimized %>% filter(!whichRegion %
 BwBeatmetOpt <- RkiDataICU_BeatmetOpti[[which(RkiDataICU_BeatmetOpti$whichRegion == "Baden-Württemberg"),"optimizedInput"]]
 BwBeatmetNames <- BwBeatmetOpt[[1]] %>% names
 for (region in (nonBwRegions$whichRegion %>% unlist)) {
+ # browser()
   indexEntitiy <- which(nonBwRegions$whichRegion == region)
   ReduzierungOpt <- nonBwRegions[[indexEntitiy,"optimizedInput"]] 
   redNames <- ReduzierungOpt[[1]] %>% names # get names of already optmised parameters
-  extraNames <-  BwBeatmetNames[!BwBeatmetNames %in% redNames] # get names which are not already optimised for non BW regions
+  tmp <-(str_subset(BwBeatmetNames , "reduzierung", negate = TRUE))
+  extraNames <-tmp[seq(2,length(tmp))] # exclude empty string at postion 1
+  
+  #extraNames <-  BwBeatmetNames[!BwBeatmetNames %in% redNames] # get names which are not already optimised for non BW regions
   for (extraName in extraNames) {
     ReduzierungOpt[[1]][[extraName]]<- BwBeatmetOpt[[1]][[extraName]] 
   }
@@ -206,7 +209,8 @@ for (region in (nonBwRegions$whichRegion %>% unlist)) {
 }
 
 RkiDataICU_BeatmetOptiTotal <- bind_rows(nonBwRegions,RkiDataICU_BeatmetOpti)
-
+MeldeMap <- createMap(RkiDataICU_BeatmetOptiTotal)
+save(MeldeMap, file = "../data/meldeMap.RData")
 path <- "../data/InputFileForAppFolder/"
 
 ## move old opt file and save new one #####
