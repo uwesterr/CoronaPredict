@@ -1,17 +1,19 @@
 # helper functions for shiny app Covid19
 
- library(httr)
- library(tictoc)
- library(GA)
- library(jsonlite)
- library(staTools)
- library(writexl)
- library(rlang)
- library(DT)
- library(modelr)
+library(httr)
+library(tictoc)
+library(GA)
+library(jsonlite)
+library(staTools)
+library(writexl)
+library(readxl)
+library(rlang)
+library(DT)
+library(modelr)
 library(tidyverse)
- library(lubridate)
- 
+library(lubridate)
+library(zoo)
+
 createDfBundLandKreis <- function() {
   # https://npgeo-corona-npgeo-de.hub.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0
   historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
@@ -23,20 +25,20 @@ createDfBundLandKreis <- function() {
   waitingTime <- 600 # wait ten minutes before polling server again
   minDataSize <- 123396 # minimum number of rows to be considered a full download
   counter <- 0
-while ((nrow(historyDf) < minDataSize ) & (counter < maxTries) ) {
-  counter <- counter + 1
-  cat("Download too small: ", nrow(historyDf), " try again, counter: ", counter)
-  print("")
-  Sys.sleep(waitingTime)
-  historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
-  historyDf <- historyData[["features"]][["properties"]]
- 
-}
+  while ((nrow(historyDf) < minDataSize ) & (counter < maxTries) ) {
+    counter <- counter + 1
+    cat("Download too small: ", nrow(historyDf), " try again, counter: ", counter)
+    print("")
+    Sys.sleep(waitingTime)
+    historyData <- jsonlite::fromJSON("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")
+    historyDf <- historyData[["features"]][["properties"]]
+    
+  }
   
-if (counter == maxTries) {
-  abort(message = "Not enough data in download, abort")
-  
-}
+  if (counter == maxTries) {
+    abort(message = "Not enough data in download, abort")
+    
+  }
   
   historyDf$MeldeDate <- as.Date(historyDf$Meldedatum)
   
@@ -51,7 +53,12 @@ if (counter == maxTries) {
            Index = as.numeric(MeldeDate- min(MeldeDate))) %>% mutate(Einwohner = bundesLandPopulation %>% summarise(sum = sum(EinwohnerBundesland)) %>% unlist) 
   historyDfBund$FirstMelde <- BundFirstMeldung %>% unlist %>% as.Date()
   
+  ######## calculate all meldungen within week per 100.000 inhabitants
+  historyDfBund <- historyDfBund %>% arrange(MeldeDate) %>% mutate(MeldeWithinWeek = pmap_dbl(list(MeldeDate, Einwohner, whichRegion), sumFallForWeek, historyDfBund),
+                                                                   MeldeWithinWeekPer100kInhabitants = MeldeWithinWeek/Einwohner*1e5 )
   
+  
+
   
   BundesLandFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% group_by(Bundesland) %>% summarise(FirstMelde = min(MeldeDate))
   historyDfBundesLand  <- historyDf %>% dplyr::ungroup() %>% group_by(Bundesland, MeldeDate)  %>% summarise_if(is.numeric, sum, na.rm = TRUE)  %>% 
@@ -59,8 +66,9 @@ if (counter == maxTries) {
            SumAnzahl = ifelse(SumAnzahl <1, 0.1,SumAnzahl),
            Index = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(BundesLandFirstMeldung) %>% left_join(bundesLandPopulation)  %>% 
     rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) 
-  
-  
+  ######## calculate all meldungen within week per 100.000 inhabitants
+  historyDfBundesLand <- historyDfBundesLand %>% group_by(whichRegion) %>% arrange(MeldeDate) %>% mutate(MeldeWithinWeek = pmap_dbl(list(MeldeDate, Einwohner, whichRegion), sumFallForWeek, historyDfBundesLand),
+  MeldeWithinWeekPer100kInhabitants = MeldeWithinWeek/Einwohner*1e5 )
   
   
   LandkreisFirstMeldung  <- historyDf %>% filter(AnzahlFall>0) %>% dplyr::ungroup() %>% group_by(Landkreis) %>% summarise(FirstMelde = min(MeldeDate))
@@ -69,6 +77,12 @@ if (counter == maxTries) {
            SumAnzahl = ifelse(SumAnzahl <1, 0.1,SumAnzahl),
            Index = as.numeric(MeldeDate- min(MeldeDate))) %>% left_join(LandkreisFirstMeldung) %>%  left_join(landKreisPopulation)  %>% 
     rename_at(vars(contains("Einwohner")), ~ "Einwohner" ) 
+  
+  ######## calculate all meldungen within week per 100.000 inhabitants
+  historyDfLandkreis <- historyDfLandkreis %>% group_by(whichRegion)  %>% arrange(MeldeDate) %>% mutate(MeldeWithinWeek = pmap_dbl(list(MeldeDate, Einwohner, whichRegion), sumFallForWeek, historyDfLandkreis),
+                                                                             MeldeWithinWeekPer100kInhabitants = MeldeWithinWeek/Einwohner*1e5 )
+  
+  
   ############# add krankenhaus daten
   Land_BW_Data <-  readRescueTrackerData()
   # load("../data/LK_KH_Data.RData")
@@ -100,6 +114,40 @@ if (counter == maxTries) {
   return(RkiDataWithRoNoOpimizedUpToDate)
 }
 
+######## calculate all meldungen within week per 100.000 inhabitants forecast ############
+sumFallForWeek <- function(MeldeDate, Einwohner, selectedRegion, df){
+  df <- df %>% filter(whichRegion == selectedRegion)
+  IndexToday <- which(df$MeldeDate == MeldeDate)
+  IndexWeekBefore <- min(which(df$MeldeDate >= MeldeDate - 6)) # find the day not more than a week ago but as much in the past as possible
+  if (is_empty(IndexWeekBefore)) {
+    IndexWeekBefore <- 1
+    
+  }
+  
+  tmp <- df$AnzahlFall[IndexWeekBefore:IndexToday] %>% sum
+  res <- tmp%>% as.numeric() # gemeldete within a week per 100.000 inhabitants
+  return(res)
+  
+}
+
+
+
+######## calculate all meldungen within week per 100.000 inhabitants  ############
+sumFallForWeekForecast <- function(MeldeDate, df){
+  IndexToday <- which(df$Tag == MeldeDate)
+  IndexWeekBefore <- min(which(df$Tag >= MeldeDate - 6)) # find the day not more than a week ago but as much in the past as possible
+  if (is_empty(IndexWeekBefore)) {
+    IndexWeekBefore <- 1
+    
+  }
+  
+  tmp <- df$NeuInfizierteBerechnet[IndexWeekBefore:IndexToday] %>% sum
+  res <- tmp%>% as.numeric() # gemeldete within a week per 100.000 inhabitants
+  return(res)
+  
+}
+
+
 ### read krankenhaus data ######
 # reads data from rescuetracker api and stores data in data.frame
 readRescueTrackerData <- function() {
@@ -112,7 +160,7 @@ readRescueTrackerData <- function() {
   
   # tmp
   #setwd("D:/thomas/Dropbox/Intern/LGA/R/app/kh_import/src")
-
+  
   # get data from rescuetrack
   load("../secure/cookieForReutlingerData.RData")
   rescuetrackData <- GET("https://apps.rescuetrack.com/rrb/api/v1/getCapacityDump", add_headers(Cookie = Cookie))
@@ -147,14 +195,14 @@ readRescueTrackerData <- function() {
                                 timestamp = ymd_hms('2020-04-17T12:12:56'))
   
   # Assign raw data on level "Krankenhaus"
- # print ("----- Assign raw data on level Krankenhaus -------")
+  # print ("----- Assign raw data on level Krankenhaus -------")
   for (folderIndex in seq(1,length(foldersDf))) {
     folderIndex
     # exclude higher levels BL, RP and ILS from data import
     if ( (length(foldersDf[[folderIndex]][["resources"]])>0) 
          && !str_detect(foldersDf[[folderIndex]][["folderName"]], c("ILS ", "RP ", "Baden-W")) %>% sum()
     )  {
-     #  print(foldersDf[[folderIndex]][["folderName"]])
+      #  print(foldersDf[[folderIndex]][["folderName"]])
       # browser()
       for (resourceIndex in seq(1,length(foldersDf[[folderIndex]][["resources"]]))) {
         for (capacitiesIndex in seq(1,length(foldersDf[[folderIndex]][["resources"]][[resourceIndex]][["capacities"]]))) {
@@ -198,7 +246,7 @@ readRescueTrackerData <- function() {
           nrow_tmp_day <- nrow(tmp_day)
           if (nrow_tmp_day==0) {
             # generate a new dataset entry with content of previous day and the actual date
-           #  print ("anlegen")
+            #  print ("anlegen")
             act_timestamp <- as_datetime(day_index*86400+36000)
             krankenhausDataLoop            <- previous_day
             krankenhausDataLoop$timestamp  <- act_timestamp
@@ -206,10 +254,10 @@ readRescueTrackerData <- function() {
             
           }  else if (nrow_tmp_day>1) {
             #keep only newest entry (=last in act_kh) and delete others in krankenhausData
-           #  print (paste("Laenge krankenhausData vor Loeschen:", nrow(krankenhausData)))
+            #  print (paste("Laenge krankenhausData vor Loeschen:", nrow(krankenhausData)))
             # jetzt nur noch das letzte behalten
             krankenhausData <- anti_join(krankenhausData, head(tmp_day,n=nrow_tmp_day-1))
-          #  print (paste("Laenge krankenhausData nach Loeschen sollte kleiner sein:", nrow(krankenhausData)))
+            #  print (paste("Laenge krankenhausData nach Loeschen sollte kleiner sein:", nrow(krankenhausData)))
             previous_day=tail(tmp_day,n=1)
           }  else {
             # is ok as the first date is always populated
@@ -224,7 +272,7 @@ readRescueTrackerData <- function() {
   
   
   # combine data to landkreis, date
- #  print ("----- Combine data to landkreis, date, ... -------")
+  #  print ("----- Combine data to landkreis, date, ... -------")
   start_date = min(date(krankenhausData$timestamp))
   end_date   = max(date(krankenhausData$timestamp))
   
@@ -248,7 +296,7 @@ readRescueTrackerData <- function() {
   
   for (LK_Index in seq(1,length(LK_ILS$Landkreis))) {
     LK_Index
-  #   print(LK_ILS$Landkreis[[LK_Index]])
+    #   print(LK_ILS$Landkreis[[LK_Index]])
     
     day_index=0
     for (day_index in seq(start_date, end_date, by = 1)) {
@@ -386,12 +434,12 @@ createRkiRegOptFrame <- function(dfNested, regionSelected, parameter_tibble, opt
   dfNested[[indexEntitiy, resultColumnName]] <- list(res$OptResult)
   optimizedInput <- dfNested[[indexEntitiy, "optimizedInput"]][[1]]
   # update optimized values to list
-
+  
   for (parameter in parameter_tibble$var_name) {
- 
+    
     optimizedInput[[parameter]] <- res[["OptResult"]][[parameter]][[1]]
   }
-
+  
   dfNested[[indexEntitiy, "optimizedInput"]] <- list(optimizedInput)
   return( "dfNested" = dfNested)
 }
@@ -400,7 +448,7 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
   # dfRoNoOpt should be dataframe starting with reduzierung_datum1
   dateOfFirstAction <- input$reduzierung_datum1
   dfUnNested <- dfUnNested %>% filter(MeldeDate >= dateOfFirstAction) # only consider values after first reduction action
-
+  
   
   res <- createOptParmeters(parameter_tibble)
   allPara          <- res[[1]]
@@ -429,7 +477,7 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
   denormPara <- denormalizePara(GA@solution[1,], parameter_tibble, para)
   cat("denormPara: ", unlist(denormPara %>% names), "\n") 
   cat("denormPara: ", unlist(denormPara), "\n")  
-
+  
   denormParaNames <- denormPara %>% names
   
   # create output frame 
@@ -440,7 +488,7 @@ optimizerGeneticAlgorithmRedReduction <- function(dfUnNested, parameter_tibble, 
   OptResult[["GaFitnessValue"]] <- GA@fitnessValue
   OptResult[["OptParaNames"]] <- list("denormParaNames" = denormParaNames)
   OptResult[["GaPara"]] <- list( "summmaryGA" = summary(GA))
- 
+  
   return(list("OptResult" = OptResult))
   
 }
@@ -490,9 +538,9 @@ calcPredictionsForGaOptimization = function(optPara, allPara, parameter_tibble, 
   }
   
   inputForOptimization$dateInput[2] = dfUnNested$MeldeDate %>% max() # set endDate to date of last MeldeDate
-
-    dfRechenKern <-   Rechenkern(dfUnNested, inputForOptimization)
-
+  
+  dfRechenKern <-   Rechenkern(dfUnNested, inputForOptimization)
+  
   dfRechenKern <- dfRechenKern %>% filter(Tag  %in% dfUnNested$MeldeDate)
   dfUnNested <- dfUnNested %>% filter(MeldeDate  %in% dfRechenKern$Tag)
   # res <- MPE(dfRechenKern$ErfassteInfizierteBerechnet,dfUnNested$SumAnzahl)
@@ -559,7 +607,7 @@ createPlotReduOpt <- function(RkiDataWithRoNoAndReduzierungOpimized,input) {
     geom_vline(xintercept = redDate2, color = "blue") +  
     geom_vline(xintercept = redDate3, color = "red") +
     annotate("text", x = redDate1, y = 300, label = "Reduzierungsmaßnahme 1", angle=90) 
- return(p)
+  return(p)
 }
 
 
@@ -580,7 +628,7 @@ calcOptimizationStationaerDaten = function(optPara, allPara, parameter_tibble, d
   for (inputVarName in   inputVarNames ) {
     inputForOptimization[[inputVarName]]<- allPara[[inputVarName]]
   }
-
+  
   inputForOptimization$dateInput[2] = dfUnNested$MeldeDate %>% max() # set endDate to date of last MeldeDate
   dfRechenKern <-   Rechenkern(dfUnNested, inputForOptimization)
   # browser()
@@ -588,21 +636,21 @@ calcOptimizationStationaerDaten = function(optPara, allPara, parameter_tibble, d
   tmp <- tmp[tmp[[gaPara$ReportedVar]] != 0,]
   if(nrow(tmp) == 0){
     res= 0
-    } else{
-
-      dfRechenKern <- dfRechenKern %>% filter((Tag  %in% tmp$MeldeDate)) # & (Tag > as.Date("2020-03-30")))
-  
-
-  tmp <- tmp %>% filter(MeldeDate  %in% dfRechenKern$Tag)
-   #  
-  if (gaPara$errorFunc == "RMS") {
-    res <- sqrt(mean((tmp[[gaPara$ReportedVar]]-dfRechenKern[[gaPara$CalculatedVar]])^2)) 
-  } else if (gaPara$errorFunc == "MAPE") {
-    res <- MAPE(tmp[[gaPara$ReportedVar]],dfRechenKern[[gaPara$CalculatedVar]])
-  }  else{
-    print("Forgot to define errorfunction for GA calcOptimizationStationaerDaten")
-  }
+  } else{
+    
+    dfRechenKern <- dfRechenKern %>% filter((Tag  %in% tmp$MeldeDate)) # & (Tag > as.Date("2020-03-30")))
+    
+    
+    tmp <- tmp %>% filter(MeldeDate  %in% dfRechenKern$Tag)
+    #  
+    if (gaPara$errorFunc == "RMS") {
+      res <- sqrt(mean((tmp[[gaPara$ReportedVar]]-dfRechenKern[[gaPara$CalculatedVar]])^2)) 
+    } else if (gaPara$errorFunc == "MAPE") {
+      res <- MAPE(tmp[[gaPara$ReportedVar]],dfRechenKern[[gaPara$CalculatedVar]])
+    }  else{
+      print("Forgot to define errorfunction for GA calcOptimizationStationaerDaten")
     }
+  }
   return(-res)
 } 
 
@@ -610,19 +658,19 @@ calcOptimizationStationaerDaten = function(optPara, allPara, parameter_tibble, d
 
 createPlotStationaerOpt <- function(input) {
   
-   load("../data/RkiDataStationaerOpti.RData")
+  load("../data/RkiDataStationaerOpti.RData")
   RkiDataStationaerOpti <- RkiDataStationaerOpti %>% 
     as_tibble()  %>% add_column("dfRechenKern" = 0)
   
-
+  
   dfRechenkernAndRki <- tibble()
   for (regionSelected in RkiDataStationaerOpti$whichRegion %>% head(10)) {
     
-   
+    
     ##### create input vector based on optimisaton results
     inputForOptimization <- input
     tmp  <- RkiDataStationaerOpti %>% filter(whichRegion == regionSelected)
-
+    
     inputForOptimization <- setInputAccordingToPreviousOpt(tmp)
     
     RkiDataWithR0N0 <- tmp %>% unnest(data)
@@ -641,24 +689,24 @@ createPlotStationaerOpt <- function(input) {
   redDate3 <- input$reduzierung_datum3
   #maxMeldeDate <- max(dfRechenkernAndRkiUnnest$MeldeDate)
   tmp <- dfRechenkernAndRkiUnnest %>%  filter(!is.na(SumAnzahl))
- plotNeuInfizierteBerechnet<-  tmp %>%  group_by(whichRegion)  %>% filter(Tag >= redDate1 & !is_na(SumAnzahl)) %>% ggplot(aes(Tag, AnzahlFall)) + geom_point() + 
+  plotNeuInfizierteBerechnet<-  tmp %>%  group_by(whichRegion)  %>% filter(Tag >= redDate1 & !is_na(SumAnzahl)) %>% ggplot(aes(Tag, AnzahlFall)) + geom_point() + 
     geom_line(aes(Tag, NeuInfizierteBerechnet))  +
     facet_wrap(vars(whichRegion), scales="free") +  
     geom_vline(xintercept = redDate1, color = "green") + 
     geom_vline(xintercept = redDate2, color = "blue") +  
     geom_vline(xintercept = redDate3, color = "red") +
     annotate("text", x = redDate1, y = 5, label = "Reduzierungsmaßnahme 1", angle=90) 
-
   
- plotStationaer <-  tmp %>%  group_by(whichRegion)  %>% 
-   filter(Tag >= redDate1 & !is_na(KhBerechnet)) %>% ggplot(aes(Tag, Stationaer)) + geom_point() + 
+  
+  plotStationaer <-  tmp %>%  group_by(whichRegion)  %>% 
+    filter(Tag >= redDate1 & !is_na(KhBerechnet)) %>% ggplot(aes(Tag, Stationaer)) + geom_point() + 
     geom_line(aes(Tag, KhBerechnet)) + scale_y_log10() +
     facet_wrap(vars(whichRegion), scales="free") +  
     geom_vline(xintercept = redDate1, color = "green") + 
     geom_vline(xintercept = redDate2, color = "blue") +  
     geom_vline(xintercept = redDate3, color = "red") +
     annotate("text", x = redDate1, y = 5, label = "Reduzierungsmaßnahme 1", angle=90) 
-
+  
   return(list("plotNeuInfizierteBerechnet" = plotNeuInfizierteBerechnet, "plotStationaer" = plotStationaer ))
 }
 
@@ -693,7 +741,7 @@ createPlotICU_BeatmetOpt <- function(input) {
   redDate3 <- input$reduzierung_datum3
   #maxMeldeDate <- max(dfRechenkernAndRkiUnnest$MeldeDate)
   tmp <- dfRechenkernAndRkiUnnest %>%  filter(!is.na(SumAnzahl))
-
+  
   plotIntensivBerechnet <-  tmp %>%  group_by(whichRegion)  %>% 
     filter(Tag >= redDate1 & !is_na(ICU_Beatmet)) %>% ggplot(aes(Tag, ICU_Beatmet)) + geom_point() + 
     geom_line(aes(Tag, IntensivBerechnet))  +
@@ -706,7 +754,76 @@ createPlotICU_BeatmetOpt <- function(input) {
   return(list("plotIntensivBerechnet" = plotIntensivBerechnet))
 }
 
-
+### create leaflet map #######
+createMap <- function(RkiDataWithSumsNested) {
+  tmp <- RkiDataWithSumsNested %>% unnest(data)
+  landkreisMeldeProWocheAktuell <- tmp %>% group_by(Landkreis) %>% filter(MeldeDate == max(MeldeDate)) %>% select(Landkreis, MeldeWithinWeekPer100kInhabitants)
+  
+  DeutschlandLkSk <-geojsonio::geojson_read("../data/landkreise-in-germany.geojson", what = "sp")
+  tmp <- DeutschlandLkSk@data
+  tmp <- tmp %>% mutate(Landkreis = ifelse(str_detect(type_2, "Stadt"), paste0("SK ",name_2), paste0("LK ",name_2)),
+                        Landkreis = ifelse(str_detect(Landkreis, "Freiburg"), "SK Freiburg i.Breisgau", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Dillingen"), "LK Dillingen a.d.Donau", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Neumarkt"), "LK Neumarkt i.d.OPf.", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Weiden"), "SK Weiden i.d.OPf.", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Wendel"), "LK Sankt Wendel", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "SK Neustadt"), "SK Neustadt a.d.Weinstraße", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Aachen"), "StadtRegion Aachen", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Wunsiedel"), "LK Wunsiedel i.Fichtelgebirge", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Hannover"), "Region Hannover", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Ludwigshafen"), "SK Ludwigshafen", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Landau"), "SK Landau i.d.Pfalz" , Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "SK Offenbach"), "SK Offenbach", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Lindau"), "LK Lindau", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Saarbrücken"), "LK Stadtverband Saarbrücken", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Frankenthal"), "SK Frankenthal", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Halle"), "SK Halle", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Aisch"), "LK Neustadt a.d.Aisch-Bad Windsheim", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Prüm"), "LK Bitburg-Prüm", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Kempten"), "SK Kempten", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Brandenburg"), "SK Brandenburg a.d.Havel", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Pfaffenhofen"), "LK Pfaffenhofen a.d.Ilm", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Landsberg"), "LK Landsberg a.Lech", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Mühldorf"), "LK Mühldorf a.Inn", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Mülheim"), "SK Mülheim a.d.Ruhr", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Berlin"), "SK Berlin Mitte ", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Altenkirchen"), "LK Altenkirchen", Landkreis),
+                        Landkreis = ifelse(str_detect(Landkreis, "Waldnaab"), "LK Neustadt a.d.Waldnaab", Landkreis))
+  
+  
+  DeutschlandLkSk@data <- left_join(tmp,  landkreisMeldeProWocheAktuell )#,by = c("Landkreis1" = "Landkreis"))
+  mybins <- c(0,5, 10, 15, 20,40, 50, 100, 200, Inf)
+  mypalette <- colorBin( palette="YlOrBr", domain=DeutschlandLkSk@data$MeldeWithinWeekPer100kInhabitants, na.color="transparent", bins=mybins)
+  
+  # Prepare the text for tooltips:
+  mytext <- paste(
+    "Kreis: ", DeutschlandLkSk@data$Landkreis, "<br/>", 
+    "Meldungen letze Woche pro 100.000 Einwohner: ", round(DeutschlandLkSk@data$MeldeWithinWeekPer100kInhabitants, 0), 
+    sep="") %>%
+    lapply(htmltools::HTML)
+  
+  # Final Map
+  MeldeMap <- leaflet(DeutschlandLkSk) %>% 
+    addTiles()  %>% 
+    setView( lat=51, lng=6 , zoom=5) %>%
+    addPolygons( 
+      layerId=~Landkreis,
+      fillColor = ~mypalette(MeldeWithinWeekPer100kInhabitants), 
+      stroke=TRUE, 
+      fillOpacity = 0.6, 
+      color="white", 
+      weight=0.3,
+      label = mytext,
+      labelOptions = labelOptions( 
+        style = list("font-weight" = "normal", padding = "3px 8px"), 
+        textsize = "13px", 
+        direction = "auto"
+      )
+    ) %>%
+    addLegend( pal=mypalette, values=~MeldeWithinWeekPer100kInhabitants, opacity=0.9, title = "Meldungen", position = "bottomleft" )
+  
+ return(MeldeMap)
+}
 
 
 
