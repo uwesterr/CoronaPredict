@@ -45,7 +45,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
             red_rt4     <- input$reduzierung_rt4/100,  
             red_rt5     <- input$reduzierung_rt5/100)  
   )
-
+  
   
   # Ausgabe
   Y_inf_limit <- Ygesamt*ges_inf_rate/faktor_n_inf
@@ -100,7 +100,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   # find day on which the first was case would have been reported with given Rt 
   offsetDay <- ceiling(log(n0_erfasst*faktor_n_inf,Rt)) # calculate the day when one case was there 
   if(offsetDay< ende_inf+2){
-  #  browser()
+    #  browser()
     offsetDay = ende_inf+2 # to avoid error message when low SumAnzahlFall
   }
   #browser()
@@ -128,8 +128,8 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   
   # Init the aktuell infizierte mit den nicht vorhandenen werten vor startdatum
   
-
-
+  
+  
   for (day in seq(RegStartDate- offsetDay, RegStartDate, by = 1)) {
     
     day = as.Date(day)
@@ -170,7 +170,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   #startDate <- as.Date('2020-03-01', format="%Y-%m-%d")
   #TG wieder variabel gesetzt, damit Anpassung stimmt
   endDate <- as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")) # Datum Ende
-
+  
   for (dayOfCalculation in seq(RegStartDate+1, endDate,by = 1)) {
     dayOfCalculation = as.Date(dayOfCalculation)
     indexDay <- which(calcDf$Tag == dayOfCalculation)
@@ -190,7 +190,7 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
     #     summarise(sum = sum(NeuGesamtInfizierteBerechnet)) %>% as.numeric()
     
     
-   
+    
     calcDf$GesamtAktuellInfizierteBerechnet[indexDay] <- calcDf$NeuGesamtInfizierteBerechnet[activeStartDay:activeEndDay] %>% sum
     calcDf$NeuGesamtInfizierteBerechnet[indexDay]<- round(calcNeuGesamtInfizierteBerechnet(calcDf[indexDay,]), digits = 0)
     calcDf$NeuInfizierteBerechnet[indexDay]  <- round(max(.1,calcDf$NeuGesamtInfizierteBerechnet[indexDay]/faktor_n_inf), digits = 0)
@@ -225,6 +225,10 @@ Rechenkern <- function(RkiDataWithR0N0, input) {
   # Verstorben
   calcDf <- calcDf %>% mutate(NeueToteBerechnet = round(tod_rate* lag(NeuInfizierteBerechnet, td_tod, default = 0),digits=0)) %>% 
     mutate(ToteBerechnet = cumsum(NeueToteBerechnet)) %>% filter(Tag >= RegStartDate)
+  
+  ######## calculate all meldungen within week per 100.000 inhabitants
+  calcDf <- calcDf  %>% arrange(Tag) %>% mutate(MeldeWithinWeekBerechnet = map_dbl(Tag, sumFallForWeekForecast, calcDf),
+                                                MeldeWithinWeekPer100kInhabitantsBerechnet = MeldeWithinWeekBerechnet/Ygesamt*1e5 )
   
   # browser()
   df <- left_join(calcDf,RkiDataWithR0N0, by =c("Tag" = "MeldeDate")) %>% 

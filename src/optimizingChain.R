@@ -21,6 +21,7 @@ library(zoo)
 library(plotly)
 library(readxl)
 library(scales)
+library(leaflet)
 #setwd("~/CloudProjectsUnderWork/ProjectsUnderWork/PredCo/CoronaPredict/src")
 source(file = "Rechenkern.R")
 source(file = "helperForCovid19.R")
@@ -45,6 +46,8 @@ oldFile <- list.files(path, full.names = TRUE)
 load(oldFile)
 
 RkiDataWithOptimizedInputOfPreviousRun <- left_join(RkiDataWithRoNoOpimizedUpToDate, RkiDataICU_BeatmetOptiTotal %>% select(whichRegion, optimizedInput))
+rm(RkiDataICU_BeatmetOptiTotal)
+rm(RkiDataWithRoNoOpimizedUpToDate)
 
 ############ 
 
@@ -71,16 +74,15 @@ parameter_tibble <- tribble(
 optFunction <- calcPredictionsForGaOptimization
 resultColumnName <- "reduzierungsOptResult"
 gaPara <- list("popSize" = 25, "maxiter" = 40, run = 8)
-if(!"reduzierungsOptResult" %in% colnames(RkiDataWithRoNoOpimizedUpToDate)){
-RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%  as_tibble() %>%  add_column("reduzierungsOptResult" = list("a"),
-                                           "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
-}
+# if(!"reduzierungsOptResult" %in% colnames(RkiDataWithOptimizedInputOfPreviousRun)){
+#   RkiDataWithOptimizedInputOfPreviousRun <- RkiDataWithOptimizedInputOfPreviousRun %>%  as_tibble() %>%  add_column("reduzierungsOptResult" = list("a"),
+#                                            "optimizedInput" = list("OptimizedInputValues" = 0)) # %>% filter(whichRegion == "Brandenburg")
+# }
 
-################## for tests #########
-# RkiDataWithRoNoOpimizedUpToDate <- RkiDataWithRoNoOpimizedUpToDate %>%
-#   filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) %>% 
-#   head(2)
-############################## conduct optimization #######################
+#  ################# for tests #########
+# RkiDataWithOptimizedInputOfPreviousRun <- RkiDataWithOptimizedInputOfPreviousRun %>%
+#     filter(whichRegion %in% c("Deutschland", "Baden-Württemberg" , landkreiseBadenWuerttemberg)) # %>%   head(2)
+#  ############################# conduct optimization #######################
 source(file = "helperForCovid19.R")
 source(file = "Rechenkern.R")
 
@@ -194,10 +196,14 @@ nonBwRegions <-  RkiDataWithRoNoAndReduzierungOpimized %>% filter(!whichRegion %
 BwBeatmetOpt <- RkiDataICU_BeatmetOpti[[which(RkiDataICU_BeatmetOpti$whichRegion == "Baden-Württemberg"),"optimizedInput"]]
 BwBeatmetNames <- BwBeatmetOpt[[1]] %>% names
 for (region in (nonBwRegions$whichRegion %>% unlist)) {
+ # browser()
   indexEntitiy <- which(nonBwRegions$whichRegion == region)
   ReduzierungOpt <- nonBwRegions[[indexEntitiy,"optimizedInput"]] 
   redNames <- ReduzierungOpt[[1]] %>% names # get names of already optmised parameters
-  extraNames <-  BwBeatmetNames[!BwBeatmetNames %in% redNames] # get names which are not already optimised for non BW regions
+  tmp <-(str_subset(BwBeatmetNames , "reduzierung", negate = TRUE))
+  extraNames <-tmp[seq(2,length(tmp))] # exclude empty string at postion 1
+  
+  #extraNames <-  BwBeatmetNames[!BwBeatmetNames %in% redNames] # get names which are not already optimised for non BW regions
   for (extraName in extraNames) {
     ReduzierungOpt[[1]][[extraName]]<- BwBeatmetOpt[[1]][[extraName]] 
   }
@@ -220,6 +226,11 @@ do.call(file.remove, list(list.files(path, full.names = TRUE)))
 
 # save new file
 save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", Comment, Sys.time(),  ".RData"), compress = TRUE)
+
+
+## create melde map
+MeldeMap <- createMap(RkiDataICU_BeatmetOptiTotal)
+save(MeldeMap, file = "../data/meldeMap.RData")
 
 ####### copy data to offical page ##############
 if (CopyToOfficialPage) {
