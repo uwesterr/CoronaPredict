@@ -163,7 +163,7 @@ ui <- function(request) {
                                                 wellPanel(
                                                   dateRangeInput(inputId = "dateInput",
                                                                  label = "Datum",
-                                                                 start = as.Date('2020-04-01'),
+                                                                 start = as.Date('2020-03-01'),
                                                                  end = as.Date('2020-06-01'),
                                                                  min = as.Date('2020-03-01'),
                                                                  max = as.Date('2020-12-31'),
@@ -232,8 +232,32 @@ ui <- function(request) {
                                          column(6,
                                                 addSpinner(plotlyOutput(outputId ="MeldungenProWoche"), spin = "circle", color = "#E41A1C"))),   
                                        
+                                       fluidRow(
+                                         wellPanel(
+                                           splitLayout(
+                                             style = "border: 1px solid silver;",
+                                             cellWidths =  c("50%", "50%"),
+                                             cellHeight = "120%",
+                                             cellArgs = list(style = "padding: 6px"), 
+                                             addSpinner(plotlyOutput(outputId ="Kumuliert"), spin = "circle", color = "#E41A1C"),
+                                             addSpinner(plotlyOutput(outputId ="Verlauf"), spin = "circle", color = "#E41A1C"))
+                                           #addSpinner(plotOutput("plot1"), spin = "circle", color = "#E41A1C"),                                           
+                                         )
+                                       ),
                                        
-                                       
+
+                                       fluidRow(
+                                         wellPanel(
+                                           #           splitLayout(
+                                           #             style = "border: 1px solid silver;",
+                                           #             cellWidths =  c("50%", "50%"),
+                                           #             cellHeight = "120%",
+                                           addSpinner(plotlyOutput(outputId ="Krankenhaus"), spin = "circle", color = "#E41A1C")),
+                                         #             addSpinner(plotlyOutput(outputId ="MeldungenProWoche"), spin = "circle", color = "#E41A1C"))                                             
+                                         # plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
+                                         #        ),
+                                         
+                                       ),
                                        wellPanel(
                                          h3("Krankenhausaufenthalt"), 
                                          
@@ -251,31 +275,8 @@ ui <- function(request) {
                                            column(4,
                                                   wellPanel(
                                                     numericInput("dt_inf_kh", label = "Versatz nach Infektion [d]", value = 8),
-                                                    numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation [d]", value = 1))))) , 
-                                       fluidRow(
-                                         wellPanel(
-                                           #           splitLayout(
-                                           #             style = "border: 1px solid silver;",
-                                           #             cellWidths =  c("50%", "50%"),
-                                           #             cellHeight = "120%",
-                                           addSpinner(plotlyOutput(outputId ="Krankenhaus"), spin = "circle", color = "#E41A1C")),
-                                         #             addSpinner(plotlyOutput(outputId ="MeldungenProWoche"), spin = "circle", color = "#E41A1C"))                                             
-                                         # plotlyOutput(outputId ="Krankenhaus"), plotlyOutput(outputId ="Reproduktionsrate"))
-                                         #        ),
-                                         
-                                       ),
-                                       fluidRow(
-                                         wellPanel(
-                                           splitLayout(
-                                             style = "border: 1px solid silver;",
-                                             cellWidths =  c("50%", "50%"),
-                                             cellHeight = "120%",
-                                             cellArgs = list(style = "padding: 6px"), 
-                                             addSpinner(plotlyOutput(outputId ="Kumuliert"), spin = "circle", color = "#E41A1C"),
-                                             addSpinner(plotlyOutput(outputId ="Verlauf"), spin = "circle", color = "#E41A1C"))
-                                           #addSpinner(plotOutput("plot1"), spin = "circle", color = "#E41A1C"),                                           
-                                         )
-                                       )
+                                                    numericInput("dt_kh_int", label = "Versatz Krankenhaus - Intensivstation [d]", value = 1))))) 
+
                                        
                                      ) # end main panel
                       )
@@ -324,9 +325,7 @@ server <- function(input, output, session) {
   }) 
   
   
-  points <- eventReactive(input$recalc, {
-    cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
-  }, ignoreNULL = FALSE)
+ 
   observeEvent(input$mymap_shape_click, { # update the location selectInput on map clicks
     p <- input$mymap_shape_click
     updateSelectInput(session, "LandkreiseSelected",  selected = input$mymap_shape_click[["id"]])
@@ -336,26 +335,32 @@ server <- function(input, output, session) {
   })
   output$mymap <- renderLeaflet({
     load("data/meldeMap.RData")
-   return(MeldeMap)
+    return(MeldeMap)
   })
   
   
   vals <- reactiveValues(Flag = "Bundesland")
   r0_no_erfasstDf <- reactiveVal(0) 
-  
+ 
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
-
-   
-     print("observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{")
-    req(input)
     if(input$BundeslandSelected =="---"){
     }else {
-      (updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
+      isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
       vals$Flag  <- "Bundesland"
-      regionSelected = 2
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
-
-      req(input)
+      OptResultDf <- RkiDataWithSumsNested[[1,"optimizedInput"]]
+      isolate(inputForOptimization <- input) # to make setting reduzierung_rtx easy and fast
+      
+      for (inputVarName in OptResultDf[[1]] %>% names) {
+        if (inputVarName %in% (input %>% names)) {
+          if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
+            isolate(updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
+          } else {
+            isolate(updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
+          }
+        }
+      }
+      
       r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
       
@@ -363,14 +368,24 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
-    print("observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{")
+    
     if(input$LandkreiseSelected =="---"){
     }else {
       
       isolate(updateSelectInput(session, "BundeslandSelected",  selected = "---"))
       vals$Flag  <- "Landkreis"
-      regionSelected = 3
       RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$LandkreiseSelected)
+      OptResultDf <- RkiDataWithSumsNested[[1,"optimizedInput"]]
+      inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
+      for (inputVarName in OptResultDf[[1]] %>% names) {
+        if (inputVarName %in% (input %>% names)) {
+          if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
+            isolate(updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
+          } else {
+            isolate(updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
+          }
+        }
+      }
       r0_no_erfasstDf(RkiDataWithSumsNested)
       
     }
@@ -378,40 +393,15 @@ server <- function(input, output, session) {
   
   rkiAndPredictData <- reactive({
     #  browser()
-    print("################rkiAndPredictData <- reactive({")
     if (r0_no_erfasstDf()$NotEnoughDataFlag) {
       showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", 
                             "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. 
                             Hierdurch ist aber auch keine valide Zukunftsschätzung möglich.",  footer = modalButton("Ok")))
       
     }
-    ###### set values according to optimized values ############ 
     RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest(data)
-    OptResultDf <- RkiDataWithR0N0[[1,"optimizedInput"]]
-    isolate(inputForOptimization <- input) # to make setting reduzierung_rtx easy and fast
     
-    for (inputVarName in OptResultDf[[1]] %>% names) {
-      print("for (inputVarName in OptResultDf[[1]] %>% names) {")
-      
-      if (inputVarName %in% (isolate(inputForOptimization %>% names))) {
-        if (inputVarName %in% (str_subset(isolate(inputForOptimization %>% names), "reduzierung"))) {
-          (updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
-        } else {
-          (updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
-        }
-      }
-    }
-    ### set input values since update function send data only after plots are generated
-    #browser()
-    OptResultDf <- RkiDataWithR0N0[[1,"optimizedInput"]]
-    inputForOptimization <-  isolate(reactiveValuesToList(input)) # to make setting reduzierung_rtx easy and fast
-    for (inputVarName in OptResultDf[[1]] %>% names) {
-      if (inputVarName %in% (inputForOptimization %>% names)) {
-        inputForOptimization[[inputVarName]]<- OptResultDf[[1]][[inputVarName]] 
-      }
-    }
-    
-    df_nom <-  Rechenkern(RkiDataWithR0N0, inputForOptimization)
+    df_nom <-  Rechenkern(RkiDataWithR0N0, input)
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
     letzter_Tag <- max(tmp$Tag)
     konfidenz_je_tag <- mean(c(0.023, 0.029/2)) # Mittelwert aus zwei separaten Untersuchungen zu log. Standardabweichungen
@@ -433,223 +423,230 @@ server <- function(input, output, session) {
     df_nom$ErfassteInfizierteBerechnet_max <- KonfidenzVektor(df_nom$ErfassteInfizierteBerechnet, df_nom$Tag,0, +konfidenz_je_tag, letzter_Tag, 0)
     
     konfidenz <- log10(1.1)
-    df_nom$ToteBerechnet_min <- KonfidenzVektor(df_nom$ToteBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, inputForOptimization$td_tod)
-    df_nom$ToteBerechnet_max <- KonfidenzVektor(df_nom$ToteBerechnet, df_nom$Tag,konfidenz, +konfidenz_je_tag, letzter_Tag, inputForOptimization$td_tod)
+    df_nom$ToteBerechnet_min <- KonfidenzVektor(df_nom$ToteBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$td_tod)
+    df_nom$ToteBerechnet_max <- KonfidenzVektor(df_nom$ToteBerechnet, df_nom$Tag,konfidenz, +konfidenz_je_tag, letzter_Tag, input$td_tod)
     
-    df_nom$KhBerechnet_min <- KonfidenzVektor(df_nom$KhBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, inputForOptimization$dt_inf_kh)
-    df_nom$KhBerechnet_max <- KonfidenzVektor(df_nom$KhBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, inputForOptimization$dt_inf_kh)
+    df_nom$KhBerechnet_min <- KonfidenzVektor(df_nom$KhBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$dt_inf_kh)
+    df_nom$KhBerechnet_max <- KonfidenzVektor(df_nom$KhBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, input$dt_inf_kh)
     
-    df_nom$IntensivBerechnet_min <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, inputForOptimization$dt_kh_int+inputForOptimization$dt_inf_kh)
-    df_nom$IntensivBerechnet_max <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, inputForOptimization$dt_kh_int+inputForOptimization$dt_inf_kh)
+    df_nom$IntensivBerechnet_min <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, -konfidenz, -konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
+    df_nom$IntensivBerechnet_max <- KonfidenzVektor(df_nom$IntensivBerechnet, df_nom$Tag, +konfidenz, +konfidenz_je_tag, letzter_Tag, input$dt_kh_int+input$dt_inf_kh)
     
     
-    df <- df_nom %>% filter(Tag >=as.Date(strptime(inputForOptimization$dateInput[1], format="%Y-%m-%d")),
-                            Tag <=as.Date(strptime(inputForOptimization$dateInput[2], format="%Y-%m-%d")))
+    df <- df_nom %>% filter(Tag >=as.Date(strptime(input$dateInput[1], format="%Y-%m-%d")),
+                            Tag <=as.Date(strptime(input$dateInput[2], format="%Y-%m-%d")))
   }) 
-  color1 = 'blue'
-  color2 = 'green'
-  color3 = '#6ab84d'
-  color4 = 'black'
-  color5 = 'gray'
-  color6 = 'lightblue'
-  perdictionHorizon <- Sys.Date()+21 # how far in the future confidance will be displayed
-  alphaForConfidence <- 0.1 
-  # more options at https://ggplot2.tidyverse.org/reference/theme.html
-  themeCust <-  theme(
-    plot.title = element_text(color="blue", size=24, face="bold.italic"),
-    axis.title.x = element_text(color="blue", size=16, face="bold"),
-    axis.title.y = element_text(color="blue", size=16, face="bold"),
-    axis.text.x = element_text(color="blue", size=16, face="bold"),
-    axis.text.y = element_text(color="blue", size=16, face="bold"),
-    plot.background = element_rect(fill = "lightgray"),
-    axis.text = element_text(colour = "blue"),
-    legend.text = element_text(color="blue", size=16, face="bold"),
-    legend.position = "bottom"
-  )
-  #############  output$Kumuliert ################
-  output$Kumuliert <- renderPlotly({
-   print("output$Kumuliert <- renderPlotly({") 
-
-  #  (logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE))
-    logy <- TRUE
-    (tmp <- rkiAndPredictData())
-    colnames(tmp)[colnames(tmp) == "SumAnzahl"] <- "Erfasste_Infizierte"
-    colnames(tmp)[colnames(tmp) == "sumTote"] <- "Erfasste_Todesfaelle"
-    colnames(tmp)[colnames(tmp) == "ToteBerechnet"] <- "Berechnete_Todesfaelle"
-    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet"] <- "Berechnete_Infizierte"
-    # min
-    colnames(tmp)[colnames(tmp) == "SumAnzahl_min"] <- "Erfasste_Infizierte_min"
-    colnames(tmp)[colnames(tmp) == "sumTote_min"] <- "Erfasste_Todesfaelle_min"
-    colnames(tmp)[colnames(tmp) == "ToteBerechnet_min"] <- "Berechnete_Todesfaelle_min"
-    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_min"] <- "Berechnete_Infizierte_min"
-    # max
-    colnames(tmp)[colnames(tmp) == "SumAnzahl_max"] <- "Erfasste_Infizierte_max"
-    colnames(tmp)[colnames(tmp) == "sumTote_max"] <- "Erfasste_Todesfaelle_max"
-    colnames(tmp)[colnames(tmp) == "ToteBerechnet_max"] <- "Berechnete_Todesfaelle_max"
-    colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_max"] <- "Berechnete_Infizierte_max"
-    tmp$Erfasste_Infizierte <- as.integer(tmp$Erfasste_Infizierte)
-    tmp$Berechnete_Infizierte <- as.integer(tmp$Berechnete_Infizierte)
-    
-    
-    
-    p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) +
-      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon), 
-                  aes( x= Tag, ymin = Berechnete_Infizierte_min, ymax = Berechnete_Infizierte_max), alpha =alphaForConfidence, outline.type = "full", fill = color1) + 
-      geom_line(aes(x=Tag, y = Berechnete_Infizierte)) +   
-      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon), 
-                  aes( x= Tag, ymin = Berechnete_Todesfaelle_min, ymax = Berechnete_Todesfaelle_max), alpha =alphaForConfidence, outline.type = "full", fill = color4) + 
-      
-      geom_point(data = tmp, aes(x = Tag, y = Erfasste_Infizierte, color = "Erfasste Infizierte")) +
-      geom_line(data = tmp, aes(x = Tag, y = Berechnete_Todesfaelle, color = "Todesfälle berechnet")) + 
-      geom_point(data = tmp, aes(x = Tag, y = Erfasste_Todesfaelle, color = "Todesfälle erfasst")) +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(tmp %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte / Todesfälle, CI 95%", sep =""),
-                                                         x = "Datum", y = "Anzahl",
-                                                         caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
-                                                           'Erfasste Infizierte berechnet' = color1,
-                                                           'Erfasste Infizierte' = color2,
-                                                           'Todesfälle berechnet' = color4,
-                                                           'Todesfälle erfasst' = color5)) +
-      labs(color = 'Daten')
-    
-    if(logy){
-      p <- p + scale_y_log10(labels = label_number_auto(), limits = c(1, NA))
-    } else {
-      p <- p + scale_y_continuous(labels = scales::comma)
-    }
-    p <- ggplotly(p, tooltip = c("Erfasste_Infizierte", "Berechnete_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle"))
-    p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
-    p
-    
-  })
-  
-  #########    output$Verlauf ############ 
-  
-  output$Verlauf <- renderPlotly({
-    print("  output$Verlauf <- renderPlotly({")
-    logy <- TRUE
-  #  (logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE))
-    
-    (tmp <- rkiAndPredictData())
-    colnames(tmp)[colnames(tmp) == "AnzahlTodesfall"] <- "NeueToteErfasst"
-    tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
-    tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
-    p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) +  geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
-      geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
-      
-      geom_point(aes(x=Tag,y= AnzahlFall, color = "Neu Infizierte erfasst")) +
-      geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y=NeueToteErfasst, color = "Neue Todesfälle erfasst")) +
-      geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
-      
-      scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(tmp %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte / Todesfälle, CI 95%", sep =""),
-                                                         x = "Datum", y = "Anzahl",
-                                                         caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
-                                                           'Aktuell Infizierte berechnet' = color1,
-                                                           'Neu Infizierte berechnet' = color2,
-                                                           'Neu Infizierte erfasst' = color3,
-                                                           'Neue Todesfälle berechnet' = color4,
-                                                           'Neue Todesfälle erfasst' = color5)) +
-      labs(color = 'Daten')
-    
-    if(logy){
-      p <- p +  scale_y_log10(label = label_number_auto())
-    } else {
-      p <- p +  scale_y_continuous(labels = scales::comma)
-    }
-    
-    
-    p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag", "NeueToteErfasst", "NeueToteBerechnet","AnzahlFall"))
-    
-    
-    p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
-    p
-    
-  }) 
-  
-  #########     output$Krankenhaus ############  
-  output$Krankenhaus <- renderPlotly({
-    print("  output$Krankenhaus <- renderPlotly({")
- #   (logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE))
-    logy <- TRUE
-    (tmp <- rkiAndPredictData())
-    colnames(tmp)[colnames(tmp) == "KhBerechnet"] <- "Krankenhaus_berechnet"
-    colnames(tmp)[colnames(tmp) == "IntensivBerechnet"] <- "Intensiv_berechnet"
-    colnames(tmp)[colnames(tmp) == "Stationaer"] <- "Krankenhaus_erfasst"
-    colnames(tmp)[colnames(tmp) == "ICU_Beatmet"] <- "Intensiv_erfasst"
-    
-    #min
-    colnames(tmp)[colnames(tmp) == "KhBerechnet_min"] <- "Krankenhaus_berechnet_min"
-    colnames(tmp)[colnames(tmp) == "IntensivBerechnet_min"] <- "Intensiv_berechnet_min"
-    #max
-    colnames(tmp)[colnames(tmp) == "KhBerechnet_max"] <- "Krankenhaus_berechnet_max"
-    colnames(tmp)[colnames(tmp) == "IntensivBerechnet_max"] <- "Intensiv_berechnet_max"
-    
-    tmp$Intensiv_berechnet <- as.integer(tmp$Intensiv_berechnet)
-    tmp$Krankenhaus_berechnet <- as.integer(tmp$Krankenhaus_berechnet)
-    p <- ggplot(tmp, aes( color ="KH berechnet")) + 
-      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Krankenhaus_berechnet_min, ymax = Krankenhaus_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color1) + 
-      geom_line(aes(x=Tag, y = Krankenhaus_berechnet))  + geom_point(aes(Tag, Krankenhaus_erfasst, color = "KH erfasst")) +
-      geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Intensiv_berechnet_min, ymax = Intensiv_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
-      geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) + geom_point(aes(Tag, Intensiv_erfasst, color = "Intensiv erfasst")) +
-      
-      scale_x_date(labels = date_format("%d.%m")) + 
-      labs(title = paste0(tmp %>%  filter(!is.na(whichRegion)) %>% select(whichRegion) %>% 
-                            unique(), ": Plätze in Krankenhaus / Intensivstation, CI 95%", sep ="")  ,
-           x = "Datum", y = "Anzahl",
-           caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +  
-      scale_color_manual(values = c(
-        'KH berechnet' = color1,
-        'Intensiv berechnet' = color2,
-        'KH erfasst' = color6,
-        'Intensiv erfasst' = color3)) +
-      labs(color = 'Daten')
-    
-    if(logy){
-      p <- p +  scale_y_log10(label = label_number_auto())
-    } else {
-      p <- p + scale_y_continuous(labels = scales::comma)
-    }
-    
-    p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag", "Krankenhaus_erfasst", "Intensiv_erfasst" ))
-    p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  
-    p
-    
-    
-  }) 
-  
-  #########     output$MeldungenProWoche ############  
-  output$MeldungenProWoche <- renderPlotly({
-    print("  output$MeldungenProWoche <- renderPlotly({")
-    
  
- #   logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
-    logy <- TRUE
-    (tmp <- rkiAndPredictData())
-    paste0(tmp %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  
-    # browser()
-    colnames(tmp)[colnames(tmp) == "MeldeWithinWeekPer100kInhabitantsBerechnet"] <- "Berechnet"
-    colnames(tmp)[colnames(tmp) == "MeldeWithinWeekPer100kInhabitants"] <- "Gemeldet"
+  
+  ######## oberser event plot ###########
+  
+  
+  
+  observeEvent(rkiAndPredictData(), ignoreInit = TRUE,
     
-    tmp$Berechnet <- round(tmp$Berechnet, digits = 0)
-    tmp$Gemeldet <- round(tmp$Gemeldet, digits = 0)
-    # browser()
-    #   tmp$Reproduktionszahl_ohne_Massnahmen <- round(input$ta*(tmp$Reproduktionszahl_ohne_Massnahmen-1), digits = 3)
-    #   tmp$Aktuelle_Reproduktionszahl <- round(input$ta*(tmp$Aktuelle_Reproduktionszahl-1), digits = 3)
-    
-    p <- ggplot(tmp, aes(color = "Berechnet")) + geom_line(aes(x=Tag, y = Berechnet), linetype = 2) + geom_point(aes(x = Tag, y = Gemeldet, color = "Gemeldet")) +
-      # geom_line(aes(x=Tag,y = Aktuelle_Reproduktionszahl, color = "R aktuell"))  +
-      scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(tmp %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Meldungen der letzen Woche pro 100.000 Einwohner", sep ="")  , 
-                                                         x = "Datum", y = "Meldungen der letzen Woche / 100.000 Einwohner",
-                                                         caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
-                                                           'Berechnet' = color1,
-                                                           'Gemeldet' = color2)) + geom_hline( yintercept = 50) +
+    {
+      color1 = 'blue'
+      color2 = 'green'
+      color3 = '#6ab84d'
+      color4 = 'black'
+      color5 = 'gray'
+      color6 = 'lightblue'
+      perdictionHorizon <- Sys.Date()+21 # how far in the future confidance will be displayed
+      alphaForConfidence <- 0.1 
+      # more options at https://ggplot2.tidyverse.org/reference/theme.html
+      themeCust <-  theme(
+        plot.title = element_text(color="blue", size=24, face="bold.italic"),
+        axis.title.x = element_text(color="blue", size=16, face="bold"),
+        axis.title.y = element_text(color="blue", size=16, face="bold"),
+        axis.text.x = element_text(color="blue", size=16, face="bold"),
+        axis.text.y = element_text(color="blue", size=16, face="bold"),
+        plot.background = element_rect(fill = "lightgray"),
+        axis.text = element_text(colour = "blue"),
+        legend.text = element_text(color="blue", size=16, face="bold"),
+        legend.position = "bottom"
+      )
+      #############  output$Kumuliert ################
+      output$Kumuliert <- renderPlotly({
+        
+        
+        
+        logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
+        
+        tmp <- rkiAndPredictData()
+        colnames(tmp)[colnames(tmp) == "SumAnzahl"] <- "Erfasste_Infizierte"
+        colnames(tmp)[colnames(tmp) == "sumTote"] <- "Erfasste_Todesfaelle"
+        colnames(tmp)[colnames(tmp) == "ToteBerechnet"] <- "Berechnete_Todesfaelle"
+        colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet"] <- "Berechnete_Infizierte"
+        # min
+        colnames(tmp)[colnames(tmp) == "SumAnzahl_min"] <- "Erfasste_Infizierte_min"
+        colnames(tmp)[colnames(tmp) == "sumTote_min"] <- "Erfasste_Todesfaelle_min"
+        colnames(tmp)[colnames(tmp) == "ToteBerechnet_min"] <- "Berechnete_Todesfaelle_min"
+        colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_min"] <- "Berechnete_Infizierte_min"
+        # max
+        colnames(tmp)[colnames(tmp) == "SumAnzahl_max"] <- "Erfasste_Infizierte_max"
+        colnames(tmp)[colnames(tmp) == "sumTote_max"] <- "Erfasste_Todesfaelle_max"
+        colnames(tmp)[colnames(tmp) == "ToteBerechnet_max"] <- "Berechnete_Todesfaelle_max"
+        colnames(tmp)[colnames(tmp) == "ErfassteInfizierteBerechnet_max"] <- "Berechnete_Infizierte_max"
+        tmp$Erfasste_Infizierte <- as.integer(tmp$Erfasste_Infizierte)
+        tmp$Berechnete_Infizierte <- as.integer(tmp$Berechnete_Infizierte)
+        
+        
+        
+        p <- ggplot(tmp, aes(color = "Erfasste Infizierte berechnet")) +
+          geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon), 
+                      aes( x= Tag, ymin = Berechnete_Infizierte_min, ymax = Berechnete_Infizierte_max), alpha =alphaForConfidence, outline.type = "full", fill = color1) + 
+          geom_line(aes(x=Tag, y = Berechnete_Infizierte)) +   
+          geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon), 
+                      aes( x= Tag, ymin = Berechnete_Todesfaelle_min, ymax = Berechnete_Todesfaelle_max), alpha =alphaForConfidence, outline.type = "full", fill = color4) + 
+          
+          geom_point(data = tmp, aes(x = Tag, y = Erfasste_Infizierte, color = "Erfasste Infizierte")) +
+          geom_line(data = tmp, aes(x = Tag, y = Berechnete_Todesfaelle, color = "Todesfälle berechnet")) + 
+          geom_point(data = tmp, aes(x = Tag, y = Erfasste_Todesfaelle, color = "Todesfälle erfasst")) +
+          scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Kumulierte Infizierte / Todesfälle, CI 95%", sep =""),
+                                                             x = "Datum", y = "Anzahl",
+                                                             caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
+                                                               'Erfasste Infizierte berechnet' = color1,
+                                                               'Erfasste Infizierte' = color2,
+                                                               'Todesfälle berechnet' = color4,
+                                                               'Todesfälle erfasst' = color5)) +
+          labs(color = 'Daten')
+        
+        if(logy){
+          p <- p + scale_y_log10(labels = label_number_auto(), limits = c(1, NA))
+        } else {
+          p <- p + scale_y_continuous(labels = scales::comma)
+        }
+        p <- ggplotly(p, tooltip = c("Erfasste_Infizierte", "Berechnete_Infizierte", "Tag", "Erfasste_Todesfaelle", "Berechnete_Todesfaelle"))
+        p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
+        p
+        
+      })
       
-      labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
-    p <- ggplotly(p, tooltip = c("Berechnet","Gemeldet", "Tag"))
-    p <- p %>% layout(legend = list(x = 0.01, y = 0.01, font = list(size = 8))) 
-    
-    p
-    
-  })  
+      #########    output$Verlauf ############ 
+      
+      output$Verlauf <- renderPlotly({
+        
+        logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
+        
+        tmp <- rkiAndPredictData()
+        colnames(tmp)[colnames(tmp) == "AnzahlTodesfall"] <- "NeueToteErfasst"
+        tmp$AktuellInfizierteBerechnet <- as.integer(tmp$AktuellInfizierteBerechnet)
+        tmp$NeuInfizierteBerechnet <- as.integer(tmp$NeuInfizierteBerechnet)
+        p <- ggplot(tmp, aes(color ="Aktuell Infizierte berechnet")) + geom_line(aes(x=Tag, y = AktuellInfizierteBerechnet)) +  geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
+          geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + 
+          
+          geom_point(aes(x=Tag,y= AnzahlFall, color = "Neu Infizierte erfasst")) +
+          geom_line(aes(x=Tag,y= NeueToteBerechnet, color = "Neue Todesfälle berechnet")) + geom_point(aes(x=Tag,y=NeueToteErfasst, color = "Neue Todesfälle erfasst")) +
+          geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) + geom_line(aes(x=Tag,y= NeuInfizierteBerechnet, color = "Neu Infizierte berechnet")) +
+          
+          scale_x_date(labels = date_format("%d.%m")) + labs(title = paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Verlauf Infizierte / Todesfälle, CI 95%", sep =""),
+                                                             x = "Datum", y = "Anzahl",
+                                                             caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
+                                                               'Aktuell Infizierte berechnet' = color1,
+                                                               'Neu Infizierte berechnet' = color2,
+                                                               'Neu Infizierte erfasst' = color3,
+                                                               'Neue Todesfälle berechnet' = color4,
+                                                               'Neue Todesfälle erfasst' = color5)) +
+          labs(color = 'Daten')
+        
+        if(logy){
+          p <- p +  scale_y_log10(label = label_number_auto())
+        } else {
+          p <- p +  scale_y_continuous(labels = scales::comma)
+        }
+        
+        
+        p <- ggplotly(p, tooltip = c("AktuellInfizierteBerechnet", "NeuInfizierteBerechnet", "Tag", "NeueToteErfasst", "NeueToteBerechnet","AnzahlFall"))
+        
+        
+        p <- p %>% layout(legend = list(x = 0.69, y = 0.01, font = list(size = 8)))
+        p
+        
+      }) 
+      
+      #########     output$Krankenhaus ############  
+      output$Krankenhaus <- renderPlotly({
+        logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
+        
+        tmp <- rkiAndPredictData()
+        colnames(tmp)[colnames(tmp) == "KhBerechnet"] <- "Krankenhaus_berechnet"
+        colnames(tmp)[colnames(tmp) == "IntensivBerechnet"] <- "Intensiv_berechnet"
+        colnames(tmp)[colnames(tmp) == "Stationaer"] <- "Krankenhaus_erfasst"
+        colnames(tmp)[colnames(tmp) == "ICU_Beatmet"] <- "Intensiv_erfasst"
+        
+        #min
+        colnames(tmp)[colnames(tmp) == "KhBerechnet_min"] <- "Krankenhaus_berechnet_min"
+        colnames(tmp)[colnames(tmp) == "IntensivBerechnet_min"] <- "Intensiv_berechnet_min"
+        #max
+        colnames(tmp)[colnames(tmp) == "KhBerechnet_max"] <- "Krankenhaus_berechnet_max"
+        colnames(tmp)[colnames(tmp) == "IntensivBerechnet_max"] <- "Intensiv_berechnet_max"
+        
+        tmp$Intensiv_berechnet <- as.integer(tmp$Intensiv_berechnet)
+        tmp$Krankenhaus_berechnet <- as.integer(tmp$Krankenhaus_berechnet)
+        p <- ggplot(tmp, aes( color ="KH berechnet")) + 
+          geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Krankenhaus_berechnet_min, ymax = Krankenhaus_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color1) + 
+          geom_line(aes(x=Tag, y = Krankenhaus_berechnet))  + geom_point(aes(Tag, Krankenhaus_erfasst, color = "KH erfasst")) +
+          geom_ribbon(data =tmp%>% filter(Tag <= perdictionHorizon),  aes( x= Tag, ymin = Intensiv_berechnet_min, ymax = Intensiv_berechnet_max), alpha =alphaForConfidence, outline.type = "full",  fill = color2) + 
+          geom_line(aes(x=Tag,y= Intensiv_berechnet, color = "Intensiv berechnet")) + geom_point(aes(Tag, Intensiv_erfasst, color = "Intensiv erfasst")) +
+          
+          scale_x_date(labels = date_format("%d.%m")) + 
+          labs(title = paste0(rkiAndPredictData() %>%  filter(!is.na(whichRegion)) %>% select(whichRegion) %>% 
+                                unique(), ": Plätze in Krankenhaus / Intensivstation, CI 95%", sep ="")  ,
+               x = "Datum", y = "Anzahl",
+               caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +  
+          scale_color_manual(values = c(
+            'KH berechnet' = color1,
+            'Intensiv berechnet' = color2,
+            'KH erfasst' = color6,
+            'Intensiv erfasst' = color3)) +
+          labs(color = 'Daten')
+        
+        if(logy){
+          p <- p +  scale_y_log10(label = label_number_auto())
+        } else {
+          p <- p + scale_y_continuous(labels = scales::comma)
+        }
+        
+        p <- ggplotly(p, tooltip = c("Krankenhaus_berechnet", "Intensiv_berechnet", "Tag", "Krankenhaus_erfasst", "Intensiv_erfasst" ))
+        p <- p %>% layout(legend = list(x = 0.01, y = 0.99, font = list(size = 8)))  
+        p
+        
+        
+      }) 
+      
+      #########     output$MeldungenProWoche ############  
+      output$MeldungenProWoche <- renderPlotly({
+        paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Reproduktionsrate", sep ="")  
+        logy <- ifelse(input$logyInput == "logarithmisch" , TRUE, FALSE)
+        
+        tmp <- rkiAndPredictData()
+        # browser()
+        colnames(tmp)[colnames(tmp) == "MeldeWithinWeekPer100kInhabitantsBerechnet"] <- "Berechnet"
+        colnames(tmp)[colnames(tmp) == "MeldeWithinWeekPer100kInhabitants"] <- "Gemeldet"
+        
+        tmp$Berechnet <- round(tmp$Berechnet, digits = 0)
+        tmp$Gemeldet <- round(tmp$Gemeldet, digits = 0)
+        # browser()
+        #   tmp$Reproduktionszahl_ohne_Massnahmen <- round(input$ta*(tmp$Reproduktionszahl_ohne_Massnahmen-1), digits = 3)
+        #   tmp$Aktuelle_Reproduktionszahl <- round(input$ta*(tmp$Aktuelle_Reproduktionszahl-1), digits = 3)
+        
+        p <- ggplot(tmp, aes(color = "Berechnet")) + geom_line(aes(x=Tag, y = Berechnet), linetype = 2) + geom_point(aes(x = Tag, y = Gemeldet, color = "Gemeldet")) +
+          # geom_line(aes(x=Tag,y = Aktuelle_Reproduktionszahl, color = "R aktuell"))  +
+          scale_x_date(labels = date_format("%d.%m")) + labs(title =  paste0(rkiAndPredictData() %>% filter(!is.na(whichRegion)) %>% select(whichRegion) %>% unique(), ": Meldungen der letzen Woche pro 100.000 Einwohner", sep ="")  , 
+                                                             x = "Datum", y = "Meldungen der letzen Woche / 100.000 Einwohner",
+                                                             caption = "Daten von https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.geojson")  +   scale_color_manual(values = c(
+                                                               'Berechnet' = color1,
+                                                               'Gemeldet' = color2)) + geom_hline( yintercept = 50) +
+          
+          labs(color = 'Daten')+ scale_y_continuous(labels = scales::comma)
+        p <- ggplotly(p, tooltip = c("Berechnet","Gemeldet", "Tag"))
+        p <- p %>% layout(legend = list(x = 0.01, y = 0.01, font = list(size = 8))) 
+        
+        p
+        
+      })  
+    }
+  )
   
   # Save extra values in state$values when we bookmark
   onBookmark(function(state) {
@@ -669,9 +666,9 @@ server <- function(input, output, session) {
     if(input$BundeslandSelected =="---"){
     }else {
       vals$Flag  <- "Bundesland"
-      regionSelected = 2
       load("data/RkiDataICU_BeatmetOptiTotal.RData")
       RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal  %>% filter(whichRegion == input$BundeslandSelected)
+      browser()
       r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
       isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
@@ -681,7 +678,6 @@ server <- function(input, output, session) {
       
     }else {
       vals$Flag  <- "Landkreis"
-      regionSelected = 3
       load("data/RkiDataICU_BeatmetOptiTotal.RData")
       RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal  %>% filter(whichRegion == input$LandkreiseSelected)
       r0_no_erfasstDf(RkiDataWithSumsNested)
