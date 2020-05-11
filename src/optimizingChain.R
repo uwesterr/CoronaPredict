@@ -21,6 +21,7 @@ library(zoo)
 library(plotly)
 library(readxl)
 library(scales)
+library(leaflet)
 #setwd("~/CloudProjectsUnderWork/ProjectsUnderWork/PredCo/CoronaPredict/src")
 source(file = "Rechenkern.R")
 source(file = "helperForCovid19.R")
@@ -45,6 +46,8 @@ oldFile <- list.files(path, full.names = TRUE)
 load(oldFile)
 
 RkiDataWithOptimizedInputOfPreviousRun <- left_join(RkiDataWithRoNoOpimizedUpToDate, RkiDataICU_BeatmetOptiTotal %>% select(whichRegion, optimizedInput))
+rm(RkiDataICU_BeatmetOptiTotal)
+rm(RkiDataWithRoNoOpimizedUpToDate)
 
 ############ 
 
@@ -209,8 +212,7 @@ for (region in (nonBwRegions$whichRegion %>% unlist)) {
 }
 
 RkiDataICU_BeatmetOptiTotal <- bind_rows(nonBwRegions,RkiDataICU_BeatmetOpti)
-MeldeMap <- createMap(RkiDataICU_BeatmetOptiTotal)
-save(MeldeMap, file = "../data/meldeMap.RData")
+
 path <- "../data/InputFileForAppFolder/"
 
 ## move old opt file and save new one #####
@@ -224,6 +226,11 @@ do.call(file.remove, list(list.files(path, full.names = TRUE)))
 
 # save new file
 save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", Comment, Sys.time(),  ".RData"), compress = TRUE)
+
+
+## create melde map
+MeldeMap <- createMap(RkiDataICU_BeatmetOptiTotal)
+save(MeldeMap, file = "../data/meldeMap.RData")
 
 ####### copy data to offical page ##############
 if (CopyToOfficialPage) {
