@@ -75,7 +75,7 @@ ui <- function(request) {
   
   
   # widgets website https://shiny.rstudio.com/gallery/widget-gallery.html
-  navbarPage("Covid19 Meldungen in Deutschland!",  position = c("fixed-bottom"),
+  navbarPage("Covid19 Meldungen in Deutschland!",  position = c("static-top"), 
              
              tabPanel("Einstellung und Ausgabe",
                       setBackgroundColor("#ECF0F5"
@@ -222,7 +222,7 @@ ui <- function(request) {
                                      ), # end sidebar panel
                                      mainPanel(
                                        
-                                       h2("CoPE: Rechenmodel Verlauf Covid19 Infektionen und deren Auswirkung, version 0.24", color = "blue"),
+                                       h2("CoPE: Rechenmodell Verlauf Covid19 Infektionen und deren Auswirkung, version 0.24", color = "blue"),
                                        tags$head(tags$style('h2 {color:blue;}')),
                                        tags$head(tags$style('h3 {color:blue;}')),
                                        
@@ -341,40 +341,15 @@ server <- function(input, output, session) {
   
   vals <- reactiveValues(Flag = "Bundesland")
   r0_no_erfasstDf <- reactiveVal(0) 
- 
+  
+  isolate({ 
   observeEvent(input$BundeslandSelected,  ignoreInit = FALSE,{
     if(input$BundeslandSelected =="---"){
     }else {
       isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
       vals$Flag  <- "Bundesland"
-      RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$BundeslandSelected)
-      OptResultDf <- RkiDataWithSumsNested[[1,"optimizedInput"]]
-      isolate(inputForOptimization <- input) # to make setting reduzierung_rtx easy and fast
-      
-      for (inputVarName in OptResultDf[[1]] %>% names) {
-        if (inputVarName %in% (input %>% names)) {
-          if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
-            isolate(updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
-          } else {
-            isolate(updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
-          }
-        }
-      }
-      
-      r0_no_erfasstDf(RkiDataWithSumsNested)
-      # set menu of Landkreis to "---"
-      
-    }
-  })
-  
-  observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
-    
-    if(input$LandkreiseSelected =="---"){
-    }else {
-      
-      isolate(updateSelectInput(session, "BundeslandSelected",  selected = "---"))
-      vals$Flag  <- "Landkreis"
-      RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == input$LandkreiseSelected)
+      isolate(vals$region <-  input$BundeslandSelected)
+      RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == vals$region)
       OptResultDf <- RkiDataWithSumsNested[[1,"optimizedInput"]]
       inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
       for (inputVarName in OptResultDf[[1]] %>% names) {
@@ -386,20 +361,51 @@ server <- function(input, output, session) {
           }
         }
       }
-      r0_no_erfasstDf(RkiDataWithSumsNested)
+      
+    }
+  })
+
+  observeEvent(input$LandkreiseSelected, ignoreInit = TRUE,{
+    
+    if(input$LandkreiseSelected =="---"){
+
+    }else {
+      
+      isolate(updateSelectInput(session, "BundeslandSelected",  selected = "---"))
+      vals$Flag  <- "Landkreis"
+      isolate(vals$region <-  input$LandkreiseSelected)
+      RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == vals$region)
+      OptResultDf <- RkiDataWithSumsNested[[1,"optimizedInput"]]
+      inputForOptimization <- input # to make setting reduzierung_rtx easy and fast
+      for (inputVarName in OptResultDf[[1]] %>% names) {
+        if (inputVarName %in% (input %>% names)) {
+          if (inputVarName %in% (str_subset(input %>% names, "reduzierung"))) {
+            isolate(updateSliderInput(session, inputVarName, value = OptResultDf[[1]][[inputVarName]]))
+          } else {
+            isolate(updateNumericInput(session, inputVarName, value = round(OptResultDf[[1]][[inputVarName]],1)))
+          }
+        }
+      }
+  #    r0_no_erfasstDf(RkiDataWithSumsNested)
       
     }
   })
   
+})
+  
   rkiAndPredictData <- reactive({
     #  browser()
-    if (r0_no_erfasstDf()$NotEnoughDataFlag) {
+    isolate({
+      RkiDataWithSumsNested  <- RkiDataWithSumsNested %>% filter(whichRegion == vals$region)
+
+    })
+    if (RkiDataWithSumsNested$NotEnoughDataFlag) {
       showModal(modalDialog(title = "Zu wenige Fallzahlen für eine gute Schätzung des Verlaufs", 
                             "Glücklicherweise sind in diesem Kreis bisher nur wenige an COVID 19 erkrankt. 
                             Hierdurch ist aber auch keine valide Zukunftsschätzung möglich.",  footer = modalButton("Ok")))
       
     }
-    RkiDataWithR0N0 <- r0_no_erfasstDf() %>% unnest(data)
+    RkiDataWithR0N0 <- RkiDataWithSumsNested %>% unnest(data)
     
     df_nom <-  Rechenkern(RkiDataWithR0N0, input)
     tmp <- df_nom %>% filter(!is.na(SumAnzahl))
@@ -439,8 +445,7 @@ server <- function(input, output, session) {
  
   
   ######## oberser event plot ###########
-  
-  
+
   
   observeEvent(rkiAndPredictData(), ignoreInit = TRUE,
     
@@ -550,7 +555,7 @@ server <- function(input, output, session) {
           labs(color = 'Daten')
         
         if(logy){
-          p <- p +  scale_y_log10(label = label_number_auto())
+          p <- p +  scale_y_log10(label = label_number_auto(), limits = c(1, NA))
         } else {
           p <- p +  scale_y_continuous(labels = scales::comma)
         }
@@ -602,7 +607,7 @@ server <- function(input, output, session) {
           labs(color = 'Daten')
         
         if(logy){
-          p <- p +  scale_y_log10(label = label_number_auto())
+          p <- p +  scale_y_log10(label = label_number_auto(), limits = c(1, NA))
         } else {
           p <- p + scale_y_continuous(labels = scales::comma)
         }
@@ -668,7 +673,6 @@ server <- function(input, output, session) {
       vals$Flag  <- "Bundesland"
       load("data/RkiDataICU_BeatmetOptiTotal.RData")
       RkiDataWithSumsNested <-  RkiDataICU_BeatmetOptiTotal  %>% filter(whichRegion == input$BundeslandSelected)
-      browser()
       r0_no_erfasstDf(RkiDataWithSumsNested)
       # set menu of Landkreis to "---"
       isolate(updateSelectInput(session, "LandkreiseSelected",  selected = "---"))
