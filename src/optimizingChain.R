@@ -57,8 +57,12 @@ rm(RkiDataWithRoNoOpimizedUpToDate)
 # cronjob running createDfBundLandKreis.R every day at 0.01am 
 
 plotCreate <- 0
-Comment <- "Cronjob" # add comment to file name
+Comment <- "CronJob" # add comment to file name
 CopyToOfficialPage <- 0 # copy datafile to official webpage
+updateOptimize <- 0 # set to 1 if optimization of parameters shall be run, set to 0 if only reported data shall be upatated
+
+if (updateOptimize) {
+  
 
 
 ############ Optimize Reduzierung ##############################
@@ -212,7 +216,11 @@ for (region in (nonBwRegions$whichRegion %>% unlist)) {
 }
 
 RkiDataICU_BeatmetOptiTotal <- bind_rows(nonBwRegions,RkiDataICU_BeatmetOpti)
-
+} else {
+  
+  RkiDataICU_BeatmetOptiTotal <- RkiDataWithOptimizedInputOfPreviousRun
+  
+}
 path <- "../data/InputFileForAppFolder/"
 
 ## move old opt file and save new one #####
@@ -225,7 +233,10 @@ file.copy(oldFile, newFolder, overwrite = TRUE)
 do.call(file.remove, list(list.files(path, full.names = TRUE)))
 
 # save new file
-save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal", Comment, Sys.time(),  ".RData"), compress = TRUE)
+maxReportedDate <- RkiDataICU_BeatmetOptiTotal[[2]][[1]] %>% select(MeldeDate) %>% unlist %>% max() %>% as.Date()
+
+save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal_", Comment, "LastReportedDate_", 
+                                                 maxReportedDate, "_DateOfCalculation_", Sys.time(),  ".RData"), compress = TRUE)
 
 
 ## create melde map
@@ -245,6 +256,9 @@ if (CopyToOfficialPage) {
   
   # copy file from spielwiese to officical web site
   file.copy(newFile, officialDataFolder, overwrite = TRUE)
+  
+  # copy the map  to officical web site
+  file.copy("../data/meldeMap.RData", "../../myNewApp/data/", overwrite = TRUE)
   
   
 }

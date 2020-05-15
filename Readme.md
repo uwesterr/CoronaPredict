@@ -1,3 +1,4 @@
+
 # CoPE - Covid Predictor Estimator
 
 ## **Anleitung**
@@ -67,7 +68,9 @@ Die App kann mit <https://covid19.admos.de> in jedem Browser aufgerufen werden.
 Bei der Entwicklung der App wurde ein vereinfachter Algorithmus angewandt. Im Gegensatz zum allgemeingültigen SIR Modell, werden verschiedene Randbedingungen als gegeben angenommen:
 
 -   Es handelt sich um eine Epidemie
--   Es findet eine Sättigung der Infizierten statt
+-   Es findet eine Sättigung der Infizierten statt  
+
+
 
 Eine Berechnung der Daten erfolgt in Tagesschritten. Hierbei werden die neu Infizierten an einem Tag aus den Infizierten des Vortags und der täglichen Reproduktionsrate berechnet.Diese wird linear mit der Annäherung an die Sättigung reduziert.
 
@@ -77,7 +80,8 @@ Die Parameter des Modells werden durch Optimierungsverfahren (Genetic Algorithm)
 1. Fallzahllen, die vom Robert-Koch Institut auf dem Datenserver des [Corona Hub von Esri](https://npgeo-corona-npgeo-de.hub.arcgis.com/datasets/ef4b445a53c1406892257fe63129a8ea_0?geometry=-23.139%2C46.270%2C39.395%2C55.886&selectedAttribute=faelle_100000_EW) veröffentlicht werden. Die Fallzahlen sind für die regionalen Gliederungen Land-/Stadtkreise, Bundesländer und Deutschland verfügbar. 
 2. Belegzahlen der Kliniken für Baden-Württemberg. Diese werden nach Landkreisen zusammengefasst und stellen die aktuell gemeldete Belegung an stationären Betten und Beatmungsbetten auf Intensivstationen (ICU) dar. Diese Zahlen werden von der Firma convexis (convexis.de) freundlicherweise zur Verfügung gestellt und ebefalls täglich aktualisiert. 
 
-Es werden die Parameter von 2 Teilmodellen durch die erwähnten Algorithmen angepasst: 
+Es werden die Parameter von 2 Teilmodellen durch die erwähnten Algorithmen angepasst:  
+
 1. Ausbreitung der Infektionen
 2. Belegung der Krankenhausbetten
 
@@ -104,7 +108,7 @@ Hier können Daten von getroffenen Massnahmen zur Reduzierung der Reproduktionsr
 
 Als Voreinstellung sind angegeben:
 
-16.3.2020: Schliessung von Schulen und Kitas
+16.3.2020: Schliessung von Schulen und Kitas  
 23.3.2020: Einführung der Kontaktbeschränkungen
 
 Diese Daten können lokal abweichen. Baden-Württemberg hat die Schulen z.B. erst am 17.3. geschlossen. 
@@ -142,7 +146,11 @@ Hier kann das Zeitintervall für die Darstellung angegeben werden. Des Weiteren 
 <a name="meldungen-letzte-woche"></a>
 ### 3.1 Meldung der Infizierten der letzten Woche pro 100.000 Einwohner
 
+---
+
 <img src=".//media/masszahl_100K_woche.png" width="500">
+
+---
 
 Dieses Diagramm zeigt die Anzahl der Infizierten pro 100.000 Einwohner der gewählten Region sowie das Limit von 50. 
 
@@ -220,6 +228,4 @@ Die für Baden-Württemberg ermittelten Werte sind als Standardwerte auf alle Re
 Ende
 Ende
 Ende
-
-
 
