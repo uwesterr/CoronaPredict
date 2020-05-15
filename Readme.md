@@ -1,3 +1,4 @@
+
 # CoPE - Covid Predictor Estimator
 
 ## **Anleitung**
@@ -227,6 +228,4 @@ Die für Baden-Württemberg ermittelten Werte sind als Standardwerte auf alle Re
 Ende
 Ende
 Ende
-
-
 
