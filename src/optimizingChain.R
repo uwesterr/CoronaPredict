@@ -1,3 +1,10 @@
+#!/usr/bin/env Rscript
+args = commandArgs(trailingOnly=TRUE)
+# called:  RScript --vanilla optimizingChain.R FALSE "CLI" FALSE
+# args[1] : updateOptimize
+# args[2] :  Comment
+# args[3] : CopyToOfficialPage
+browser()
 # Concatenating optimizations of
 # reduzierung
 # Stationaer
@@ -56,10 +63,17 @@ rm(RkiDataWithRoNoOpimizedUpToDate)
 # from  file createDfBundLandKreisOutput.RData created by 
 # cronjob running createDfBundLandKreis.R every day at 0.01am 
 
+if (length(args)==0) {
+  args[1] = FALSE # updateOptimize
+  args[2] = "noComment" # Comment
+  args[3] = FALSE # CopyToOfficialPage
+} 
+
+browser()
 plotCreate <- 0
-Comment <- "CronJob" # add comment to file name
-CopyToOfficialPage <- 0 # copy datafile to official webpage
-updateOptimize <- 0 # set to 1 if optimization of parameters shall be run, set to 0 if only reported data shall be upatated
+Comment <- args[2] # add comment to file name
+CopyToOfficialPage <- args[3] # copy datafile to official webpage
+updateOptimize <- args[1] # set to 1 if optimization of parameters shall be run, set to 0 if only reported data shall be upatated
 
 if (updateOptimize) {
   
@@ -235,7 +249,7 @@ do.call(file.remove, list(list.files(path, full.names = TRUE)))
 # save new file
 maxReportedDate <- RkiDataICU_BeatmetOptiTotal[[2]][[1]] %>% select(MeldeDate) %>% unlist %>% max() %>% as.Date()
 
-save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal_", Comment, "LastReportedDate_", 
+save(RkiDataICU_BeatmetOptiTotal, file  = paste0(path,"RkiDataICU_BeatmetOptiTotal_", Comment, "_LastReportedDate_", 
                                                  maxReportedDate, "_DateOfCalculation_", Sys.time(),  ".RData"), compress = TRUE)
 
 
@@ -276,7 +290,7 @@ optStat <- function(optStat){
 
 }
 
-tmp <- bind_rows(RkiDataICU_BeatmetOpti,nonBwRegions) %>% select(whichRegion,optimizedInput) %>% mutate(optWide= map(optimizedInput, optStat))
+tmp <- bind_rows(RkiDataICU_BeatmetOptiTotal,nonBwRegions) %>% select(whichRegion,optimizedInput) %>% mutate(optWide= map(optimizedInput, optStat))
 optWideDf <- tmp %>% unnest(optWide)%>% unnest(optWide)
 optLongDf <- optWideDf %>% select(-optimizedInput) %>% pivot_longer(-whichRegion, names_to = "OptParameter")  %>% 
   filter(str_detect(OptParameter, c("red")))
@@ -286,7 +300,7 @@ optLongDf %>% ggplot(aes(OptParameter, value, color = OptParameter)) +geom_boxpl
 
 
 
-tmp <- RkiDataICU_BeatmetOpti %>% select(whichRegion, optimizedInput) %>% mutate(optWide= map(optimizedInput, optStat))
+tmp <- RkiDataICU_BeatmetOptiTotal %>% select(whichRegion, optimizedInput) %>% mutate(optWide= map(optimizedInput, optStat))
 optWideDf <- tmp %>% unnest(optWide)%>% unnest(optWide)
 optLongDf <- optWideDf %>% select(-optimizedInput) %>% pivot_longer(-whichRegion, names_to = "OptParameter") %>% 
     filter(str_detect(OptParameter, c("inten", "kh", "dt")))
