@@ -164,7 +164,7 @@ ui <- function(request) {
                                                   dateRangeInput(inputId = "dateInput",
                                                                  label = "Datum",
                                                                  start = as.Date('2020-03-01'),
-                                                                 end = as.Date('2020-06-01'),
+                                                                 end = as.Date('2020-07-01'),
                                                                  min = as.Date('2020-03-01'),
                                                                  max = as.Date('2020-12-31'),
                                                                  format = "yyyy-mm-dd",
