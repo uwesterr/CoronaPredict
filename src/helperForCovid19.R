@@ -256,7 +256,7 @@ readRescueTrackerData <- function() {
             #keep only newest entry (=last in act_kh) and delete others in krankenhausData
             #  print (paste("Laenge krankenhausData vor Loeschen:", nrow(krankenhausData)))
             # jetzt nur noch das letzte behalten
-            krankenhausData <- anti_join(krankenhausData, head(tmp_day,n=nrow_tmp_day-1))
+            krankenhausData <- anti_join(krankenhausData, head(tmp_day,n=nrow_tmp_day-1), by = c("id", "folderId", "folderName", "parentId", "resourceType", "free", "total", "timestamp"))
             #  print (paste("Laenge krankenhausData nach Loeschen sollte kleiner sein:", nrow(krankenhausData)))
             previous_day=tail(tmp_day,n=1)
           }  else {
