@@ -1,10 +1,33 @@
 #!/usr/bin/env Rscript
-args = commandArgs(trailingOnly=TRUE)
+args = commandArgs(TRUE)
+# $ R CMD BATCH --no-save --no-restore '--args updateOptimize=FALSE Comment="noComment"  CopyToOfficialPage=FALSE' optimizingChain.R optimizingChain.out 
+
+
 # called:  RScript --vanilla optimizingChain.R FALSE "CLI" FALSE
 # args[1] : updateOptimize
 # args[2] :  Comment
 # args[3] : CopyToOfficialPage
-browser()
+
+
+
+#  loads 
+# dataframe RkiDataWithRoNoOpimizedUpToDate 
+# from  file createDfBundLandKreisOutput.RData created by 
+# cronjob running createDfBundLandKreis.R every day at 0.01am 
+
+if(length(args)==0){
+  print("No arguments supplied.")
+  ##supply default values
+  updateOptimize = FALSE # updateOptimize
+  Comment = "noComment" # Comment
+  CopyToOfficialPage = FALSE # CopyToOfficialPage
+}else{
+  for(i in 1:length(args)){
+    eval(parse(text=args[[i]]))
+  }
+}
+
+
 # Concatenating optimizations of
 # reduzierung
 # Stationaer
@@ -58,22 +81,11 @@ rm(RkiDataWithRoNoOpimizedUpToDate)
 
 ############ 
 
-#  loads 
-# dataframe RkiDataWithRoNoOpimizedUpToDate 
-# from  file createDfBundLandKreisOutput.RData created by 
-# cronjob running createDfBundLandKreis.R every day at 0.01am 
 
-if (length(args)==0) {
-  args[1] = FALSE # updateOptimize
-  args[2] = "noComment" # Comment
-  args[3] = FALSE # CopyToOfficialPage
-} 
-
-browser()
 plotCreate <- 0
-Comment <- args[2] # add comment to file name
-CopyToOfficialPage <- args[3] # copy datafile to official webpage
-updateOptimize <- args[1] # set to 1 if optimization of parameters shall be run, set to 0 if only reported data shall be upatated
+# Comment <- args[2] # add comment to file name
+# CopyToOfficialPage <- args[3] # copy datafile to official webpage
+# updateOptimize <- args[1] # set to 1 if optimization of parameters shall be run, set to 0 if only reported data shall be upatated
 
 if (updateOptimize) {
   
@@ -226,7 +238,7 @@ for (region in (nonBwRegions$whichRegion %>% unlist)) {
     ReduzierungOpt[[1]][[extraName]]<- BwBeatmetOpt[[1]][[extraName]] 
   }
   nonBwRegions[[indexEntitiy,"optimizedInput"]] <- ReduzierungOpt
-  nonBwRegions[[indexEntitiy,"optimizedInput"]]
+ 
 }
 
 RkiDataICU_BeatmetOptiTotal <- bind_rows(nonBwRegions,RkiDataICU_BeatmetOpti)
@@ -284,7 +296,7 @@ if (CopyToOfficialPage) {
 
 
 ############ create statistic over optimized parameter
-
+if (updateOptimize){
 optStat <- function(optStat){
  list( as_tibble(optStat %>% t))
 
@@ -306,3 +318,4 @@ optLongDf <- optWideDf %>% select(-optimizedInput) %>% pivot_longer(-whichRegion
     filter(str_detect(OptParameter, c("inten", "kh", "dt")))
 optLongDf %>% ggplot(aes(OptParameter, value)) +geom_boxplot() + coord_flip() + facet_wrap(vars(OptParameter), scales = "free")
 
+}
